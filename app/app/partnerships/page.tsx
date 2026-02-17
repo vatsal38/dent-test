@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail } from '@/lib/api';
+import { CreatePartnershipModal } from './CreatePartnershipModal';
 
 export default function PartnershipsPage() {
     const [view, setView] = useState<'list' | 'kanban'>('kanban');
@@ -9,17 +10,30 @@ export default function PartnershipsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedPartnership, setSelectedPartnership] = useState<string | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
 
-    const loadData = useCallback(async () => {
-        setLoading(true);
+    const loadData = useCallback(async (showLoading = true) => {
+        if (showLoading) {
+            setLoading(true);
+        }
         setError(null);
         try {
-            const response = await getPartnerships({ view, limit: 50 });
+            // For kanban view, request maximum partnerships and sort by createdAt to show newest first
+            // For list view, use the default limit
+            const limit = view === 'kanban' ? 100 : 50; // Backend max limit is 100
+            const response = await getPartnerships({ 
+                view, 
+                limit,
+                sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
+                sortOrder: 'desc'
+            });
             setData(response);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load partnerships');
         } finally {
-            setLoading(false);
+            if (showLoading) {
+                setLoading(false);
+            }
         }
     }, [view]);
 
@@ -79,7 +93,10 @@ export default function PartnershipsPage() {
                             >
                                 List View
                             </button>
-                            <button className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium">
+                            <button 
+                                onClick={() => setShowCreateModal(true)}
+                                className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
+                            >
                                 + New Partnership
                             </button>
                         </div>
@@ -265,14 +282,30 @@ export default function PartnershipsPage() {
                 <PartnershipPanel
                     partnershipId={selectedPartnership}
                     onClose={() => setSelectedPartnership(null)}
-                    onUpdate={loadData}
+                    onUpdate={async (showLoading = false) => {
+                        // Refresh the data
+                        await loadData(showLoading);
+                    }}
                 />
             )}
+
+            {/* Create Partnership Modal */}
+            <CreatePartnershipModal
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSuccess={async (partnershipId) => {
+                    setShowCreateModal(false);
+                    // Refresh the partnerships list (without showing loading spinner)
+                    await loadData(false);
+                    // Select the newly created partnership
+                    setSelectedPartnership(partnershipId);
+                }}
+            />
         </div>
     );
 }
 
-function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId: string; onClose: () => void; onUpdate?: () => void }) {
+function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId: string; onClose: () => void; onUpdate?: (showLoading?: boolean) => Promise<void> }) {
     const [partnership, setPartnership] = useState<PartnershipDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [note, setNote] = useState('');
@@ -307,11 +340,12 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
     async function handleStageChange(newStage: string) {
         try {
             await updatePartnershipStage(partnershipId, newStage);
-            loadPartnership();
-            // Refresh the parent list to update Kanban board
+            // Refresh the parent list to update Kanban board first
             if (onUpdate) {
-                onUpdate();
+                await onUpdate(false); // Refresh without showing loading spinner
             }
+            // Then refresh the partnership details
+            await loadPartnership();
         } catch (err) {
             console.error('Failed to update stage:', err);
         }

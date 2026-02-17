@@ -296,6 +296,92 @@ export async function updatePartnershipStage(
     });
 }
 
+export interface CreatePartnershipInput {
+    organizationName: string;
+    organizationType: string;
+    primaryContactName: string;
+    primaryContactEmail?: string;
+    primaryContactJobTitle?: string;
+    primaryContactPhone?: string;
+    partnershipType: string;
+    initialStage: string;
+    season?: string;
+    source?: string;
+    estimatedRevenue?: number;
+    tags?: string[];
+}
+
+export interface DuplicateOrg {
+    id: string;
+    name: string;
+    type: string;
+    partnershipCount: number;
+}
+
+export interface CreatePartnershipResponse {
+    id: string;
+    partnerOrgId: string;
+    contactId: string;
+    message: string;
+}
+
+export interface DuplicateErrorResponse {
+    error: string;
+    duplicates: DuplicateOrg[];
+    message: string;
+}
+
+/** Create a new partnership */
+export async function createPartnership(
+    data: CreatePartnershipInput
+): Promise<CreatePartnershipResponse> {
+    const token = await getIdToken();
+    if (!token) {
+        throw new Error('Not authenticated. Please sign in.');
+    }
+
+    const response = await fetch(`${API_BASE}/api/education/partnerships`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ...data,
+            tags: data.tags || [],
+        }),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+        // Handle duplicate error (409 status)
+        if (response.status === 409 && responseData.duplicates) {
+            const error = new Error(responseData.message || 'Duplicate found') as Error & { status?: number; data?: DuplicateErrorResponse };
+            error.status = 409;
+            error.data = responseData;
+            throw error;
+        }
+        throw new Error(responseData.error || responseData.message || `API error: ${response.status}`);
+    }
+
+    return responseData;
+}
+
+/** Create a new partnership instance for an existing organization */
+export async function createPartnershipForExistingOrg(
+    partnerOrgId: string,
+    data: Omit<CreatePartnershipInput, 'organizationName' | 'organizationType'>
+): Promise<CreatePartnershipResponse> {
+    return apiRequest<CreatePartnershipResponse>(`/api/education/partnerships/existing/${partnerOrgId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+            ...data,
+            tags: data.tags || [],
+        }),
+    });
+}
+
 // ============================================
 // Inbox API
 // ============================================
