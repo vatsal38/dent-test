@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getEducationHome, EducationHomePriority, EducationHomeAtRisk, getAirtableStatus, syncAirtable, AirtableStatus } from '@/lib/api';
 import Link from 'next/link';
+import { ErrorToast } from '@/components/ErrorToast';
 
 export default function HomePage() {
     const [data, setData] = useState<{
@@ -27,6 +28,7 @@ export default function HomePage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [airtableStatus, setAirtableStatus] = useState<AirtableStatus | null>(null);
     const [syncing, setSyncing] = useState(false);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -47,13 +49,14 @@ export default function HomePage() {
 
     const handleSync = useCallback(async () => {
         setSyncing(true);
+        setSyncError(null);
         try {
             await syncAirtable();
             // Reload data after sync
             await loadData();
         } catch (err) {
             console.error('Sync failed:', err);
-            alert('Sync failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+            setSyncError('Sync failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
         } finally {
             setSyncing(false);
         }
@@ -89,7 +92,13 @@ export default function HomePage() {
                         'Good evening';
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <>
+            <ErrorToast
+                isOpen={!!syncError}
+                message={syncError || ''}
+                onClose={() => setSyncError(null)}
+            />
+            <div className="max-w-7xl mx-auto px-6 py-8">
             {/* Header Section */}
             <div className="mb-6">
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">Daily Command Center</h1>
@@ -476,5 +485,6 @@ export default function HomePage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

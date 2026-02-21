@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail } from '@/lib/api';
+import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, getPartnershipTotals, PartnershipTotalsResponse, addPartnershipContact, AddContactInput, sendEmail } from '@/lib/api';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
+import { EmailComposer } from '@/components/EmailComposer';
+
+const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
+    'dentership_host': 'Dentership Host',
+    'made_at_dent_partner': 'Made at Dent Partner',
+    'internship_host': 'Internship Host',
+    'sponsor': 'Sponsor',
+    'other': 'Other',
+};
 
 export default function PartnershipsPage() {
     const [view, setView] = useState<'list' | 'kanban'>('kanban');
@@ -11,6 +20,8 @@ export default function PartnershipsPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedPartnership, setSelectedPartnership] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+    const [totals, setTotals] = useState<PartnershipTotalsResponse | null>(null);
 
     const loadData = useCallback(async (showLoading = true) => {
         if (showLoading) {
@@ -21,13 +32,20 @@ export default function PartnershipsPage() {
             // For kanban view, request maximum partnerships and sort by createdAt to show newest first
             // For list view, use the default limit
             const limit = view === 'kanban' ? 100 : 50; // Backend max limit is 100
-            const response = await getPartnerships({ 
-                view, 
-                limit,
-                sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
-                sortOrder: 'desc'
-            });
+            const [response, totalsResponse] = await Promise.all([
+                getPartnerships({ 
+                    view, 
+                    limit,
+                    sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
+                    sortOrder: 'desc',
+                    type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+                }),
+                getPartnershipTotals().catch(() => null),
+            ]);
             setData(response);
+            if (totalsResponse) {
+                setTotals(totalsResponse);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load partnerships');
         } finally {
@@ -35,7 +53,7 @@ export default function PartnershipsPage() {
                 setLoading(false);
             }
         }
-    }, [view]);
+    }, [view, selectedTypes]);
 
     useEffect(() => {
         loadData();
@@ -99,6 +117,76 @@ export default function PartnershipsPage() {
                             >
                                 + New Partnership
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Dashboard Totals / Roll-Up View */}
+                    {totals && (
+                        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Partnership Dashboard Totals</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                    <p className="text-sm text-gray-600 mb-1">Total Partnerships</p>
+                                    <p className="text-2xl font-bold text-gray-900">{totals.totals.totalPartnerships}</p>
+                                </div>
+                                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                    <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                                    <p className="text-2xl font-bold text-gray-900">
+                                        ${totals.totals.totalRevenue.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                    <p className="text-sm text-gray-600 mb-1">Partnership Types</p>
+                                    <p className="text-2xl font-bold text-gray-900">{totals.byType.filter(t => t.count > 0).length}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                {totals.byType.map((type) => (
+                                    <div key={type.partnershipType} className="bg-white rounded-lg border border-gray-200 p-3">
+                                        <p className="text-xs text-gray-600 mb-1 truncate">{type.label}</p>
+                                        <p className="text-lg font-bold text-gray-900">{type.count}</p>
+                                        {type.totalRevenue > 0 && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                ${type.totalRevenue.toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Partnership Type Filter */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Partnership Type (FY26 Partner Role)</label>
+                        <div className="flex flex-wrap gap-2">
+                            {Object.entries(PARTNERSHIP_TYPE_LABELS).map(([value, label]) => (
+                                <button
+                                    key={value}
+                                    onClick={() => {
+                                        if (selectedTypes.includes(value)) {
+                                            setSelectedTypes(selectedTypes.filter(t => t !== value));
+                                        } else {
+                                            setSelectedTypes([...selectedTypes, value]);
+                                        }
+                                    }}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                        selectedTypes.includes(value)
+                                            ? 'bg-[#3b82f6] text-white'
+                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                            {selectedTypes.length > 0 && (
+                                <button
+                                    onClick={() => setSelectedTypes([])}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                >
+                                    Clear Filters
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -309,6 +397,16 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
     const [partnership, setPartnership] = useState<PartnershipDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [note, setNote] = useState('');
+    const [showAddContact, setShowAddContact] = useState(false);
+    const [newContact, setNewContact] = useState<AddContactInput>({
+        name: '',
+        email: '',
+        phone: '',
+        jobTitle: '',
+        isPrimary: false,
+    });
+    const [addingContact, setAddingContact] = useState(false);
+    const [showEmailComposer, setShowEmailComposer] = useState(false);
 
     const loadPartnership = useCallback(async () => {
         setLoading(true);
@@ -334,6 +432,21 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
             loadPartnership();
         } catch (err) {
             console.error('Failed to add note:', err);
+        }
+    }
+
+    async function handleAddContact() {
+        if (!newContact.name.trim()) return;
+        setAddingContact(true);
+        try {
+            await addPartnershipContact(partnershipId, newContact);
+            setNewContact({ name: '', email: '', phone: '', jobTitle: '', isPrimary: false });
+            setShowAddContact(false);
+            loadPartnership();
+        } catch (err) {
+            console.error('Failed to add contact:', err);
+        } finally {
+            setAddingContact(false);
         }
     }
 
@@ -421,9 +534,142 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
             </div>
 
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                {/* Contact Details Section */}
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900">Contact Information</h3>
+                        <button
+                            onClick={() => setShowAddContact(!showAddContact)}
+                            className="px-3 py-1.5 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-xs font-medium"
+                        >
+                            + Add Contact
+                        </button>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-3">
+                        <div>
+                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Organization</label>
+                            <p className="text-sm text-gray-900 mt-1">{partnership.partnerName}</p>
+                        </div>
+                        
+                        {/* Add Contact Form */}
+                        {showAddContact && (
+                            <div className="border-t border-gray-200 pt-3 space-y-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                                    <input
+                                        type="text"
+                                        value={newContact.name}
+                                        onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                        placeholder="Contact name"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            value={newContact.email}
+                                            onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                            placeholder="email@example.com"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                                        <input
+                                            type="tel"
+                                            value={newContact.phone}
+                                            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                            placeholder="(555) 123-4567"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Job Title</label>
+                                    <input
+                                        type="text"
+                                        value={newContact.jobTitle}
+                                        onChange={(e) => setNewContact({ ...newContact, jobTitle: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                        placeholder="e.g., Director of Partnerships"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isPrimary"
+                                        checked={newContact.isPrimary}
+                                        onChange={(e) => setNewContact({ ...newContact, isPrimary: e.target.checked })}
+                                        className="w-4 h-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]"
+                                    />
+                                    <label htmlFor="isPrimary" className="text-xs text-gray-700">Set as primary contact</label>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setShowAddContact(false);
+                                            setNewContact({ name: '', email: '', phone: '', jobTitle: '', isPrimary: false });
+                                        }}
+                                        className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleAddContact}
+                                        disabled={!newContact.name.trim() || addingContact}
+                                        className="flex-1 px-3 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium disabled:opacity-50"
+                                    >
+                                        {addingContact ? 'Adding...' : 'Add Contact'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {partnership.contacts && partnership.contacts.length > 0 && (
+                            <div className="space-y-2">
+                                {partnership.contacts.map((contact) => (
+                                    <div key={contact.id} className="border-t border-gray-200 pt-3 first:border-t-0 first:pt-0">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                                                    {contact.isPrimary && (
+                                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">Primary</span>
+                                                    )}
+                                                </div>
+                                                {contact.jobTitle && (
+                                                    <p className="text-xs text-gray-600 mt-0.5">{contact.jobTitle}</p>
+                                                )}
+                                                {contact.email && (
+                                                    <a href={`mailto:${contact.email}`} className="text-sm text-[#3b82f6] hover:underline mt-1 block">
+                                                        {contact.email}
+                                                    </a>
+                                                )}
+                                                {contact.phone && (
+                                                    <a href={`tel:${contact.phone}`} className="text-sm text-gray-700 mt-1 block">
+                                                        {contact.phone}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {(!partnership.contacts || partnership.contacts.length === 0) && !showAddContact && (
+                            <p className="text-sm text-gray-500">No contact information available</p>
+                        )}
+                    </div>
+                </div>
+
                 {/* Quick Actions */}
                 <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium">
+                    <button
+                        onClick={() => setShowEmailComposer(true)}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
+                    >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
@@ -481,16 +727,16 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                     </div>
                 </div>
 
-                {/* Activity Section */}
+                {/* Activity Timeline Section */}
                 <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Activity Timeline</h3>
                     <div className="space-y-3">
-                        {partnership.activities.slice(0, 10).length === 0 ? (
+                        {partnership.activities.length === 0 ? (
                             <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
                                 <p className="text-sm text-gray-500">No activity yet</p>
                             </div>
                         ) : (
-                            partnership.activities.slice(0, 10).map((activity) => {
+                            partnership.activities.map((activity) => {
                                 const getActivityIcon = () => {
                                     switch (activity.type) {
                                         case 'email_sent':
@@ -518,7 +764,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
 
                                 return (
                                     <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                        <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 flex-shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 shrink-0">
                                             {getActivityIcon()}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -539,6 +785,29 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                         )}
                     </div>
                 </div>
+
+                {/* Email Composer */}
+                {showEmailComposer && partnership && (
+                    <EmailComposer
+                        isOpen={showEmailComposer}
+                        to={partnership.contacts?.find(c => c.isPrimary)?.email || partnership.contacts?.[0]?.email || ''}
+                        partnershipId={partnership.id}
+                        onClose={() => setShowEmailComposer(false)}
+                        onSend={async (data) => {
+                            try {
+                                await sendEmail({
+                                    ...data,
+                                    partnershipId: partnership.id,
+                                    preserveSignature: true,
+                                });
+                                await loadPartnership();
+                            } catch (err) {
+                                console.error('Failed to send email:', err);
+                                throw err;
+                            }
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

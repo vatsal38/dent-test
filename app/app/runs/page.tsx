@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getRuns, getRunTemplates, RunListItem, RunTemplate, createRun } from '@/lib/api';
+import { getRuns, getRunTemplates, RunListItem, RunTemplate, createRun, getPartnerships, PartnershipsListResponse } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export default function RunsPage() {
@@ -14,6 +14,7 @@ export default function RunsPage() {
     const [selectedTemplate, setSelectedTemplate] = useState<RunTemplate | null>(null);
     const [runName, setRunName] = useState('');
     const [creating, setCreating] = useState(false);
+    const [selectedPartnershipIds, setSelectedPartnershipIds] = useState<string[]>([]);
 
     useEffect(() => {
         loadData();
@@ -44,6 +45,7 @@ export default function RunsPage() {
                 templateId: selectedTemplate?.id,
                 name: runName,
                 description: selectedTemplate ? `Run: ${selectedTemplate.name}` : undefined,
+                linkedPartnershipIds: selectedPartnershipIds,
             });
             router.push(`/app/runs/${run.id}`);
         } catch (err) {
@@ -255,11 +257,14 @@ export default function RunsPage() {
                     template={selectedTemplate}
                     runName={runName}
                     onNameChange={setRunName}
+                    selectedPartnershipIds={selectedPartnershipIds}
+                    onPartnershipIdsChange={setSelectedPartnershipIds}
                     onCreate={handleCreateRun}
                     onClose={() => {
                         setShowCreateModal(false);
                         setSelectedTemplate(null);
                         setRunName('');
+                        setSelectedPartnershipIds([]);
                     }}
                     creating={creating}
                 />
@@ -272,6 +277,8 @@ function CreateRunModal({
     template,
     runName,
     onNameChange,
+    selectedPartnershipIds,
+    onPartnershipIdsChange,
     onCreate,
     onClose,
     creating,
@@ -279,10 +286,46 @@ function CreateRunModal({
     template: RunTemplate | null;
     runName: string;
     onNameChange: (name: string) => void;
+    selectedPartnershipIds: string[];
+    onPartnershipIdsChange: (ids: string[]) => void;
     onCreate: () => void;
     onClose: () => void;
     creating: boolean;
 }) {
+    const [partnerships, setPartnerships] = useState<PartnershipsListResponse | null>(null);
+    const [loadingPartnerships, setLoadingPartnerships] = useState(false);
+    const [showPartnershipSelector, setShowPartnershipSelector] = useState(false);
+    const [partnershipSearch, setPartnershipSearch] = useState('');
+
+    useEffect(() => {
+        if (showPartnershipSelector && !partnerships && !loadingPartnerships) {
+            setLoadingPartnerships(true);
+            getPartnerships({ limit: 100, view: 'list' })
+                .then(data => {
+                    setPartnerships(data);
+                })
+                .catch(err => {
+                    console.error('Failed to load partnerships:', err);
+                })
+                .finally(() => {
+                    setLoadingPartnerships(false);
+                });
+        }
+    }, [showPartnershipSelector, partnerships, loadingPartnerships]);
+
+    const filteredPartnerships = partnerships?.partnerships?.filter(p =>
+        p.partnerName.toLowerCase().includes(partnershipSearch.toLowerCase()) ||
+        p.contactName?.toLowerCase().includes(partnershipSearch.toLowerCase()) ||
+        p.contactEmail?.toLowerCase().includes(partnershipSearch.toLowerCase())
+    ) || [];
+
+    const togglePartnership = (partnershipId: string) => {
+        if (selectedPartnershipIds.includes(partnershipId)) {
+            onPartnershipIdsChange(selectedPartnershipIds.filter(id => id !== partnershipId));
+        } else {
+            onPartnershipIdsChange([...selectedPartnershipIds, partnershipId]);
+        }
+    };
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -321,6 +364,108 @@ function CreateRunModal({
                         placeholder={template ? `Enter run name...` : "e.g., Weekly Review, Follow-up Session"}
                         className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
                     />
+                </div>
+
+                {/* Partnership Selector */}
+                <div className="mb-4">
+                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                        Link to Partnerships (Optional)
+                    </label>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowPartnershipSelector(!showPartnershipSelector)}
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 bg-white text-left flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                        >
+                            <span className="text-sm">
+                                {selectedPartnershipIds.length > 0
+                                    ? `${selectedPartnershipIds.length} partnership${selectedPartnershipIds.length > 1 ? 's' : ''} selected`
+                                    : 'Select partnerships...'}
+                            </span>
+                            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        {showPartnershipSelector && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                <div className="p-2 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        value={partnershipSearch}
+                                        onChange={(e) => setPartnershipSearch(e.target.value)}
+                                        placeholder="Search partnerships..."
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </div>
+                                {loadingPartnerships ? (
+                                    <div className="p-4 text-center">
+                                        <div className="animate-spin w-5 h-5 border-2 border-[#3b82f6] border-t-transparent rounded-full mx-auto"></div>
+                                        <p className="text-xs text-gray-500 mt-2">Loading partnerships...</p>
+                                    </div>
+                                ) : filteredPartnerships.length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-gray-500">
+                                        {partnershipSearch ? 'No partnerships found' : 'No partnerships available'}
+                                    </div>
+                                ) : (
+                                    <div className="max-h-48 overflow-y-auto">
+                                        {filteredPartnerships.slice(0, 20).map((partnership) => (
+                                            <label
+                                                key={partnership.id}
+                                                className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-100 cursor-pointer"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedPartnershipIds.includes(partnership.id)}
+                                                    onChange={() => togglePartnership(partnership.id)}
+                                                    className="mt-1 w-4 h-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                        {partnership.partnerName}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        {partnership.contactName && (
+                                                            <span className="text-xs text-gray-600">
+                                                                {partnership.contactName}
+                                                            </span>
+                                                        )}
+                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded">
+                                                            {partnership.stageLabel}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    {selectedPartnershipIds.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {partnerships?.partnerships
+                                ?.filter(p => selectedPartnershipIds.includes(p.id))
+                                .map((partnership) => (
+                                    <span
+                                        key={partnership.id}
+                                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded"
+                                    >
+                                        {partnership.partnerName}
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePartnership(partnership.id)}
+                                            className="text-blue-700 hover:text-blue-900"
+                                        >
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex gap-2">

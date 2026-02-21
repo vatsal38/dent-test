@@ -296,6 +296,60 @@ export async function updatePartnershipStage(
     });
 }
 
+export interface AddContactInput {
+    name: string;
+    email?: string;
+    phone?: string;
+    jobTitle?: string;
+    isPrimary?: boolean;
+}
+
+export interface Contact {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    jobTitle: string | null;
+    isPrimary: boolean;
+}
+
+export async function addPartnershipContact(
+    partnershipId: string,
+    data: AddContactInput
+): Promise<Contact> {
+    return apiRequest(`/api/education/partnerships/${partnershipId}/contacts`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export interface SendEmailInput {
+    to: string | string[];
+    subject: string;
+    body: string;
+    bodyHtml?: string;
+    preserveSignature?: boolean;
+}
+
+export async function sendEmailReply(
+    threadId: string,
+    data: SendEmailInput
+): Promise<{ success: boolean; messageId: string; threadId: string }> {
+    return apiRequest(`/api/education/inbox/threads/${threadId}/send-reply`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function sendEmail(
+    data: SendEmailInput & { partnershipId?: string }
+): Promise<{ success: boolean; messageId: string; threadId: string }> {
+    return apiRequest('/api/education/inbox/send-email', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
 export interface CreatePartnershipInput {
     organizationName: string;
     organizationType: string;
@@ -382,6 +436,28 @@ export async function createPartnershipForExistingOrg(
     });
 }
 
+export interface PartnershipTotalsResponse {
+    byType: Array<{
+        partnershipType: string;
+        label: string;
+        count: number;
+        totalRevenue: number;
+    }>;
+    byStage: Array<{
+        stage: string;
+        label: string;
+        count: number;
+    }>;
+    totals: {
+        totalPartnerships: number;
+        totalRevenue: number;
+    };
+}
+
+export async function getPartnershipTotals(): Promise<PartnershipTotalsResponse> {
+    return apiRequest<PartnershipTotalsResponse>('/api/education/partnerships/totals');
+}
+
 // ============================================
 // Inbox API
 // ============================================
@@ -416,10 +492,12 @@ export interface GmailThreadsResponse {
 export async function getGmailThreads(options?: {
     category?: string;
     reviewed?: string;
+    partnershipContactsOnly?: string;
 }): Promise<GmailThreadsResponse> {
     const params = new URLSearchParams();
     if (options?.category) params.set('category', options.category);
     if (options?.reviewed) params.set('reviewed', options.reviewed);
+    if (options?.partnershipContactsOnly) params.set('partnershipContactsOnly', options.partnershipContactsOnly);
     const qs = params.toString();
     return apiRequest<GmailThreadsResponse>(`/api/education/inbox/threads${qs ? `?${qs}` : ''}`);
 }
@@ -446,6 +524,12 @@ export async function createPartnerFromEmail(
 
 export async function markThreadReviewed(threadId: string): Promise<{ success: boolean }> {
     return apiRequest(`/api/education/inbox/threads/${threadId}/mark-reviewed`, {
+        method: 'POST',
+    });
+}
+
+export async function unlinkThread(threadId: string): Promise<{ success: boolean }> {
+    return apiRequest(`/api/education/inbox/threads/${threadId}/unlink`, {
         method: 'POST',
     });
 }

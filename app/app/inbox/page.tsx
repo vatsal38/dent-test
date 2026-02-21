@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse } from '@/lib/api';
+import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse, unlinkThread } from '@/lib/api';
 import Link from 'next/link';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 export default function InboxPage() {
     const [data, setData] = useState<GmailThreadsResponse | null>(null);
@@ -14,6 +15,7 @@ export default function InboxPage() {
     const [connecting, setConnecting] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+    const [partnershipContactsOnly, setPartnershipContactsOnly] = useState(false);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -22,6 +24,7 @@ export default function InboxPage() {
             const [threadsResponse, statusResponse] = await Promise.all([
                 getGmailThreads({
                     category: selectedCategory === 'all' ? undefined : selectedCategory,
+                    partnershipContactsOnly: partnershipContactsOnly ? 'true' : undefined,
                 }).catch(() => ({ connected: false, threads: [], counts: {} })),
                 getGmailStatus().catch(() => ({ connected: false })),
             ]);
@@ -32,7 +35,7 @@ export default function InboxPage() {
         } finally {
             setLoading(false);
         }
-    }, [selectedCategory]);
+    }, [selectedCategory, partnershipContactsOnly]);
 
     useEffect(() => {
         loadData();
@@ -44,6 +47,15 @@ export default function InboxPage() {
             loadData();
         } catch (err) {
             console.error('Failed to link thread:', err);
+        }
+    }
+
+    async function handleUnlinkThread(threadId: string) {
+        try {
+            await unlinkThread(threadId);
+            loadData();
+        } catch (err) {
+            console.error('Failed to unlink thread:', err);
         }
     }
 
@@ -218,30 +230,46 @@ export default function InboxPage() {
                         </div>
                     </div>
 
-                    {/* Category Tabs */}
-                    <div className="flex items-center gap-1 border-b border-gray-200 -mb-4">
-                        {categories.map((cat) => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategory(cat.id)}
-                                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                                    selectedCategory === cat.id
-                                        ? 'border-[#3b82f6] text-[#3b82f6]'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                {cat.label}
-                                {cat.count > 0 && (
-                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                    {/* Filters */}
+                    <div className="flex items-center justify-between mb-2">
+                        {/* Category Tabs */}
+                        <div className="flex items-center gap-1 border-b border-gray-200">
+                            {categories.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(cat.id)}
+                                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                                         selectedCategory === cat.id
-                                            ? 'bg-blue-100 text-blue-700'
-                                            : 'bg-gray-100 text-gray-600'
-                                    }`}>
-                                        {cat.count}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
+                                            ? 'border-[#3b82f6] text-[#3b82f6]'
+                                            : 'border-transparent text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    {cat.label}
+                                    {cat.count > 0 && (
+                                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                                            selectedCategory === cat.id
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                            {cat.count}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        {/* Partnership Contacts Filter */}
+                        <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={partnershipContactsOnly}
+                                    onChange={(e) => setPartnershipContactsOnly(e.target.checked)}
+                                    className="w-4 h-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]"
+                                />
+                                <span className="text-sm text-gray-700">Partnership contacts only</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -353,6 +381,7 @@ export default function InboxPage() {
                     thread={selectedThreadData}
                     onClose={() => setSelectedThread(null)}
                     onLink={handleLinkThread}
+                    onUnlink={handleUnlinkThread}
                     onMarkReviewed={handleMarkReviewed}
                 />
             )}
@@ -364,11 +393,13 @@ function EmailDetailPanel({
     thread,
     onClose,
     onLink,
+    onUnlink,
     onMarkReviewed,
 }: {
     thread: GmailThread;
     onClose: () => void;
     onLink: (threadId: string, partnershipId: string) => void;
+    onUnlink: (threadId: string) => void;
     onMarkReviewed: (threadId: string) => void;
 }) {
     const [linkPartnershipId, setLinkPartnershipId] = useState('');
@@ -376,6 +407,7 @@ function EmailDetailPanel({
     const [searchQuery, setSearchQuery] = useState('');
     const [showPartnershipDropdown, setShowPartnershipDropdown] = useState(false);
     const [loadingPartnerships, setLoadingPartnerships] = useState(false);
+    const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
     
     const displayName = thread.fromName || thread.fromEmail.split('@')[0];
     const getInitials = (name: string | null, email: string) => {
@@ -516,27 +548,62 @@ function EmailDetailPanel({
             {/* Actions Footer */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                 {thread.partnershipId ? (
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                </svg>
-                                <span className="text-sm font-medium text-blue-700">Linked to Partnership</span>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                    </svg>
+                                    <span className="text-sm font-medium text-blue-700">Linked to Partnership</span>
+                                    {thread.partnerName && (
+                                        <span className="text-sm text-gray-600">• {thread.partnerName}</span>
+                                    )}
+                                </div>
+                                <Link
+                                    href={`/app/partnerships/${thread.partnershipId}`}
+                                    className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
+                                >
+                                    View Partnership →
+                                </Link>
                             </div>
-                            <Link
-                                href={`/app/partnerships/${thread.partnershipId}`}
-                                className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
+                            <button
+                                onClick={() => onMarkReviewed(thread.id)}
+                                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
                             >
-                                View Partnership →
-                            </Link>
+                                Mark as Reviewed
+                            </button>
                         </div>
-                        <button
-                            onClick={() => onMarkReviewed(thread.id)}
-                            className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
-                        >
-                            Mark as Reviewed
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowUnlinkConfirm(true)}
+                                className="px-4 py-2 rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-50 transition-colors text-sm font-medium"
+                            >
+                                Unlink Partnership
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowPartnershipDropdown(true);
+                                    setSearchQuery('');
+                                }}
+                                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                            >
+                                Change Partnership
+                            </button>
+                        </div>
+                        <ConfirmModal
+                            isOpen={showUnlinkConfirm}
+                            title="Unlink Email from Partnership"
+                            message="Are you sure you want to unlink this email from the partnership? This action can be undone by linking it again."
+                            confirmText="Unlink"
+                            cancelText="Cancel"
+                            confirmButtonStyle="danger"
+                            onConfirm={() => {
+                                onUnlink(thread.id);
+                                setShowUnlinkConfirm(false);
+                            }}
+                            onCancel={() => setShowUnlinkConfirm(false)}
+                        />
                     </div>
                 ) : (
                     <div className="space-y-3">
