@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse, unlinkThread } from '@/lib/api';
+import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, disconnectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse, unlinkThread } from '@/lib/api';
 import Link from 'next/link';
 import { ConfirmModal } from '@/components/ConfirmModal';
 
@@ -13,6 +13,7 @@ export default function InboxPage() {
     const [selectedThread, setSelectedThread] = useState<string | null>(null);
     const [gmailStatus, setGmailStatus] = useState<{ connected: boolean; emailAddress?: string | null } | null>(null);
     const [connecting, setConnecting] = useState(false);
+    const [disconnecting, setDisconnecting] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
     const [partnershipContactsOnly, setPartnershipContactsOnly] = useState(false);
@@ -82,9 +83,23 @@ export default function InboxPage() {
         }
     }
 
+    async function handleDisconnectGmail() {
+        if (!confirm('Are you sure you want to disconnect Gmail? This will remove all synced emails.')) return;
+        setDisconnecting(true);
+        try {
+            await disconnectGmail();
+            await loadData(); // Reload inbox to clear out threads
+        } catch (err) {
+            console.error('Failed to disconnect Gmail:', err);
+            setError(err instanceof Error ? err.message : 'Failed to disconnect Gmail');
+        } finally {
+            setDisconnecting(false);
+        }
+    }
+
     async function handleSyncGmail() {
         if (!gmailStatus?.connected) return;
-        
+
         setSyncing(true);
         setError(null);
         try {
@@ -186,11 +201,10 @@ export default function InboxPage() {
                                 <button
                                     onClick={handleSyncGmail}
                                     disabled={syncing}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                        syncing
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${syncing
                                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                             : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                    }`}
+                                        }`}
                                     title="Sync latest emails"
                                 >
                                     {syncing ? (
@@ -208,15 +222,26 @@ export default function InboxPage() {
                                     )}
                                 </button>
                             )}
+                            {gmailStatus?.connected && (
+                                <button
+                                    onClick={handleDisconnectGmail}
+                                    disabled={disconnecting}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${disconnecting
+                                            ? 'bg-red-50 text-red-300 cursor-not-allowed border border-red-200'
+                                            : 'bg-white border border-red-300 text-red-600 hover:bg-red-50'
+                                        }`}
+                                >
+                                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                                </button>
+                            )}
                             {!gmailStatus?.connected && (
                                 <button
                                     onClick={handleConnectGmail}
                                     disabled={connecting}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                        connecting
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${connecting
                                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                             : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-                                    }`}
+                                        }`}
                                 >
                                     {connecting ? 'Connecting...' : 'Connect Gmail'}
                                 </button>
@@ -238,26 +263,24 @@ export default function InboxPage() {
                                 <button
                                     key={cat.id}
                                     onClick={() => setSelectedCategory(cat.id)}
-                                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                                        selectedCategory === cat.id
+                                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${selectedCategory === cat.id
                                             ? 'border-[#3b82f6] text-[#3b82f6]'
                                             : 'border-transparent text-gray-600 hover:text-gray-900'
-                                    }`}
+                                        }`}
                                 >
                                     {cat.label}
                                     {cat.count > 0 && (
-                                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                                            selectedCategory === cat.id
+                                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${selectedCategory === cat.id
                                                 ? 'bg-blue-100 text-blue-700'
                                                 : 'bg-gray-100 text-gray-600'
-                                        }`}>
+                                            }`}>
                                             {cat.count}
                                         </span>
                                     )}
                                 </button>
                             ))}
                         </div>
-                        
+
                         {/* Partnership Contacts Filter */}
                         <div className="flex items-center gap-2">
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -289,14 +312,13 @@ export default function InboxPage() {
                             {threads.map((thread) => {
                                 const isSelected = selectedThread === thread.id;
                                 const displayName = thread.fromName || thread.fromEmail.split('@')[0];
-                                
+
                                 return (
                                     <div
                                         key={thread.id}
                                         onClick={() => setSelectedThread(thread.id)}
-                                        className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                                            isSelected ? 'bg-blue-50' : ''
-                                        } ${!thread.isRead ? 'bg-white' : ''}`}
+                                        className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50' : ''
+                                            } ${!thread.isRead ? 'bg-white' : ''}`}
                                     >
                                         {/* Checkbox */}
                                         <div className="pt-1">
@@ -408,7 +430,7 @@ function EmailDetailPanel({
     const [showPartnershipDropdown, setShowPartnershipDropdown] = useState(false);
     const [loadingPartnerships, setLoadingPartnerships] = useState(false);
     const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
-    
+
     const displayName = thread.fromName || thread.fromEmail.split('@')[0];
     const getInitials = (name: string | null, email: string) => {
         if (name) {
@@ -435,7 +457,7 @@ function EmailDetailPanel({
     }, [showPartnershipDropdown, partnerships, loadingPartnerships]);
 
     // Filter partnerships by search query
-    const filteredPartnerships = partnerships?.partnerships?.filter(p => 
+    const filteredPartnerships = partnerships?.partnerships?.filter(p =>
         p.partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.contactEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.contactName?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -513,17 +535,16 @@ function EmailDetailPanel({
 
                 {/* Category Badge */}
                 <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        thread.category === 'needs_response' ? 'bg-red-100 text-red-700' :
-                        thread.category === 'hot_lead' ? 'bg-orange-100 text-orange-700' :
-                        thread.category === 'mou_related' ? 'bg-green-100 text-green-700' :
-                        'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${thread.category === 'needs_response' ? 'bg-red-100 text-red-700' :
+                            thread.category === 'hot_lead' ? 'bg-orange-100 text-orange-700' :
+                                thread.category === 'mou_related' ? 'bg-green-100 text-green-700' :
+                                    'bg-gray-100 text-gray-700'
+                        }`}>
                         {thread.category === 'unlinked_intro' ? 'New Introduction' :
-                         thread.category === 'needs_response' ? 'Needs Response' :
-                         thread.category === 'hot_lead' ? 'Hot Lead' :
-                         thread.category === 'mou_related' ? 'MOU Related' :
-                         'Uncategorized'}
+                            thread.category === 'needs_response' ? 'Needs Response' :
+                                thread.category === 'hot_lead' ? 'Hot Lead' :
+                                    thread.category === 'mou_related' ? 'MOU Related' :
+                                        'Uncategorized'}
                     </span>
                     {thread.hasAttachment && (
                         <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 flex items-center gap-1">
@@ -628,7 +649,7 @@ function EmailDetailPanel({
                                         Link Email
                                     </button>
                                 </div>
-                                
+
                                 {/* Partnership Dropdown */}
                                 {showPartnershipDropdown && (
                                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">

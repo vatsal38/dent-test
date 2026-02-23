@@ -608,6 +608,12 @@ export async function connectGmail(): Promise<{ authUrl: string }> {
     return apiRequest<{ authUrl: string }>('/api/integrations/gmail/connect');
 }
 
+export async function disconnectGmail(): Promise<{ success: boolean }> {
+    return apiRequest<{ success: boolean }>('/api/integrations/gmail/disconnect', {
+        method: 'POST',
+    });
+}
+
 /** Initiate Gmail OAuth connection - redirects to Google */
 export function initiateGmailConnection(): void {
     window.location.href = `${API_BASE}/api/integrations/gmail/connect`;
