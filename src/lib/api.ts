@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+export { auth };
 
 // Backend API URL
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -158,7 +159,7 @@ export interface PartnershipListItem {
     contactJobTitle: string | null;
     stage: string;
     stageLabel: string;
-    partnershipType: string;
+    partnershipType: string[];
     season: string | null;
     source: string | null;
     estimatedRevenue: number | null;
@@ -198,7 +199,7 @@ export interface PartnershipDetail {
     partnerType: string;
     stage: string;
     stageLabel: string;
-    partnershipType: string;
+    partnershipType: string[];
     season: string | null;
     source: string | null;
     estimatedRevenue: number | null;
@@ -256,6 +257,7 @@ export async function getPartnerships(options?: {
     sortOrder?: 'asc' | 'desc';
     limit?: number;
     offset?: number;
+    assignedTo?: string;
 }): Promise<PartnershipsListResponse> {
     const params = new URLSearchParams();
     if (options?.view) params.set('view', options.view);
@@ -267,6 +269,7 @@ export async function getPartnerships(options?: {
     if (options?.sortOrder) params.set('sortOrder', options.sortOrder);
     if (options?.limit) params.set('limit', options.limit.toString());
     if (options?.offset) params.set('offset', options.offset.toString());
+    if (options?.assignedTo) params.set('assignedTo', options.assignedTo);
     
     const qs = params.toString();
     return apiRequest<PartnershipsListResponse>(`/api/education/partnerships${qs ? `?${qs}` : ''}`);
@@ -357,7 +360,7 @@ export interface CreatePartnershipInput {
     primaryContactEmail?: string;
     primaryContactJobTitle?: string;
     primaryContactPhone?: string;
-    partnershipType: string;
+    partnershipType: string[];
     initialStage: string;
     season?: string;
     source?: string;
@@ -454,8 +457,11 @@ export interface PartnershipTotalsResponse {
     };
 }
 
-export async function getPartnershipTotals(): Promise<PartnershipTotalsResponse> {
-    return apiRequest<PartnershipTotalsResponse>('/api/education/partnerships/totals');
+export async function getPartnershipTotals(options?: { assignedTo?: string }): Promise<PartnershipTotalsResponse> {
+    const params = new URLSearchParams();
+    if (options?.assignedTo) params.set('assignedTo', options.assignedTo);
+    const qs = params.toString();
+    return apiRequest<PartnershipTotalsResponse>(`/api/education/partnerships/totals${qs ? `?${qs}` : ''}`);
 }
 
 // ============================================

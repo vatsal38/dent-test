@@ -15,19 +15,22 @@ interface CreatePartnershipModalProps {
 }
 
 const PARTNERSHIP_TYPES = [
-    { value: 'dentership_host', label: 'Dentership Host' },
-    { value: 'made_at_dent_partner', label: 'Made at Dent Partner' },
-    { value: 'internship_host', label: 'Internship Host' },
+    { value: 'dentership_host', label: 'Denternship Host' },
+    { value: 'space_partner', label: 'Space Partner' },
+    { value: 'made_at_dent', label: 'Made@Dent' },
     { value: 'sponsor', label: 'Sponsor' },
+    { value: 'food_for_thought_speaker', label: 'Food-for-Thought Speaker' },
+    { value: 'aixdt_irc_evaluator', label: 'AIxDT IRC Evaluator' },
     { value: 'other', label: 'Other' },
 ];
 
 const PARTNERSHIP_STAGES = [
-    { value: 'new_intro_made', label: 'New / Intro Made' },
+    { value: 'need_outreach', label: 'Need 1st Outreach' },
     { value: 'awaiting_response', label: 'Awaiting Response' },
     { value: 'conversation_active', label: 'Conversation Active' },
-    { value: 'mou_sent', label: 'MOU Sent' },
-    { value: 'confirmed_locked', label: 'Confirmed / Locked' },
+    { value: 'interested', label: 'Interested' },
+    { value: 'mou_sent', label: 'MOU/Invoice Sent' },
+    { value: 'confirmed_locked', label: 'Confirmed/Locked' },
     { value: 'not_this_season', label: 'Not This Season' },
 ];
 
@@ -47,13 +50,18 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
         primaryContactEmail: '',
         primaryContactJobTitle: '',
         primaryContactPhone: '',
-        partnershipType: 'dentership_host',
-        initialStage: 'new_intro_made',
+        partnershipType: ['dentership_host'],
+        initialStage: 'need_outreach',
         season: '',
         source: '',
         estimatedRevenue: undefined,
         tags: [],
     });
+
+    const [airtableSearch, setAirtableSearch] = useState('');
+    const [airtableResults, setAirtableResults] = useState<any[]>([]);
+    const [isSearchingAirtable, setIsSearchingAirtable] = useState(false);
+    const [showAirtableSearch, setShowAirtableSearch] = useState(false);
 
     const [duplicates, setDuplicates] = useState<DuplicateOrg[] | null>(null);
     const [selectedDuplicate, setSelectedDuplicate] = useState<string | null>(null);
@@ -115,17 +123,69 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
             primaryContactEmail: '',
             primaryContactJobTitle: '',
             primaryContactPhone: '',
-            partnershipType: 'dentership_host',
-            initialStage: 'new_intro_made',
+            partnershipType: ['dentership_host'],
+            initialStage: 'need_outreach',
             season: '',
             source: '',
             estimatedRevenue: undefined,
             tags: [],
         });
+        setAirtableSearch('');
+        setAirtableResults([]);
+        setShowAirtableSearch(false);
         setDuplicates(null);
         setSelectedDuplicate(null);
         setError(null);
         onClose();
+    };
+
+    const searchAirtable = async () => {
+        if (!airtableSearch.trim()) return;
+        setIsSearchingAirtable(true);
+        setError(null);
+        try {
+            const response = await fetch(`/api/integrations/airtable/search?search=${encodeURIComponent(airtableSearch)}`);
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            setAirtableResults(data.records || []);
+        } catch (err: any) {
+            setError(err.message || 'Failed to search Airtable');
+        } finally {
+            setIsSearchingAirtable(false);
+        }
+    };
+
+    const handleImportAirtable = async (record: any) => {
+        setCreating(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/education/partnerships/import-airtable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recordId: record.id }),
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            if (onSuccess) {
+                await onSuccess(data.partnershipId);
+            }
+            handleClose();
+        } catch (err: any) {
+            setError(err.message || 'Failed to import from Airtable');
+            setCreating(false);
+        }
+    };
+
+    const togglePartnershipType = (type: string) => {
+        setFormData(prev => {
+            const current = prev.partnershipType || [];
+            if (current.includes(type)) {
+                return { ...prev, partnershipType: current.filter(t => t !== type) };
+            } else {
+                return { ...prev, partnershipType: [...current, type] };
+            }
+        });
     };
 
     return (
@@ -164,11 +224,10 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                             {duplicates.map((dup) => (
                                 <label
                                     key={dup.id}
-                                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                        selectedDuplicate === dup.id
-                                            ? 'bg-blue-50 border-blue-300'
-                                            : 'bg-white border-gray-200 hover:bg-gray-50'
-                                    }`}
+                                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedDuplicate === dup.id
+                                        ? 'bg-blue-50 border-blue-300'
+                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                        }`}
                                 >
                                     <input
                                         type="radio"
@@ -209,8 +268,99 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                     </div>
                 )}
 
-                {/* Create Form */}
+                {/* Tabs */}
                 {!duplicates && (
+                    <div className="flex border-b border-gray-200 mb-6">
+                        <button
+                            onClick={() => setShowAirtableSearch(false)}
+                            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${!showAirtableSearch
+                                ? 'border-[#3b82f6] text-[#3b82f6]'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Manual Entry
+                        </button>
+                        <button
+                            onClick={() => setShowAirtableSearch(true)}
+                            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${showAirtableSearch
+                                ? 'border-[#3b82f6] text-[#3b82f6]'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Search Airtable
+                        </button>
+                    </div>
+                )}
+
+                {/* Airtable Search Flow */}
+                {showAirtableSearch && !duplicates && (
+                    <div className="space-y-4">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={airtableSearch}
+                                onChange={(e) => setAirtableSearch(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && searchAirtable()}
+                                placeholder="Search by organization name..."
+                                className="flex-1 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                            <button
+                                onClick={searchAirtable}
+                                disabled={isSearchingAirtable}
+                                className="px-4 py-2 bg-[#3b82f6] text-white rounded-lg hover:bg-[#2563eb] disabled:opacity-50"
+                            >
+                                {isSearchingAirtable ? 'Searching...' : 'Search'}
+                            </button>
+                        </div>
+
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                            {airtableResults.length === 0 && !isSearchingAirtable && (
+                                <div className="text-center py-8 text-gray-500 text-sm">
+                                    No records found in Airtable. Try a different search term.
+                                </div>
+                            )}
+                            {airtableResults.map((record) => (
+                                <div
+                                    key={record.id}
+                                    className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all group"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-gray-900 mb-1">{record.fields.Name || 'Unnamed'}</h3>
+                                            <div className="flex flex-wrap gap-2">
+                                                {record.fields.Type && (
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase">
+                                                        {record.fields.Type}
+                                                    </span>
+                                                )}
+                                                {record.fields.Status && (
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-600 uppercase">
+                                                        {record.fields.Status}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {record.fields.Website && (
+                                                <div className="text-xs text-blue-500 mt-2 truncate max-w-xs cursor-default">
+                                                    {record.fields.Website}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => handleImportAirtable(record)}
+                                            disabled={creating}
+                                            className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+                                        >
+                                            {creating ? 'Importing...' : 'Import Record'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Manual Create Form */}
+                {!duplicates && !showAirtableSearch && (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -303,25 +453,28 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Partnership Type *
-                                </label>
-                                <select
-                                    value={formData.partnershipType}
-                                    onChange={(e) => setFormData({ ...formData, partnershipType: e.target.value })}
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                >
-                                    {PARTNERSHIP_TYPES.map((type) => (
-                                        <option key={type.value} value={type.value}>
+                        <div>
+                            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                Partnership Types *
+                            </label>
+                            <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                {PARTNERSHIP_TYPES.map((type) => (
+                                    <label key={type.value} className="flex items-center gap-2 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.partnershipType?.includes(type.value)}
+                                            onChange={() => togglePartnershipType(type.value)}
+                                            className="w-4 h-4 rounded border-gray-300 text-[#3b82f6] focus:ring-[#3b82f6]"
+                                        />
+                                        <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">
                                             {type.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                        </span>
+                                    </label>
+                                ))}
                             </div>
+                        </div>
 
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
                                     Initial Stage *
@@ -339,9 +492,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                                     ))}
                                 </select>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
                                     Season
@@ -354,7 +505,9 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                                     placeholder="FY26 Spring"
                                 />
                             </div>
+                        </div>
 
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
                                     Source
@@ -367,21 +520,21 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                                     placeholder="Referral, Email, etc."
                                 />
                             </div>
-                        </div>
 
-                        <div>
-                            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                Estimated Revenue
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.estimatedRevenue || ''}
-                                onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                min="0"
-                                step="0.01"
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                placeholder="50000"
-                            />
+                            <div>
+                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                    Estimated Revenue
+                                </label>
+                                <input
+                                    type="number"
+                                    value={formData.estimatedRevenue || ''}
+                                    onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                    min="0"
+                                    step="0.01"
+                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    placeholder="50000"
+                                />
+                            </div>
                         </div>
 
                         <div className="flex gap-2 pt-4">
@@ -394,7 +547,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                             </button>
                             <button
                                 type="submit"
-                                disabled={creating}
+                                disabled={creating || !formData.partnershipType?.length}
                                 className="flex-1 px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {creating ? 'Creating...' : 'Create Partnership'}

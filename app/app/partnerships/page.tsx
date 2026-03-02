@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, getPartnershipTotals, PartnershipTotalsResponse, addPartnershipContact, AddContactInput, sendEmail } from '@/lib/api';
+import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, getPartnershipTotals, PartnershipTotalsResponse, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
 
 const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
-    'dentership_host': 'Dentership Host',
-    'made_at_dent_partner': 'Made at Dent Partner',
-    'internship_host': 'Internship Host',
+    'dentership_host': 'Denternship Host',
+    'space_partner': 'Space Partner',
+    'made_at_dent': 'Made@Dent',
     'sponsor': 'Sponsor',
+    'food_for_thought_speaker': 'Food-for-Thought Speaker',
+    'aixdt_irc_evaluator': 'AIxDT IRC Evaluator',
     'other': 'Other',
 };
 
@@ -22,6 +24,7 @@ export default function PartnershipsPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [totals, setTotals] = useState<PartnershipTotalsResponse | null>(null);
+    const [showOnlyMine, setShowOnlyMine] = useState(false);
 
     const loadData = useCallback(async (showLoading = true) => {
         if (showLoading) {
@@ -29,18 +32,20 @@ export default function PartnershipsPage() {
         }
         setError(null);
         try {
-            // For kanban view, request maximum partnerships and sort by createdAt to show newest first
-            // For list view, use the default limit
-            const limit = view === 'kanban' ? 100 : 50; // Backend max limit is 100
+            const userId = auth.currentUser?.uid;
+            const assignedTo = showOnlyMine ? userId : undefined;
+
+            const limit = view === 'kanban' ? 100 : 50;
             const [response, totalsResponse] = await Promise.all([
-                getPartnerships({ 
-                    view, 
+                getPartnerships({
+                    view,
                     limit,
                     sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
                     sortOrder: 'desc',
                     type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+                    assignedTo,
                 }),
-                getPartnershipTotals().catch(() => null),
+                getPartnershipTotals({ assignedTo }).catch(() => null),
             ]);
             setData(response);
             if (totalsResponse) {
@@ -53,7 +58,7 @@ export default function PartnershipsPage() {
                 setLoading(false);
             }
         }
-    }, [view, selectedTypes]);
+    }, [view, selectedTypes, showOnlyMine]);
 
     useEffect(() => {
         loadData();
@@ -91,27 +96,39 @@ export default function PartnershipsPage() {
                             <p className="text-gray-600">Manage all partnership stages and activities in one view.</p>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="flex bg-gray-100 rounded-lg p-1 mr-4">
+                                <button
+                                    onClick={() => setShowOnlyMine(false)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${!showOnlyMine ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    All Partners
+                                </button>
+                                <button
+                                    onClick={() => setShowOnlyMine(true)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${showOnlyMine ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    My Partners
+                                </button>
+                            </div>
                             <button
                                 onClick={() => setView('kanban')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    view === 'kanban'
-                                        ? 'bg-[#3b82f6] text-white'
-                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                }`}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'kanban'
+                                    ? 'bg-[#3b82f6] text-white'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    }`}
                             >
                                 Kanban Board
                             </button>
                             <button
                                 onClick={() => setView('list')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    view === 'list'
-                                        ? 'bg-[#3b82f6] text-white'
-                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                }`}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'list'
+                                    ? 'bg-[#3b82f6] text-white'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    }`}
                             >
                                 List View
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowCreateModal(true)}
                                 className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
                             >
@@ -170,11 +187,10 @@ export default function PartnershipsPage() {
                                             setSelectedTypes([...selectedTypes, value]);
                                         }
                                     }}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                        selectedTypes.includes(value)
-                                            ? 'bg-[#3b82f6] text-white'
-                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                    }`}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedTypes.includes(value)
+                                        ? 'bg-[#3b82f6] text-white'
+                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                        }`}
                                 >
                                     {label}
                                 </button>
@@ -209,7 +225,7 @@ export default function PartnershipsPage() {
                                                 // Determine status based on days since contact
                                                 let status = 'on track';
                                                 let statusColor = 'bg-green-100 text-green-700 border-green-200';
-                                                
+
                                                 if (partnership.daysSinceContact !== null) {
                                                     if (partnership.daysSinceContact >= 14) {
                                                         status = 'stalled';
@@ -221,18 +237,17 @@ export default function PartnershipsPage() {
                                                 }
 
                                                 const isSelected = selectedPartnership === partnership.id;
-                                                
+
                                                 const isStuck = partnership.daysSinceContact !== null && partnership.daysSinceContact >= 14;
-                                                
+
                                                 return (
                                                     <div
                                                         key={partnership.id}
                                                         onClick={() => setSelectedPartnership(partnership.id)}
-                                                        className={`p-4 rounded-lg bg-white border cursor-pointer transition-all hover:shadow-md ${
-                                                            isSelected ? 'border-[#3b82f6] shadow-lg ring-2 ring-blue-100' : isStuck ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                                                        }`}
+                                                        className={`p-4 rounded-lg bg-white border cursor-pointer transition-all hover:shadow-md ${isSelected ? 'border-[#3b82f6] shadow-lg ring-2 ring-blue-100' : isStuck ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                                                            }`}
                                                     >
-                                                        <div className="flex items-start justify-between mb-2">
+                                                        <div className="flex items-start justify-between mb-1">
                                                             <h4 className="font-semibold text-gray-900 text-sm flex-1 pr-2">
                                                                 {partnership.partnerName}
                                                             </h4>
@@ -240,7 +255,15 @@ export default function PartnershipsPage() {
                                                                 {status}
                                                             </span>
                                                         </div>
-                                                        
+
+                                                        {partnership.partnershipType && (
+                                                            <p className="text-[10px] text-gray-500 mb-2">
+                                                                {Array.isArray(partnership.partnershipType)
+                                                                    ? partnership.partnershipType.map(t => PARTNERSHIP_TYPE_LABELS[t] || t).join(', ')
+                                                                    : (PARTNERSHIP_TYPE_LABELS[partnership.partnershipType] || partnership.partnershipType)}
+                                                            </p>
+                                                        )}
+
                                                         {/* Revenue Badge */}
                                                         {partnership.estimatedRevenue && (
                                                             <div className="mb-2">
@@ -249,11 +272,11 @@ export default function PartnershipsPage() {
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        
+
                                                         {/* Contact Info */}
                                                         <div className="space-y-1 mb-2">
                                                             <p className={`text-xs ${isStuck ? 'text-red-700 font-semibold' : 'text-gray-500'}`}>
-                                                                {partnership.daysSinceContact !== null 
+                                                                {partnership.daysSinceContact !== null
                                                                     ? `${partnership.daysSinceContact} days since contact`
                                                                     : 'No contact'}
                                                             </p>
@@ -263,7 +286,7 @@ export default function PartnershipsPage() {
                                                                 </p>
                                                             )}
                                                         </div>
-                                                        
+
                                                         {/* Stuck Warning */}
                                                         {isStuck && (
                                                             <div className="mt-2 pt-2 border-t border-red-200">
@@ -303,7 +326,7 @@ export default function PartnershipsPage() {
                                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Revenue</span>
                                 </div>
                             </div>
-                            
+
                             {/* Table Body */}
                             <div className="divide-y divide-gray-200">
                                 {data.partnerships && data.partnerships.length > 0 ? (
@@ -311,16 +334,19 @@ export default function PartnershipsPage() {
                                         <div
                                             key={partnership.id}
                                             onClick={() => setSelectedPartnership(partnership.id)}
-                                            className={`grid grid-cols-12 gap-4 px-6 py-4 cursor-pointer transition-colors ${
-                                                selectedPartnership === partnership.id
-                                                    ? 'bg-blue-50 border-l-4 border-l-[#3b82f6]'
-                                                    : 'bg-white hover:bg-gray-50'
-                                            }`}
+                                            className={`grid grid-cols-12 gap-4 px-6 py-4 cursor-pointer transition-colors ${selectedPartnership === partnership.id
+                                                ? 'bg-blue-50 border-l-4 border-l-[#3b82f6]'
+                                                : 'bg-white hover:bg-gray-50'
+                                                }`}
                                         >
                                             <div className="col-span-4">
                                                 <h3 className="font-semibold text-gray-900">{partnership.partnerName}</h3>
                                                 {partnership.partnershipType && (
-                                                    <p className="text-xs text-gray-500 mt-1">{partnership.partnershipType}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {Array.isArray(partnership.partnershipType)
+                                                            ? partnership.partnershipType.map(t => PARTNERSHIP_TYPE_LABELS[t] || t).join(', ')
+                                                            : (PARTNERSHIP_TYPE_LABELS[partnership.partnershipType] || partnership.partnershipType)}
+                                                    </p>
                                                 )}
                                             </div>
                                             <div className="col-span-2">
@@ -465,11 +491,12 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
     }
 
     const stages = [
-        { value: 'new_intro_made', label: 'New Intro Made' },
+        { value: 'need_outreach', label: 'Need 1st Outreach' },
         { value: 'awaiting_response', label: 'Awaiting Response' },
         { value: 'conversation_active', label: 'Conversation Active' },
-        { value: 'mou_sent', label: 'MOU Sent' },
-        { value: 'confirmed_locked', label: 'Confirmed & Locked' },
+        { value: 'interested', label: 'Interested' },
+        { value: 'mou_sent', label: 'MOU/Invoice Sent' },
+        { value: 'confirmed_locked', label: 'Confirmed/Locked' },
         { value: 'not_this_season', label: 'Not This Season' },
     ];
 
@@ -486,9 +513,9 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
     const daysSinceContact = partnership.lastContactAt
         ? Math.floor((new Date().getTime() - new Date(partnership.lastContactAt).getTime()) / (1000 * 60 * 60 * 24))
         : null;
-    
-    const needsAttention = partnership.stage === 'mou_sent' && 
-                          (daysSinceContact !== null && daysSinceContact > 5);
+
+    const needsAttention = partnership.stage === 'mou_sent' &&
+        (daysSinceContact !== null && daysSinceContact > 5);
 
     return (
         <div className="w-1/3 border-l border-gray-200 bg-white flex flex-col h-full overflow-y-auto">
@@ -550,7 +577,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Organization</label>
                             <p className="text-sm text-gray-900 mt-1">{partnership.partnerName}</p>
                         </div>
-                        
+
                         {/* Add Contact Form */}
                         {showAddContact && (
                             <div className="border-t border-gray-200 pt-3 space-y-3">
@@ -694,8 +721,8 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                                 <div key={activity.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                                     <p className="text-sm text-gray-700 leading-relaxed">{activity.content}</p>
                                     <p className="text-xs text-gray-500 mt-2">
-                                        {new Date(activity.createdAt).toLocaleDateString('en-US', { 
-                                            month: 'short', 
+                                        {new Date(activity.createdAt).toLocaleDateString('en-US', {
+                                            month: 'short',
                                             day: 'numeric',
                                             year: 'numeric'
                                         })}
@@ -770,8 +797,8 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-gray-900">{activity.content || activity.type.replace(/_/g, ' ')}</p>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                {new Date(activity.createdAt).toLocaleDateString('en-US', { 
-                                                    month: 'short', 
+                                                {new Date(activity.createdAt).toLocaleDateString('en-US', {
+                                                    month: 'short',
                                                     day: 'numeric',
                                                     year: 'numeric',
                                                     hour: 'numeric',

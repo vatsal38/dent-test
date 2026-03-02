@@ -28,3 +28,70 @@ body {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(229, 231, 235, 0.8);
 }
+
+/* TipTap email editor content */
+.email-editor-content p { margin: 0.5em 0; }
+.email-editor-content p:first-child { margin-top: 0; }
+.email-editor-content p:last-child { margin-bottom: 0; }
+.email-editor-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5em 0; }
+.email-editor-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5em 0; }
+.email-editor-content li { margin: 0.25em 0; }
+.email-editor-content strong { font-weight: 600; }
+.email-editor-content em { font-style: italic; }
+.email-editor-content p.is-editor-empty:first-child::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+
+/* Template-style header/footer in editor */
+.email-editor-content h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.75rem 0;
+  padding: 0.5rem 0 0.5rem 0.75rem;
+  border-left: 3px solid var(--primary, #3b82f6);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+  border-radius: 0 6px 6px 0;
+}
+.email-editor-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 1rem 0 0.5rem 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.email-editor-content blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #3b82f6;
+  color: #334155;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.email-editor-content blockquote p { margin: 0; }
+.email-editor-content hr {
+  margin: 1.25rem 0;
+  border: none;
+  border-top: 2px solid #e5e7eb;
+}
+.email-editor-content hr + p {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+.email-editor-content ul {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0 1rem 0;
+}
+.email-editor-content li {
+  margin: 0.35em 0;
+  line-height: 1.5;
+}
+.email-editor-content .email-signoff {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+.email-editor-content a { color: #2563eb; text-decoration: underline; }
