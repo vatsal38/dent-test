@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: appUser,
         firebaseUser,
         organization,
-        isAuthenticated: !!firebaseUser,
+        isAuthenticated: !!firebaseUser && !!appUser,
         isLoading,
         signInWithGoogle,
         logout,
