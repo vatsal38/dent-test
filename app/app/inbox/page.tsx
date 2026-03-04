@@ -119,7 +119,7 @@ export default function InboxPage() {
         }
     }
 
-    if (loading) {
+    if (loading && !data) {
         return (
             <div className="p-8 flex items-center justify-center min-h-screen">
                 <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
@@ -127,20 +127,8 @@ export default function InboxPage() {
         );
     }
 
-    if (error) {
-        return (
-            <div className="p-8">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                    {error}
-                </div>
-            </div>
-        );
-    }
-
-    if (!data) return null;
-
-    const threads = data.threads || [];
-    const counts = data.counts || { total: 0, unlinked_intros: 0, needs_response: 0, hot_leads: 0, mou_related: 0 };
+    const threads = data?.threads || [];
+    const counts = data?.counts || { total: 0, unlinked_intros: 0, needs_response: 0, hot_leads: 0, mou_related: 0 };
 
     const categories = [
         { id: 'all', label: 'All Emails', count: counts.total || 0, icon: '📧', color: 'bg-blue-50 border-blue-200' },
@@ -202,8 +190,8 @@ export default function InboxPage() {
                                     onClick={handleSyncGmail}
                                     disabled={syncing}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${syncing
-                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                                         }`}
                                     title="Sync latest emails"
                                 >
@@ -227,8 +215,8 @@ export default function InboxPage() {
                                     onClick={handleDisconnectGmail}
                                     disabled={disconnecting}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${disconnecting
-                                            ? 'bg-red-50 text-red-300 cursor-not-allowed border border-red-200'
-                                            : 'bg-white border border-red-300 text-red-600 hover:bg-red-50'
+                                        ? 'bg-red-50 text-red-300 cursor-not-allowed border border-red-200'
+                                        : 'bg-white border border-red-300 text-red-600 hover:bg-red-50'
                                         }`}
                                 >
                                     {disconnecting ? 'Disconnecting...' : 'Disconnect'}
@@ -239,8 +227,8 @@ export default function InboxPage() {
                                     onClick={handleConnectGmail}
                                     disabled={connecting}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${connecting
-                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                            : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                        : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
                                         }`}
                                 >
                                     {connecting ? 'Connecting...' : 'Connect Gmail'}
@@ -264,15 +252,15 @@ export default function InboxPage() {
                                     key={cat.id}
                                     onClick={() => setSelectedCategory(cat.id)}
                                     className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${selectedCategory === cat.id
-                                            ? 'border-[#3b82f6] text-[#3b82f6]'
-                                            : 'border-transparent text-gray-600 hover:text-gray-900'
+                                        ? 'border-[#3b82f6] text-[#3b82f6]'
+                                        : 'border-transparent text-gray-600 hover:text-gray-900'
                                         }`}
                                 >
                                     {cat.label}
                                     {cat.count > 0 && (
                                         <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${selectedCategory === cat.id
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'bg-gray-100 text-gray-600'
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'bg-gray-100 text-gray-600'
                                             }`}>
                                             {cat.count}
                                         </span>
@@ -296,6 +284,23 @@ export default function InboxPage() {
                     </div>
                 </div>
 
+                {/* Error Banner */}
+                {error && (
+                    <div className="px-6 py-2 bg-red-50 border-b border-red-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-red-700 text-sm">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{error}</span>
+                        </div>
+                        <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
+
                 {/* Email List */}
                 <div className="flex-1 overflow-y-auto">
                     {threads.length === 0 ? (
@@ -304,7 +309,7 @@ export default function InboxPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                             <p className="text-gray-500 text-center">
-                                {data.connected ? 'No emails in this category' : 'Connect Gmail to see your emails'}
+                                {gmailStatus?.connected ? 'No emails in this category' : (loading ? 'Loading emails...' : 'Connect Gmail to see your emails')}
                             </p>
                         </div>
                     ) : (
@@ -536,9 +541,9 @@ function EmailDetailPanel({
                 {/* Category Badge */}
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${thread.category === 'needs_response' ? 'bg-red-100 text-red-700' :
-                            thread.category === 'hot_lead' ? 'bg-orange-100 text-orange-700' :
-                                thread.category === 'mou_related' ? 'bg-green-100 text-green-700' :
-                                    'bg-gray-100 text-gray-700'
+                        thread.category === 'hot_lead' ? 'bg-orange-100 text-orange-700' :
+                            thread.category === 'mou_related' ? 'bg-green-100 text-green-700' :
+                                'bg-gray-100 text-gray-700'
                         }`}>
                         {thread.category === 'unlinked_intro' ? 'New Introduction' :
                             thread.category === 'needs_response' ? 'Needs Response' :
