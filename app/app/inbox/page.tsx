@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, disconnectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse, unlinkThread } from '@/lib/api';
+import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, disconnectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse, unlinkThread, downloadGmailAttachment, sendEmailReply } from '@/lib/api';
 import Link from 'next/link';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { EmailComposer } from '@/components/EmailComposer';
 
 export default function InboxPage() {
     const [data, setData] = useState<GmailThreadsResponse | null>(null);
@@ -17,6 +18,8 @@ export default function InboxPage() {
     const [syncing, setSyncing] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
     const [partnershipContactsOnly, setPartnershipContactsOnly] = useState(false);
+    const [showEmailComposer, setShowEmailComposer] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<GmailThread | null>(null);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -410,6 +413,36 @@ export default function InboxPage() {
                     onLink={handleLinkThread}
                     onUnlink={handleUnlinkThread}
                     onMarkReviewed={handleMarkReviewed}
+                    onReply={(thread) => {
+                        setReplyingTo(thread);
+                        setShowEmailComposer(true);
+                    }}
+                />
+            )}
+
+            {/* Email Composer for Replies */}
+            {showEmailComposer && replyingTo && (
+                <EmailComposer
+                    isOpen={showEmailComposer}
+                    to={replyingTo.fromEmail}
+                    subject={`Re: ${replyingTo.subject}`}
+                    threadId={replyingTo.id}
+                    onClose={() => {
+                        setShowEmailComposer(false);
+                        setReplyingTo(null);
+                    }}
+                    onSend={async (data) => {
+                        try {
+                            await sendEmailReply(replyingTo.id, {
+                                ...data,
+                                preserveSignature: true,
+                            });
+                            // Optionally reload
+                            loadData();
+                        } catch (err) {
+                            console.error('Failed to send reply:', err);
+                        }
+                    }}
                 />
             )}
         </div>
@@ -422,12 +455,14 @@ function EmailDetailPanel({
     onLink,
     onUnlink,
     onMarkReviewed,
+    onReply,
 }: {
     thread: GmailThread;
     onClose: () => void;
     onLink: (threadId: string, partnershipId: string) => void;
     onUnlink: (threadId: string) => void;
     onMarkReviewed: (threadId: string) => void;
+    onReply: (thread: GmailThread) => void;
 }) {
     const [linkPartnershipId, setLinkPartnershipId] = useState('');
     const [partnerships, setPartnerships] = useState<PartnershipsListResponse | null>(null);
@@ -519,6 +554,16 @@ function EmailDetailPanel({
                     </div>
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={() => onReply(thread)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                            title="Reply to email"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                            Reply
+                        </button>
+                        <button
                             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                             onClick={() => onMarkReviewed(thread.id)}
                             title="Mark as reviewed"
@@ -561,6 +606,42 @@ function EmailDetailPanel({
                     )}
                 </div>
             </div>
+
+            {/* Attachments Section */}
+            {thread.hasAttachment && thread.attachments && thread.attachments.length > 0 && (
+                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        Attachments ({thread.attachments.length})
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                        {thread.attachments.map((att) => (
+                            <div
+                                key={att.attachmentId}
+                                className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group cursor-pointer max-w-[280px]"
+                                onClick={() => downloadGmailAttachment(att.messageId, att.attachmentId, att.filename, att.mimeType)}
+                            >
+                                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600" title={att.filename}>{att.filename}</p>
+                                    <p className="text-xs text-gray-500">{Math.round(att.size / 1024)} KB</p>
+                                </div>
+                                <button className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors shrink-0">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Email Body */}
             <div className="flex-1 px-6 py-6">

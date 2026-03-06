@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, getPartnershipTotals, PartnershipTotalsResponse, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
+import Link from 'next/link';
 
 const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
     'dentership_host': 'Denternship Host',
@@ -128,6 +129,15 @@ export default function PartnershipsPage() {
                             >
                                 List View
                             </button>
+                            <Link
+                                href="/app/partnerships/tracker"
+                                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Tracker
+                            </Link>
                             <button
                                 onClick={() => setShowCreateModal(true)}
                                 className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
@@ -208,9 +218,9 @@ export default function PartnershipsPage() {
 
                     {/* Kanban View */}
                     {view === 'kanban' && data.columns && (
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="flex gap-6 overflow-x-auto pb-4 -mx-6 px-6">
                             {data.columns.map((column) => (
-                                <div key={column.stage} className="flex flex-col">
+                                <div key={column.stage} className="flex flex-col min-w-[320px] w-[320px]">
                                     <div className="mb-4 pb-3 border-b border-gray-200">
                                         <h3 className="font-semibold text-gray-900 text-lg">{column.label}</h3>
                                         <p className="text-sm text-gray-500 mt-1">{column.count} partnerships</p>

@@ -22,7 +22,13 @@ interface EmailComposerProps {
     threadId?: string;
     partnershipId?: string;
     onClose: () => void;
-    onSend: (data: { to: string | string[]; subject: string; body: string; bodyHtml?: string }) => Promise<void>;
+    onSend: (data: {
+        to: string | string[];
+        subject: string;
+        body: string;
+        bodyHtml?: string;
+        attachments?: Array<{ filename: string; mimeType: string; content: string }>;
+    }) => Promise<void>;
 }
 
 const FollowUpIcon = () => (
@@ -106,6 +112,7 @@ export function EmailComposer({
     const [aiPrompt, setAiPrompt] = useState('');
     const [sending, setSending] = useState(false);
     const [aiGenerating, setAiGenerating] = useState(false);
+    const [attachments, setAttachments] = useState<File[]>([]);
 
     if (!isOpen) return null;
 
@@ -139,19 +146,53 @@ export function EmailComposer({
         }
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+        }
+    };
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const base64String = reader.result as string;
+                const base64Content = base64String.split(',')[1] || '';
+                resolve(base64Content);
+            };
+            reader.onerror = error => reject(error);
+        });
+    };
+
     const handleSend = async () => {
         if (!subject.trim() || !bodyText.trim()) return;
         setSending(true);
         try {
+            // Encode attachments to base64
+            const encodedAttachments = await Promise.all(
+                attachments.map(async (file) => ({
+                    filename: file.name,
+                    mimeType: file.type || 'application/octet-stream',
+                    content: await fileToBase64(file),
+                }))
+            );
+
             await onSend({
                 to,
                 subject,
                 body: bodyText,
                 bodyHtml: bodyHtml || undefined,
+                attachments: encodedAttachments.length > 0 ? encodedAttachments : undefined,
             });
             setSubject('');
             setBodyHtml('');
             setBodyText('');
+            setAttachments([]);
             setSelectedTemplate(null);
             setUseAI(false);
             setAiPrompt('');
@@ -209,11 +250,10 @@ export function EmailComposer({
                                     key={template.id}
                                     type="button"
                                     onClick={() => handleTemplateSelect(template)}
-                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-left transition-all ${
-                                        selectedTemplate?.id === template.id
-                                            ? 'border-[#3b82f6] bg-blue-50/80 shadow-sm'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/80'
-                                    }`}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-left transition-all ${selectedTemplate?.id === template.id
+                                        ? 'border-[#3b82f6] bg-blue-50/80 shadow-sm'
+                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/80'
+                                        }`}
                                 >
                                     <span className={`p-2 rounded-lg ${selectedTemplate?.id === template.id ? 'bg-[#3b82f6] text-white' : 'bg-gray-100 text-gray-600'}`}>
                                         {template.icon}
@@ -287,6 +327,42 @@ export function EmailComposer({
                             placeholder="Write your message… You can use bold, italic, and lists."
                             onChange={handleEditorChange}
                         />
+                    </div>
+
+                    {/* Attachments */}
+                    <div className="pt-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Attachments</label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {attachments.map((file, idx) => (
+                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-100 group">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                    <span className="truncate max-w-[150px]">{file.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeAttachment(idx)}
+                                        className="text-blue-400 hover:text-blue-600 p-0.5"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <label className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors shadow-sm">
+                            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Attachment
+                            <input
+                                type="file"
+                                multiple
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                        </label>
                     </div>
                 </div>
 

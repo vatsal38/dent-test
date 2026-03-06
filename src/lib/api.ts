@@ -332,6 +332,7 @@ export interface SendEmailInput {
     body: string;
     bodyHtml?: string;
     preserveSignature?: boolean;
+    attachments?: Array<{ filename: string; mimeType: string; content: string }>;
 }
 
 export async function sendEmailReply(
@@ -478,6 +479,13 @@ export interface GmailThread {
     category: 'unlinked_intro' | 'needs_response' | 'hot_lead' | 'mou_related';
     isRead: boolean;
     hasAttachment: boolean;
+    attachments?: Array<{
+        messageId: string;
+        attachmentId: string;
+        filename: string;
+        mimeType: string;
+        size: number;
+    }>;
     receivedAt: string;
     partnershipId: string | null;
     partnerName: string | null;
@@ -540,6 +548,35 @@ export async function unlinkThread(threadId: string): Promise<{ success: boolean
     });
 }
 
+/**
+ * Downloads an email attachment from the backend
+ */
+export async function downloadGmailAttachment(messageId: string, attachmentId: string, filename: string, mimeType: string) {
+    const token = await getIdToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const params = new URLSearchParams({ filename, mimeType });
+    const response = await fetch(`${API_BASE}/api/education/inbox/messages/${messageId}/attachments/${attachmentId}?${params.toString()}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to download attachment');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
 // ============================================
 // Airtable Integration API
 // ============================================
@@ -590,6 +627,22 @@ export async function syncAirtable(): Promise<{
 export async function disconnectAirtable(): Promise<{ success: boolean }> {
     return apiRequest('/api/education/airtable/disconnect', {
         method: 'POST',
+    });
+}
+
+export interface AirtableRecord {
+    id: string;
+    fields: Record<string, any>;
+}
+
+export async function searchAirtable(query: string): Promise<{ records: AirtableRecord[] }> {
+    return apiRequest<{ records: AirtableRecord[] }>(`/api/integrations/airtable/search?search=${encodeURIComponent(query)}`);
+}
+
+export async function importAirtableRecord(recordId: string): Promise<{ partnershipId: string; success: boolean }> {
+    return apiRequest<{ partnershipId: string; success: boolean }>('/api/education/partnerships/import-airtable', {
+        method: 'POST',
+        body: JSON.stringify({ recordId }),
     });
 }
 

@@ -6,6 +6,8 @@ import {
     createPartnershipForExistingOrg,
     CreatePartnershipInput,
     DuplicateOrg,
+    searchAirtable as apiSearchAirtable,
+    importAirtableRecord,
 } from '@/lib/api';
 
 interface CreatePartnershipModalProps {
@@ -144,9 +146,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
         setIsSearchingAirtable(true);
         setError(null);
         try {
-            const response = await fetch(`/api/integrations/airtable/search?search=${encodeURIComponent(airtableSearch)}`);
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
+            const data = await apiSearchAirtable(airtableSearch);
             setAirtableResults(data.records || []);
         } catch (err: any) {
             setError(err.message || 'Failed to search Airtable');
@@ -159,13 +159,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
         setCreating(true);
         setError(null);
         try {
-            const response = await fetch('/api/education/partnerships/import-airtable', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ recordId: record.id }),
-            });
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
+            const data = await importAirtableRecord(record.id);
 
             if (onSuccess) {
                 await onSuccess(data.partnershipId);
