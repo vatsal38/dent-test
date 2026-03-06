@@ -155,7 +155,9 @@ export interface PartnershipListItem {
     partnerName: string;
     partnerType: string;
     contactName: string | null;
+    primaryContactName?: string | null;
     contactEmail: string | null;
+    primaryContactEmail?: string | null;
     contactJobTitle: string | null;
     stage: string;
     stageLabel: string;
@@ -177,6 +179,8 @@ export interface PartnershipListItem {
     mouStatus: string | null;
     createdAt: string;
 }
+
+export type PartnershipSummary = PartnershipListItem;
 
 export interface PartnershipsListResponse {
     view: 'list' | 'kanban';
@@ -456,6 +460,9 @@ export interface PartnershipTotalsResponse {
         totalPartnerships: number;
         totalRevenue: number;
     };
+    totalCount?: number;
+    totalEstimatedRevenue?: number;
+    countsByStage?: Record<string, number>;
 }
 
 export async function getPartnershipTotals(options?: { assignedTo?: string }): Promise<PartnershipTotalsResponse> {

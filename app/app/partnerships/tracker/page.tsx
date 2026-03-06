@@ -49,7 +49,7 @@ export default function PartnershipTrackerPage() {
                 getPartnerships({ limit: 100 }),
                 getPartnershipTotals()
             ]);
-            setPartnerships(resp.partnerships);
+            setPartnerships(resp.partnerships || []);
             setTotals(totalsResp);
         } catch (err) {
             console.error('Failed to load tracker data:', err);
