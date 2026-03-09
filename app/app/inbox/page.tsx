@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { getGmailThreads, GmailThread, GmailThreadsResponse, linkThread, markThreadReviewed, connectGmail, disconnectGmail, getGmailStatus, syncGmail, getPartnerships, PartnershipsListResponse, unlinkThread, downloadGmailAttachment, sendEmailReply } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { EmailComposer } from '@/components/EmailComposer';
@@ -363,7 +364,7 @@ export default function InboxPage() {
                                                     </span>
                                                     {thread.partnerName && (
                                                         <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full shrink-0">
-                                                            {thread.partnerName}
+                                                            {formatPartnerName(thread.partnerName)}
                                                         </span>
                                                     )}
                                                     {thread.category === 'needs_response' && (
@@ -664,7 +665,7 @@ function EmailDetailPanel({
                                     </svg>
                                     <span className="text-sm font-medium text-blue-700">Linked to Partnership</span>
                                     {thread.partnerName && (
-                                        <span className="text-sm text-gray-600">• {thread.partnerName}</span>
+                                        <span className="text-sm text-gray-600">• {formatPartnerName(thread.partnerName)}</span>
                                     )}
                                 </div>
                                 <Link
@@ -764,7 +765,7 @@ function EmailDetailPanel({
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-sm font-medium text-gray-900 truncate">
-                                                                    {partnership.partnerName}
+                                                                    {formatPartnerName(partnership.partnerName)}
                                                                 </p>
                                                                 <div className="flex items-center gap-2 mt-1">
                                                                     {partnership.contactName && (

@@ -11,6 +11,7 @@ import {
     getPartnerships,
     PartnershipListItem,
 } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 
 interface CreatePartnershipModalProps {
     isOpen: boolean;
@@ -372,8 +373,11 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                                         Airtable Records ({airtableResults.length})
                                     </h3>
                                     {airtableResults.map((record) => {
-                                        const rawName = record.fields.Name || record.fields['Partner Name'] || record.fields.Organization || 'Unnamed';
-                                        const displayName = Array.isArray(rawName) ? String(rawName[0] || 'Unnamed') : String(rawName);
+                                        const displayName = formatPartnerName(
+                                            record.fields['Organization Name'] ||
+                                            record.fields['Organization'] ||
+                                            record.fields['Name']
+                                        );
 
                                         // Check if this Airtable record name closely matches an existing DB record
                                         const isAlreadyImported = existingResults.some(

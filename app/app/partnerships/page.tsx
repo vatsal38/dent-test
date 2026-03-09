@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, getPartnershipTotals, PartnershipTotalsResponse, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
 import Link from 'next/link';
@@ -259,7 +260,7 @@ export default function PartnershipsPage() {
                                                     >
                                                         <div className="flex items-start justify-between mb-1">
                                                             <h4 className="font-semibold text-gray-900 text-sm flex-1 pr-2">
-                                                                {partnership.partnerName}
+                                                                {formatPartnerName(partnership.partnerName)}
                                                             </h4>
                                                             <span className={`px-2 py-0.5 rounded text-xs font-medium border shrink-0 ${statusColor}`}>
                                                                 {status}
@@ -350,7 +351,7 @@ export default function PartnershipsPage() {
                                                 }`}
                                         >
                                             <div className="col-span-4">
-                                                <h3 className="font-semibold text-gray-900">{partnership.partnerName}</h3>
+                                                <h3 className="font-semibold text-gray-900">{formatPartnerName(partnership.partnerName)}</h3>
                                                 {partnership.partnershipType && (
                                                     <p className="text-xs text-gray-500 mt-1">
                                                         {Array.isArray(partnership.partnershipType)
@@ -532,7 +533,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10 shadow-sm">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-bold text-gray-900 truncate">{partnership.partnerName}</h2>
+                        <h2 className="text-xl font-bold text-gray-900 truncate">{formatPartnerName(partnership.partnerName)}</h2>
                         <div className="mt-2">
                             <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Stage</label>
                             <select
@@ -585,7 +586,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                     <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-3">
                         <div>
                             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Organization</label>
-                            <p className="text-sm text-gray-900 mt-1">{partnership.partnerName}</p>
+                            <p className="text-sm text-gray-900 mt-1">{formatPartnerName(partnership.partnerName)}</p>
                         </div>
 
                         {/* Add Contact Form */}

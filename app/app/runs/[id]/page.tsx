@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getRunDetails, updateRunStep, updateRunStatus, createRunStep, RunDetail, RunStep, getPartnerships, PartnershipsListResponse } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function RunDetailPage() {
@@ -99,12 +100,11 @@ export default function RunDetailPage() {
                         )}
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            run.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            run.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                            run.status === 'paused' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${run.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                run.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                    run.status === 'paused' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                            }`}>
                             {run.status.replace('_', ' ')}
                         </span>
                     </div>
@@ -259,7 +259,7 @@ function AddStepModal({
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl border border-gray-200 p-6 max-w-md w-full mx-4 shadow-xl">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Add Step</h2>
-                
+
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                         {error}
@@ -358,8 +358,8 @@ function StepCard({
             setLoadingData(true);
             try {
                 // Load partnerships based on step config or default to at-risk
-                const data = await getPartnerships({ 
-                    view: 'list', 
+                const data = await getPartnerships({
+                    view: 'list',
                     limit: 50,
                     // Could filter by step.config if available
                 });
@@ -429,12 +429,11 @@ function StepCard({
                             {step.orderIndex + 1}
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900">{step.title}</h3>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            step.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            step.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                            step.status === 'skipped' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${step.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                step.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                    step.status === 'skipped' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                            }`}>
                             {step.status.replace('_', ' ')}
                         </span>
                     </div>
@@ -466,9 +465,9 @@ function StepCard({
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className="font-medium text-gray-900">{p.partnerName}</p>
+                                                    <p className="font-medium text-gray-900">{formatPartnerName(p.partnerName)}</p>
                                                     <p className="text-xs text-gray-500 mt-1">
-                                                        {p.daysSinceContact !== null 
+                                                        {p.daysSinceContact !== null
                                                             ? `Last contact: ${p.daysSinceContact} days ago`
                                                             : 'No contact yet'}
                                                     </p>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getRuns, getRunTemplates, RunListItem, RunTemplate, createRun, getPartnerships, PartnershipsListResponse } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 export default function RunsPage() {
@@ -146,44 +147,44 @@ export default function RunsPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {templates.map((template) => (
-                        <div
-                            key={template.id}
-                            className="p-6 rounded-lg bg-white border border-gray-200 hover:shadow-lg transition-shadow"
-                        >
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{template.name}</h3>
-                                    <p className="text-sm text-gray-600">{template.description}</p>
-                                </div>
-                                <div className="ml-4">
-                                    {getStatusIcon(template)}
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 text-sm text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <span>{template.estimatedMinutes} mins</span>
+                            <div
+                                key={template.id}
+                                className="p-6 rounded-lg bg-white border border-gray-200 hover:shadow-lg transition-shadow"
+                            >
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{template.name}</h3>
+                                        <p className="text-sm text-gray-600">{template.description}</p>
                                     </div>
-                                    <span>{template.steps.length} steps</span>
+                                    <div className="ml-4">
+                                        {getStatusIcon(template)}
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        setSelectedTemplate(template);
-                                        setRunName(template.name);
-                                        setShowCreateModal(true);
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
-                                >
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                                    </svg>
-                                    Start Run
-                                </button>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                                        <div className="flex items-center gap-1">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span>{template.estimatedMinutes} mins</span>
+                                        </div>
+                                        <span>{template.steps.length} steps</span>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedTemplate(template);
+                                            setRunName(template.name);
+                                            setShowCreateModal(true);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
+                                    >
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                        </svg>
+                                        Start Run
+                                    </button>
+                                </div>
                             </div>
-                        </div>
                         ))}
                     </div>
                 )}
@@ -208,7 +209,7 @@ export default function RunsPage() {
                             const diffMs = now.getTime() - startedDate.getTime();
                             const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                             const diffDays = Math.floor(diffHours / 24);
-                            
+
                             let timeAgo = '';
                             if (diffDays === 0) {
                                 timeAgo = `Today at ${startedDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
@@ -333,7 +334,7 @@ function CreateRunModal({
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
                     {template ? 'Create Run from Template' : 'Create Custom Run'}
                 </h2>
-                
+
                 {template ? (
                     <div className="mb-4 p-3 rounded-lg bg-gray-50">
                         <p className="text-sm text-gray-900 font-medium">{template.name}</p>
@@ -423,7 +424,7 @@ function CreateRunModal({
                                                 />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-gray-900 truncate">
-                                                        {partnership.partnerName}
+                                                        {formatPartnerName(partnership.partnerName)}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         {partnership.contactName && (
@@ -452,7 +453,7 @@ function CreateRunModal({
                                         key={partnership.id}
                                         className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded"
                                     >
-                                        {partnership.partnerName}
+                                        {formatPartnerName(partnership.partnerName)}
                                         <button
                                             type="button"
                                             onClick={() => togglePartnership(partnership.id)}

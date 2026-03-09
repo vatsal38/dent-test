@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { getPartnerships, PartnershipsListResponse, PartnershipTotalsResponse, getPartnershipTotals, PartnershipSummary } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
 
 const STAGE_COLORS: Record<string, string> = {
@@ -233,10 +234,10 @@ export default function PartnershipTrackerPage() {
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm shadow-sm group-hover:from-blue-100 group-hover:to-blue-50 group-hover:border-blue-200 group-hover:text-blue-600 transition-all">
-                                                    {partnership.partnerName.substring(0, 2).toUpperCase()}
+                                                    {formatPartnerName(partnership.partnerName).substring(0, 2).toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{partnership.partnerName}</p>
+                                                    <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{formatPartnerName(partnership.partnerName)}</p>
                                                     <p className="text-xs text-gray-500 mt-0.5">{partnership.partnerType}</p>
                                                 </div>
                                             </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail } from '@/lib/api';
+import { formatPartnerName } from '@/lib/utils';
 
 export default function PartnershipDetailPage() {
     const params = useParams();
@@ -96,7 +97,7 @@ export default function PartnershipDetailPage() {
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-3">{partnership.partnerName}</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-3">{formatPartnerName(partnership.partnerName)}</h1>
                         <div className="flex items-center gap-3 flex-wrap">
                             <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold">
                                 {partnership.partnershipType}
@@ -112,11 +113,10 @@ export default function PartnershipDetailPage() {
                                 </span>
                             )}
                             {partnership.lastContactAt && (
-                                <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-                                    Math.floor((new Date().getTime() - new Date(partnership.lastContactAt).getTime()) / (1000 * 60 * 60 * 24)) >= 14
+                                <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${Math.floor((new Date().getTime() - new Date(partnership.lastContactAt).getTime()) / (1000 * 60 * 60 * 24)) >= 14
                                         ? 'bg-red-100 text-red-700'
                                         : 'bg-gray-50 text-gray-600'
-                                }`}>
+                                    }`}>
                                     {Math.floor((new Date().getTime() - new Date(partnership.lastContactAt).getTime()) / (1000 * 60 * 60 * 24))} days since contact
                                 </span>
                             )}
@@ -137,7 +137,7 @@ export default function PartnershipDetailPage() {
                         </select>
                     </div>
                 </div>
-                
+
                 {/* Quick Context Bar */}
                 <div className="pt-4 border-t border-gray-200">
                     <div className="grid grid-cols-4 gap-4 text-sm">
@@ -148,7 +148,7 @@ export default function PartnershipDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 mb-1">Commitment Date</p>
                             <p className="font-medium text-gray-900">
-                                {partnership.commitmentDate 
+                                {partnership.commitmentDate
                                     ? new Date(partnership.commitmentDate).toLocaleDateString()
                                     : 'Not set'}
                             </p>
@@ -221,8 +221,8 @@ export default function PartnershipDetailPage() {
                                                             {activity.type.replace(/_/g, ' ')}
                                                         </span>
                                                         <span className="text-xs text-gray-500">
-                                                            {new Date(activity.createdAt).toLocaleDateString('en-US', { 
-                                                                month: 'short', 
+                                                            {new Date(activity.createdAt).toLocaleDateString('en-US', {
+                                                                month: 'short',
                                                                 day: 'numeric',
                                                                 year: 'numeric',
                                                                 hour: 'numeric',
