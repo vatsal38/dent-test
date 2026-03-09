@@ -8,6 +8,8 @@ import {
     DuplicateOrg,
     searchAirtable as apiSearchAirtable,
     importAirtableRecord,
+    getPartnerships,
+    PartnershipListItem,
 } from '@/lib/api';
 
 interface CreatePartnershipModalProps {
@@ -62,6 +64,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
 
     const [airtableSearch, setAirtableSearch] = useState('');
     const [airtableResults, setAirtableResults] = useState<any[]>([]);
+    const [existingResults, setExistingResults] = useState<PartnershipListItem[]>([]);
     const [isSearchingAirtable, setIsSearchingAirtable] = useState(false);
     const [showAirtableSearch, setShowAirtableSearch] = useState(false);
 
@@ -134,6 +137,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
         });
         setAirtableSearch('');
         setAirtableResults([]);
+        setExistingResults([]);
         setShowAirtableSearch(false);
         setDuplicates(null);
         setSelectedDuplicate(null);
@@ -146,10 +150,21 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
         setIsSearchingAirtable(true);
         setError(null);
         try {
-            const data = await apiSearchAirtable(airtableSearch);
-            setAirtableResults(data.records || []);
+            const [airtableData, dbData] = await Promise.all([
+                apiSearchAirtable(airtableSearch).catch(err => {
+                    console.error('Airtable search error:', err);
+                    return { records: [] };
+                }),
+                getPartnerships({ search: airtableSearch, limit: 10 }).catch(err => {
+                    console.error('DB search error:', err);
+                    return { partnerships: [] };
+                })
+            ]);
+
+            setAirtableResults(airtableData.records || []);
+            setExistingResults(dbData.partnerships || []);
         } catch (err: any) {
-            setError(err.message || 'Failed to search Airtable');
+            setError(err.message || 'Failed to search');
         } finally {
             setIsSearchingAirtable(false);
         }
@@ -307,249 +322,307 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                             </button>
                         </div>
 
-                        <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                            {airtableResults.length === 0 && !isSearchingAirtable && (
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                            {airtableResults.length === 0 && existingResults.length === 0 && !isSearchingAirtable && (
                                 <div className="text-center py-8 text-gray-500 text-sm">
-                                    No records found in Airtable. Try a different search term.
+                                    No records found. Try a different search term.
                                 </div>
                             )}
-                            {airtableResults.map((record) => (
-                                <div
-                                    key={record.id}
-                                    className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all group"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-900 mb-1">{record.fields.Name || 'Unnamed'}</h3>
-                                            <div className="flex flex-wrap gap-2">
-                                                {record.fields.Type && (
-                                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase">
-                                                        {record.fields.Type}
-                                                    </span>
-                                                )}
-                                                {record.fields.Status && (
-                                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-600 uppercase">
-                                                        {record.fields.Status}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {record.fields.Website && (
-                                                <div className="text-xs text-blue-500 mt-2 truncate max-w-xs cursor-default">
-                                                    {record.fields.Website}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={() => handleImportAirtable(record)}
-                                            disabled={creating}
-                                            className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+
+                            {/* Existing Records Section */}
+                            {existingResults.length > 0 && (
+                                <div className="space-y-2">
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">
+                                        Existing Partnerships ({existingResults.length})
+                                    </h3>
+                                    {existingResults.map((record) => (
+                                        <div
+                                            key={record.id}
+                                            className="p-4 rounded-xl border border-blue-200 bg-blue-50/50 transition-all flex items-start justify-between gap-4"
                                         >
-                                            {creating ? 'Importing...' : 'Import Record'}
-                                        </button>
-                                    </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                                                    {record.partnerName}
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wide">
+                                                        Already in DB
+                                                    </span>
+                                                </h3>
+                                                <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                                                    <span>{record.stageLabel}</span>
+                                                    {record.contactName && <span>• {record.contactName}</span>}
+                                                </div>
+                                            </div>
+                                            <a
+                                                href={`/app/partnerships?id=${record.id}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            >
+                                                View
+                                            </a>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            )}
+
+                            {/* Airtable Records Section */}
+                            {airtableResults.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">
+                                        Airtable Records ({airtableResults.length})
+                                    </h3>
+                                    {airtableResults.map((record) => {
+                                        const rawName = record.fields.Name || record.fields['Partner Name'] || record.fields.Organization || 'Unnamed';
+                                        const displayName = Array.isArray(rawName) ? String(rawName[0] || 'Unnamed') : String(rawName);
+
+                                        // Check if this Airtable record name closely matches an existing DB record
+                                        const isAlreadyImported = existingResults.some(
+                                            er => er.partnerName.toLowerCase() === displayName.toLowerCase()
+                                        );
+
+                                        return (
+                                            <div
+                                                key={record.id}
+                                                className={`p-4 rounded-xl border transition-all group ${isAlreadyImported
+                                                    ? 'border-gray-200 bg-gray-50 opacity-75'
+                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+                                                    }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex-1">
+                                                        <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                                                            {displayName}
+                                                            {isAlreadyImported && (
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-200 text-gray-600 uppercase">
+                                                                    Exists
+                                                                </span>
+                                                            )}
+                                                        </h3>
+                                                        {record.fields.Website && (
+                                                            <div className="text-xs text-blue-500 mt-2 truncate max-w-xs cursor-default">
+                                                                {record.fields.Website}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleImportAirtable(record)}
+                                                        disabled={creating || isAlreadyImported}
+                                                        className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-sm ${isAlreadyImported
+                                                            ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                                            : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50'
+                                                            }`}
+                                                    >
+                                                        {creating ? 'Importing...' : isAlreadyImported ? 'Imported' : 'Import Record'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
                 {/* Manual Create Form */}
-                {!duplicates && !showAirtableSearch && (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Organization Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.organizationName}
-                                    onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Acme School District"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Organization Type *
-                                </label>
-                                <select
-                                    value={formData.organizationType}
-                                    onChange={(e) => setFormData({ ...formData, organizationType: e.target.value })}
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                >
-                                    {ORG_TYPES.map((type) => (
-                                        <option key={type.value} value={type.value}>
-                                            {type.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Contact Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.primaryContactName}
-                                    onChange={(e) => setFormData({ ...formData, primaryContactName: e.target.value })}
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="John Doe"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Contact Email
-                                </label>
-                                <input
-                                    type="email"
-                                    value={formData.primaryContactEmail}
-                                    onChange={(e) => setFormData({ ...formData, primaryContactEmail: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="john@example.com"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Job Title
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.primaryContactJobTitle}
-                                    onChange={(e) => setFormData({ ...formData, primaryContactJobTitle: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Principal"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Phone
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={formData.primaryContactPhone}
-                                    onChange={(e) => setFormData({ ...formData, primaryContactPhone: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="+1 (555) 123-4567"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                Partnership Types *
-                            </label>
-                            <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                {PARTNERSHIP_TYPES.map((type) => (
-                                    <label key={type.value} className="flex items-center gap-2 cursor-pointer group">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.partnershipType?.includes(type.value)}
-                                            onChange={() => togglePartnershipType(type.value)}
-                                            className="w-4 h-4 rounded border-gray-300 text-[#3b82f6] focus:ring-[#3b82f6]"
-                                        />
-                                        <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">
-                                            {type.label}
-                                        </span>
+                {
+                    !duplicates && !showAirtableSearch && (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Organization Name *
                                     </label>
-                                ))}
-                            </div>
-                        </div>
+                                    <input
+                                        type="text"
+                                        value={formData.organizationName}
+                                        onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
+                                        required
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="Acme School District"
+                                    />
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Organization Type *
+                                    </label>
+                                    <select
+                                        value={formData.organizationType}
+                                        onChange={(e) => setFormData({ ...formData, organizationType: e.target.value })}
+                                        required
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        {ORG_TYPES.map((type) => (
+                                            <option key={type.value} value={type.value}>
+                                                {type.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Contact Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.primaryContactName}
+                                        onChange={(e) => setFormData({ ...formData, primaryContactName: e.target.value })}
+                                        required
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="John Doe"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Contact Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={formData.primaryContactEmail}
+                                        onChange={(e) => setFormData({ ...formData, primaryContactEmail: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="john@example.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Job Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.primaryContactJobTitle}
+                                        onChange={(e) => setFormData({ ...formData, primaryContactJobTitle: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="Principal"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Phone
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={formData.primaryContactPhone}
+                                        onChange={(e) => setFormData({ ...formData, primaryContactPhone: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="+1 (555) 123-4567"
+                                    />
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Initial Stage *
+                                    Partnership Types *
                                 </label>
-                                <select
-                                    value={formData.initialStage}
-                                    onChange={(e) => setFormData({ ...formData, initialStage: e.target.value })}
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                >
-                                    {PARTNERSHIP_STAGES.map((stage) => (
-                                        <option key={stage.value} value={stage.value}>
-                                            {stage.label}
-                                        </option>
+                                <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    {PARTNERSHIP_TYPES.map((type) => (
+                                        <label key={type.value} className="flex items-center gap-2 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.partnershipType?.includes(type.value)}
+                                                onChange={() => togglePartnershipType(type.value)}
+                                                className="w-4 h-4 rounded border-gray-300 text-[#3b82f6] focus:ring-[#3b82f6]"
+                                            />
+                                            <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">
+                                                {type.label}
+                                            </span>
+                                        </label>
                                     ))}
-                                </select>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Season
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.season}
-                                    onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="FY26 Spring"
-                                />
-                            </div>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Initial Stage *
+                                    </label>
+                                    <select
+                                        value={formData.initialStage}
+                                        onChange={(e) => setFormData({ ...formData, initialStage: e.target.value })}
+                                        required
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        {PARTNERSHIP_STAGES.map((stage) => (
+                                            <option key={stage.value} value={stage.value}>
+                                                {stage.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Source
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.source}
-                                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Referral, Email, etc."
-                                />
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Season
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.season}
+                                        onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="FY26 Spring"
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
-                                    Estimated Revenue
-                                </label>
-                                <input
-                                    type="number"
-                                    value={formData.estimatedRevenue || ''}
-                                    onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                    min="0"
-                                    step="0.01"
-                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                    placeholder="50000"
-                                />
-                            </div>
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Source
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.source}
+                                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="Referral, Email, etc."
+                                    />
+                                </div>
 
-                        <div className="flex gap-2 pt-4">
-                            <button
-                                type="button"
-                                onClick={handleClose}
-                                className="flex-1 px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={creating || !formData.partnershipType?.length}
-                                className="flex-1 px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {creating ? 'Creating...' : 'Create Partnership'}
-                            </button>
-                        </div>
-                    </form>
-                )}
-            </div>
-        </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                                        Estimated Revenue
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.estimatedRevenue || ''}
+                                        onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                        min="0"
+                                        step="0.01"
+                                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="50000"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={creating || !formData.partnershipType?.length}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {creating ? 'Creating...' : 'Create Partnership'}
+                                </button>
+                            </div>
+                        </form>
+                    )
+                }
+            </div >
+        </div >
     );
 }
