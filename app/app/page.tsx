@@ -87,9 +87,9 @@ export default function HomePage() {
 
     if (!data) return null;
 
-    const topAction = data.priorities[0];
-    const greetingTime = data.greeting.includes('morning') ? 'Good morning' :
-        data.greeting.includes('afternoon') ? 'Good afternoon' :
+    const topAction = data?.priorities?.[0];
+    const greetingTime = data?.greeting?.includes('morning') ? 'Good morning' :
+        data?.greeting?.includes('afternoon') ? 'Good afternoon' :
             'Good evening';
 
     return (
@@ -144,7 +144,7 @@ export default function HomePage() {
                                 {airtableStatus?.connected ? (
                                     <div className="space-y-1">
                                         <p className="text-sm text-gray-700">
-                                            <span className="font-medium">{data.priorities.length}</span> partnerships synced
+                                            <span className="font-medium">{data?.priorities?.length}</span> partnerships synced
                                             {airtableStatus.lastSyncAt && (
                                                 <span className="text-gray-600">
                                                     {' • '}
@@ -297,7 +297,7 @@ export default function HomePage() {
                     <div className="lg:col-span-2">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Priorities</h2>
                         <div className="space-y-3">
-                            {data.priorities.slice(1, 6).map((priority, idx) => {
+                            {data?.priorities?.slice(1, 6).map((priority, idx) => {
                                 // Determine if partnership is stuck (no contact for 14+ days)
                                 const isStuck = priority.daysSinceContact !== null && priority.daysSinceContact >= 14;
                                 const isUrgent = priority.daysUntilDeadline !== null && priority.daysUntilDeadline < 7 && priority.daysUntilDeadline >= 0;
@@ -390,7 +390,7 @@ export default function HomePage() {
                     {/* Right Column */}
                     <div className="space-y-6">
                         {/* At-Risk Alerts */}
-                        {data.atRisk.length > 0 && (
+                        {data?.atRisk?.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 mb-4">
                                     <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -399,7 +399,7 @@ export default function HomePage() {
                                     <h2 className="text-lg font-semibold text-gray-900">At-Risk Alerts</h2>
                                 </div>
                                 <div className="space-y-3">
-                                    {data.atRisk.slice(0, 2).map((item) => (
+                                    {data?.atRisk?.slice(0, 2).map((item) => (
                                         <Link
                                             key={item.id}
                                             href={`/app/partnerships/${item.id}`}
@@ -424,7 +424,7 @@ export default function HomePage() {
                         )}
 
                         {/* Recent Work Sessions */}
-                        {data.recentRuns.length > 0 && (
+                        {data?.recentRuns?.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-2 mb-4">
                                     <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -433,7 +433,7 @@ export default function HomePage() {
                                     <h2 className="text-lg font-semibold text-gray-900">Recent Work Sessions</h2>
                                 </div>
                                 <div className="space-y-3">
-                                    {data.recentRuns.slice(0, 3).map((run) => {
+                                    {data?.recentRuns?.slice(0, 3).map((run) => {
                                         const startedDate = new Date(run.startedAt);
                                         const now = new Date();
                                         const diffMs = now.getTime() - startedDate.getTime();

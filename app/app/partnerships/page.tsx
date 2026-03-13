@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, getPartnershipTotals, PartnershipTotalsResponse, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
+import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
@@ -25,7 +25,6 @@ export default function PartnershipsPage() {
     const [selectedPartnership, setSelectedPartnership] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-    const [totals, setTotals] = useState<PartnershipTotalsResponse | null>(null);
     const [showOnlyMine, setShowOnlyMine] = useState(false);
 
     const loadData = useCallback(async (showLoading = true) => {
@@ -38,21 +37,15 @@ export default function PartnershipsPage() {
             const assignedTo = showOnlyMine ? userId : undefined;
 
             const limit = view === 'kanban' ? 100 : 50;
-            const [response, totalsResponse] = await Promise.all([
-                getPartnerships({
-                    view,
-                    limit,
-                    sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
-                    sortOrder: 'desc',
-                    type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
-                    assignedTo,
-                }),
-                getPartnershipTotals({ assignedTo }).catch(() => null),
-            ]);
+            const response = await getPartnerships({
+                view,
+                limit,
+                sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
+                sortOrder: 'desc',
+                type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+                assignedTo,
+            });
             setData(response);
-            if (totalsResponse) {
-                setTotals(totalsResponse);
-            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load partnerships');
         } finally {
@@ -147,42 +140,6 @@ export default function PartnershipsPage() {
                             </button>
                         </div>
                     </div>
-
-                    {/* Dashboard Totals / Roll-Up View */}
-                    {totals && (
-                        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Partnership Dashboard Totals</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                                    <p className="text-sm text-gray-600 mb-1">Total Partnerships</p>
-                                    <p className="text-2xl font-bold text-gray-900">{totals.totals.totalPartnerships}</p>
-                                </div>
-                                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                                    <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        ${totals.totals.totalRevenue.toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                                    <p className="text-sm text-gray-600 mb-1">Partnership Types</p>
-                                    <p className="text-2xl font-bold text-gray-900">{totals.byType.filter(t => t.count > 0).length}</p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                                {totals.byType.map((type) => (
-                                    <div key={type.partnershipType} className="bg-white rounded-lg border border-gray-200 p-3">
-                                        <p className="text-xs text-gray-600 mb-1 truncate">{type.label}</p>
-                                        <p className="text-lg font-bold text-gray-900">{type.count}</p>
-                                        {type.totalRevenue > 0 && (
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                ${type.totalRevenue.toLocaleString()}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Partnership Type Filter */}
                     <div className="mb-6">
