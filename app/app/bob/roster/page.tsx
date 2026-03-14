@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
     getBobStudents,
+    getBobPods,
     importBobStudentsFromAirtable,
     BobStudent,
     BobStudentsListParams,
@@ -38,6 +39,7 @@ export default function RosterPage() {
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [importing, setImporting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -81,37 +83,45 @@ export default function RosterPage() {
         }
     }
 
-    function handleExportCsv() {
+    async function handleExportCsv() {
         if (!data?.students?.length) return;
-        const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Status', 'Interview Stage', 'Pod ID', 'School', 'Track', 'Coach', 'Stage', 'YW Status', 'Attendance', 'Milestones'];
-        const rows = data.students.map((s) => {
-            const att = s.attendanceStats ? `${s.attendanceStats.present ?? 0}P/${s.attendanceStats.absent ?? 0}A` : '';
-            const mil = s.milestoneStats ? `${s.milestoneStats.submitted ?? 0}/${s.milestoneStats.total ?? 0}` : '';
-            return [
-                s.firstName,
-                s.lastName,
-                s.email ?? '',
-                s.phone ?? '',
-                s.status,
-                s.interviewStage,
-                s.podId ?? '',
-                s.school ?? '',
-                s.track ?? '',
-                s.coach ?? '',
-                s.stage ?? '',
-                s.ywStatus ?? '',
-                att,
-                mil,
-            ].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',');
-        });
-        const csv = [headers.join(','), ...rows].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `bob-students-${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        setExporting(true);
+        try {
+            const { pods } = await getBobPods({ limit: 500 });
+            const podNameById = new Map(pods.map((p) => [p.id, p.name ?? p.id]));
+            const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Status', 'Interview Stage', 'Pod', 'School', 'Track', 'Coach', 'Stage', 'YW Status', 'Attendance', 'Milestones'];
+            const rows = data.students.map((s) => {
+                const att = s.attendanceStats ? `${s.attendanceStats.present ?? 0}P/${s.attendanceStats.absent ?? 0}A` : '';
+                const mil = s.milestoneStats ? `${s.milestoneStats.submitted ?? 0}/${s.milestoneStats.total ?? 0}` : '';
+                const podName = s.podId ? (podNameById.get(s.podId) ?? '') : '';
+                return [
+                    s.firstName,
+                    s.lastName,
+                    s.email ?? '',
+                    s.phone ?? '',
+                    s.status,
+                    s.interviewStage,
+                    podName,
+                    s.school ?? '',
+                    s.track ?? '',
+                    s.coach ?? '',
+                    s.stage ?? '',
+                    s.ywStatus ?? '',
+                    att,
+                    mil,
+                ].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',');
+            });
+            const csv = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bob-students-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } finally {
+            setExporting(false);
+        }
     }
 
     if (loading) {
@@ -140,12 +150,12 @@ export default function RosterPage() {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={handleExportCsv}
-                        disabled={!data?.students?.length}
+                        onClick={() => handleExportCsv()}
+                        disabled={!data?.students?.length || exporting}
                         className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 text-sm font-medium flex items-center gap-2"
                     >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Export CSV
+                        {exporting ? 'Exporting…' : 'Export CSV'}
                     </button>
                     <button
                         type="button"
