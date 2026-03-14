@@ -82,7 +82,7 @@ export default function PartnershipDetailPage() {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8 bg-white">
+        <div className="px-6 py-8 bg-white">
             <button
                 onClick={() => router.push('/app/partnerships')}
                 className="text-gray-600 hover:text-gray-900 mb-6 text-sm font-medium flex items-center gap-1"

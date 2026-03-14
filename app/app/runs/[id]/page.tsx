@@ -77,7 +77,7 @@ export default function RunDetailPage() {
         : 0;
 
     return (
-        <div className="p-8 max-w-6xl mx-auto bg-white">
+        <div className="p-8 bg-white">
             {/* Header */}
             <div className="mb-8">
                 <button

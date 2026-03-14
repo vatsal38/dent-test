@@ -83,7 +83,7 @@ export default function PartnershipsPage() {
         <div className="flex h-[calc(100vh-80px)] bg-white">
             {/* Main Content */}
             <div className={`flex-1 overflow-auto transition-all ${selectedPartnership ? 'w-2/3' : 'w-full'}`}>
-                <div className="max-w-7xl mx-auto px-6 py-8">
+                <div className="px-6 py-8">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                         <div>

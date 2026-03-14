@@ -79,7 +79,7 @@ export default function PartnershipTrackerPage() {
     }
 
     return (
-        <div className="max-w-[1600px] mx-auto px-6 py-8 animate-in fade-in duration-500">
+        <div className="px-6 py-8 animate-in fade-in duration-500">
             {/* Breadcrumbs & Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                 <div className="space-y-4">

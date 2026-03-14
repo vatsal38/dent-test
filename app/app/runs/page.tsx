@@ -93,7 +93,7 @@ export default function RunsPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-2 mb-2">

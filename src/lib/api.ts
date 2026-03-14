@@ -833,3 +833,359 @@ export async function createRunStep(
         body: JSON.stringify(data),
     });
 }
+
+// ============================================
+// BOB (Bet On Baltimore) — Roster / Students
+// ============================================
+
+export const BOB_STUDENT_STATUSES = ['active', 'inactive', 'graduated', 'withdrawn'] as const;
+export const BOB_INTERVIEW_STAGES = ['applied', 'screening', 'interview', 'offer', 'placed', 'not_placed'] as const;
+
+export type BobStudentStatus = (typeof BOB_STUDENT_STATUSES)[number];
+export type BobInterviewStage = (typeof BOB_INTERVIEW_STAGES)[number];
+
+export interface BobStudentAttendanceStats {
+    present?: number;
+    absent?: number;
+    [key: string]: number | undefined;
+}
+
+export interface BobStudentMilestoneStats {
+    submitted?: number;
+    total?: number;
+    [key: string]: number | undefined;
+}
+
+export interface BobStudent {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    phone: string | null;
+    status: BobStudentStatus;
+    interviewStage: BobInterviewStage;
+    podId: string | null;
+    school?: string | null;
+    track?: string | null;
+    coach?: string | null;
+    stage?: string | null;
+    ywStatus?: string | null;
+    attendanceStats?: BobStudentAttendanceStats | null;
+    milestoneStats?: BobStudentMilestoneStats | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BobStudentsListParams {
+    status?: BobStudentStatus;
+    interviewStage?: BobInterviewStage;
+    search?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface BobStudentsListResponse {
+    students: BobStudent[];
+    total: number;
+    limit: number;
+    offset: number;
+}
+
+export async function getBobStudents(params?: BobStudentsListParams): Promise<BobStudentsListResponse> {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.set('status', params.status);
+    if (params?.interviewStage) sp.set('interviewStage', params.interviewStage);
+    if (params?.search) sp.set('search', params.search);
+    if (params?.limit != null) sp.set('limit', String(params.limit));
+    if (params?.offset != null) sp.set('offset', String(params.offset));
+    const qs = sp.toString();
+    return apiRequest<BobStudentsListResponse>(`/api/bob/students${qs ? `?${qs}` : ''}`);
+}
+
+export async function getBobStudent(id: string): Promise<BobStudent> {
+    return apiRequest<BobStudent>(`/api/bob/students/${id}`);
+}
+
+export interface CreateBobStudentInput {
+    firstName: string;
+    lastName: string;
+    email?: string | null;
+    phone?: string | null;
+    status?: BobStudentStatus;
+    interviewStage?: BobInterviewStage;
+    podId?: string | null;
+    school?: string | null;
+    track?: string | null;
+    coach?: string | null;
+    stage?: string | null;
+    ywStatus?: string | null;
+    attendanceStats?: BobStudentAttendanceStats | null;
+    milestoneStats?: BobStudentMilestoneStats | null;
+}
+
+export async function createBobStudent(data: CreateBobStudentInput): Promise<BobStudent> {
+    return apiRequest<BobStudent>('/api/bob/students', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateBobStudent(id: string, data: Partial<CreateBobStudentInput>): Promise<BobStudent> {
+    return apiRequest<BobStudent>(`/api/bob/students/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deleteBobStudent(id: string): Promise<{ deleted: true }> {
+    return apiRequest<{ deleted: true }>(`/api/bob/students/${id}`, { method: 'DELETE' });
+}
+
+export async function importBobStudentsFromAirtable(): Promise<{ imported: number; message?: string }> {
+    return apiRequest<{ imported: number; message?: string }>('/api/bob/students/import-airtable', {
+        method: 'POST',
+    });
+}
+
+// ============================================
+// BOB — Pods (coach sees only own pod via backend filter)
+// ============================================
+
+export interface BobPod {
+    id: string;
+    name: string;
+    coachId: string | null;
+    siteSupporterId: string | null;
+    students: string[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BobPodsListParams {
+    limit?: number;
+    offset?: number;
+    /** When true, returns pods where current user can mark attendance (admin: all; site supporter: pods where siteSupporterId === me). */
+    canMarkAttendance?: boolean;
+}
+
+export interface BobPodsListResponse {
+    pods: BobPod[];
+    total: number;
+    limit: number;
+    offset: number;
+}
+
+export async function getBobPods(params?: BobPodsListParams): Promise<BobPodsListResponse> {
+    const sp = new URLSearchParams();
+    if (params?.limit != null) sp.set('limit', String(params.limit));
+    if (params?.offset != null) sp.set('offset', String(params.offset));
+    if (params?.canMarkAttendance) sp.set('canMarkAttendance', '1');
+    const qs = sp.toString();
+    return apiRequest<BobPodsListResponse>(`/api/bob/pods${qs ? `?${qs}` : ''}`);
+}
+
+export async function getBobPod(id: string): Promise<BobPod> {
+    return apiRequest<BobPod>(`/api/bob/pods/${id}`);
+}
+
+export interface CreateBobPodInput {
+    name: string;
+    coachId?: string | null;
+    siteSupporterId?: string | null;
+    students?: string[];
+}
+
+export async function createBobPod(data: CreateBobPodInput): Promise<BobPod> {
+    return apiRequest<BobPod>('/api/bob/pods', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateBobPod(id: string, data: Partial<CreateBobPodInput> & { students?: string[] }): Promise<BobPod> {
+    return apiRequest<BobPod>(`/api/bob/pods/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deleteBobPod(id: string): Promise<{ deleted: true }> {
+    return apiRequest<{ deleted: true }>(`/api/bob/pods/${id}`, { method: 'DELETE' });
+}
+
+// ============================================
+// BOB — Milestones (program milestones; uses org-scoped schema + reviewStatus)
+// ============================================
+
+export interface BobMilestone {
+    id: string;
+    projectId: string;
+    orgSlug: string;
+    scopeId: string | null;
+    name: string;
+    scopeArea: string;
+    phase: string | null;
+    targetDate: string;
+    targetEndDate: string;
+    contractualDate: string | null;
+    projectedEndDate: string | null;
+    actualDate: string | null;
+    actualEndDate: string | null;
+    status: string;
+    owner: string;
+    ownerId: string | null;
+    ownerName: string;
+    ownerRole: string | null;
+    gcTrackingNumber: number | null;
+    lookaheadItemCount: number;
+    lookaheadBlockedCount: number;
+    materialBlockedCount: number;
+    predecessors: string[];
+    successors: string[];
+    durationDays: number;
+    isCriticalPath: boolean;
+    floatDays: number | null;
+    notes: string | null;
+    reviewStatus: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BobMilestonesListParams {
+    orgId: string;
+    status?: string;
+    projectId?: string;
+    phase?: string;
+    reviewStatus?: string;
+    tab?: 'pending_review';
+}
+
+export interface BobMilestonesListResponse {
+    data: BobMilestone[];
+    count: number;
+}
+
+export async function getBobMilestones(params: BobMilestonesListParams): Promise<BobMilestonesListResponse> {
+    const sp = new URLSearchParams();
+    sp.set('orgId', params.orgId);
+    if (params.status) sp.set('status', params.status);
+    if (params.projectId) sp.set('projectId', params.projectId);
+    if (params.phase) sp.set('phase', params.phase);
+    if (params.reviewStatus) sp.set('reviewStatus', params.reviewStatus);
+    if (params.tab) sp.set('tab', params.tab);
+    return apiRequest<BobMilestonesListResponse>(`/api/bob/milestones?${sp.toString()}`);
+}
+
+export async function getBobMilestone(orgId: string, milestoneId: string): Promise<BobMilestone> {
+    return apiRequest<BobMilestone>(`/api/bob/milestones/${milestoneId}?orgId=${encodeURIComponent(orgId)}`);
+}
+
+export async function updateBobMilestone(orgId: string, milestoneId: string, data: Partial<Pick<BobMilestone, 'reviewStatus' | 'status' | 'notes'>>): Promise<BobMilestone> {
+    return apiRequest<BobMilestone>(`/api/bob/milestones/${milestoneId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...data, orgId }),
+    });
+}
+
+// ============================================
+// BOB — Command Center stats (dashboard widgets)
+// ============================================
+
+export interface BobCommandCenterStats {
+    cards: {
+        studentsEnrolled: number;
+        youthWorksSynced: number;
+        checkedInToday: number;
+        milestonesThisWeek: number;
+        openDiscrepancies: number;
+    };
+    attendanceBySite: Array<{
+        siteId: string;
+        siteName: string;
+        present: number;
+        absent: number;
+        excused: number;
+        late: number;
+        total: number;
+    }>;
+    noShowsToday: string[];
+    milestoneSubmissionByTrack: Array<{ track: string; submitted: number; total: number }>;
+    atRiskStudents: Array<{ id: string; firstName: string; lastName: string; status: string }>;
+    blitzTeams: Array<{ id: string; name: string }>;
+}
+
+export async function getBobCommandCenterStats(): Promise<BobCommandCenterStats> {
+    return apiRequest<BobCommandCenterStats>('/api/bob/command-center-stats');
+}
+
+// ============================================
+// BOB — Attendance (admin: all; coach: own pod; site supporter can mark)
+// ============================================
+
+export const BOB_ATTENDANCE_STATUSES = ['present', 'absent', 'excused', 'late'] as const;
+export type BobAttendanceStatus = (typeof BOB_ATTENDANCE_STATUSES)[number];
+
+export interface BobAttendance {
+    id: string;
+    studentId: string;
+    date: string;
+    podId: string;
+    status: BobAttendanceStatus;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BobAttendanceListParams {
+    podId?: string;
+    studentId?: string;
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface BobAttendanceListResponse {
+    attendance: BobAttendance[];
+    total: number;
+    limit: number;
+    offset: number;
+}
+
+export async function getBobAttendance(params?: BobAttendanceListParams): Promise<BobAttendanceListResponse> {
+    const sp = new URLSearchParams();
+    if (params?.podId) sp.set('podId', params.podId);
+    if (params?.studentId) sp.set('studentId', params.studentId);
+    if (params?.date) sp.set('date', params.date);
+    if (params?.startDate) sp.set('startDate', params.startDate);
+    if (params?.endDate) sp.set('endDate', params.endDate);
+    if (params?.limit != null) sp.set('limit', String(params.limit));
+    if (params?.offset != null) sp.set('offset', String(params.offset));
+    const qs = sp.toString();
+    return apiRequest<BobAttendanceListResponse>(`/api/bob/attendance${qs ? `?${qs}` : ''}`);
+}
+
+export async function getBobAttendanceRecord(id: string): Promise<BobAttendance> {
+    return apiRequest<BobAttendance>(`/api/bob/attendance/${id}`);
+}
+
+export interface CreateBobAttendanceInput {
+    studentId: string;
+    date: string;
+    podId: string;
+    status?: BobAttendanceStatus;
+}
+
+export async function createBobAttendance(data: CreateBobAttendanceInput): Promise<BobAttendance> {
+    return apiRequest<BobAttendance>('/api/bob/attendance', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateBobAttendance(id: string, data: { status: BobAttendanceStatus }): Promise<BobAttendance> {
+    return apiRequest<BobAttendance>(`/api/bob/attendance/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}

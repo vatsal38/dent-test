@@ -30,14 +30,13 @@ export default function HomePage() {
     const [airtableStatus, setAirtableStatus] = useState<AirtableStatus | null>(null);
     const [syncing, setSyncing] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
-
     const loadData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const [homeResponse, statusResponse] = await Promise.all([
                 getEducationHome(),
-                getAirtableStatus().catch(() => null), // Don't fail if status check fails
+                getAirtableStatus().catch(() => null),
             ]);
             setData(homeResponse);
             setAirtableStatus(statusResponse);
@@ -99,7 +98,7 @@ export default function HomePage() {
                 message={syncError || ''}
                 onClose={() => setSyncError(null)}
             />
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="px-6 py-8">
                 {/* Header Section */}
                 <div className="mb-6">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">Daily Command Center</h1>

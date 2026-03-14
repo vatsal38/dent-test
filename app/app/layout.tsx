@@ -6,6 +6,21 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getAirtableStatus, syncAirtable, AirtableStatus } from '@/lib/api';
+import {
+    HiOutlineHome,
+    HiOutlineClipboardList,
+    HiOutlineMail,
+    HiOutlineMenuAlt3,
+    HiOutlineViewGrid,
+    HiOutlineUserGroup,
+    HiOutlineFilter,
+    HiOutlineUser,
+    HiOutlineClipboardCheck,
+    HiOutlineDocumentText,
+    HiOutlineAcademicCap,
+    HiOutlineRefresh,
+    HiOutlineChartBar,
+} from 'react-icons/hi';
 
 function AirtableStatusBadge() {
     const [status, setStatus] = useState<AirtableStatus | null>(null);
@@ -77,9 +92,7 @@ function AirtableStatusBadge() {
                 <span className="text-sm font-medium text-yellow-700">Airtable</span>
                 <span className="text-xs text-yellow-600">Sync Error</span>
                 <button onClick={handleSync} disabled={syncing} className="ml-1 text-yellow-600 hover:text-yellow-700">
-                    <svg className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <HiOutlineRefresh className={`w-4 h-4 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
                 </button>
             </div>
         );
@@ -91,9 +104,7 @@ function AirtableStatusBadge() {
             <span className="text-sm font-medium text-green-700">Airtable</span>
             <span className="text-xs text-green-600">Synced {formatRelativeTime(status.lastSyncAt)}</span>
             <button onClick={handleSync} disabled={syncing} className="ml-1 text-green-600 hover:text-green-700">
-                <svg className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <HiOutlineRefresh className={`w-4 h-4 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
             </button>
         </div>
     );
@@ -107,6 +118,7 @@ export default function AppLayout({
     const { isAuthenticated, isLoading, user, logout } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const [bobMoreOpen, setBobMoreOpen] = useState(false);
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -126,95 +138,155 @@ export default function AppLayout({
         return null;
     }
 
-    const navItems = [
-        {
-            href: '/app', label: 'Home', icon: (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-            )
-        },
-        {
-            href: '/app/partnerships', label: 'Partnerships', icon: (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-            )
-        },
-        {
-            href: '/app/inbox', label: 'Email', icon: (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-            )
-        },
-        {
-            href: '/app/runs', label: 'Runs', icon: (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            )
-        },
+    const dentOpsNavItems = [
+        { href: '/app', label: 'Home', icon: <HiOutlineHome className="w-5 h-5 shrink-0" /> },
+        { href: '/app/partnerships', label: 'Partnerships', icon: <HiOutlineClipboardList className="w-5 h-5 shrink-0" /> },
+        { href: '/app/inbox', label: 'Email', icon: <HiOutlineMail className="w-5 h-5 shrink-0" /> },
+        { href: '/app/runs', label: 'Runs', icon: <HiOutlineMenuAlt3 className="w-5 h-5 shrink-0" /> },
     ];
 
+    const bobNavItems = [
+        { href: '/app/bob', label: 'Dashboard', icon: <HiOutlineViewGrid className="w-5 h-5 shrink-0" /> },
+        { href: '/app/bob/roster', label: 'Roster', icon: <HiOutlineUserGroup className="w-5 h-5 shrink-0" /> },
+        { href: '/app/bob/recruitment', label: 'Recruitment', icon: <HiOutlineFilter className="w-5 h-5 shrink-0" /> },
+        { href: '/app/bob/pods', label: 'Pods', icon: <HiOutlineUserGroup className="w-5 h-5 shrink-0" /> },
+        { href: '/app/bob/attendance', label: 'Attendance', icon: <HiOutlineClipboardCheck className="w-5 h-5 shrink-0" /> },
+        { href: '/app/bob/milestones', label: 'Milestones', icon: <HiOutlineClipboardList className="w-5 h-5 shrink-0" /> },
+    ];
+    const bobNavMoreItems = [
+        { href: '/app/bob/my-pod', label: 'My Pod', icon: <HiOutlineUser className="w-4 h-4 shrink-0" /> },
+        { href: '/app/bob/submit', label: 'Submit', icon: <HiOutlineDocumentText className="w-4 h-4 shrink-0" /> },
+        { href: '/app/bob/reports', label: 'Reports', icon: <HiOutlineChartBar className="w-4 h-4 shrink-0" /> },
+        { href: '/app/bob/staff', label: 'Staff', icon: <HiOutlineAcademicCap className="w-4 h-4 shrink-0" /> },
+    ];
+    const isBobMoreActive = pathname?.startsWith('/app/bob/my-pod') || pathname?.startsWith('/app/bob/submit') || pathname?.startsWith('/app/bob/reports') || pathname?.startsWith('/app/bob/staff');
+    const bobMoreExpanded = bobMoreOpen || isBobMoreActive;
+
     return (
-        <div className="min-h-screen bg-white">
-            {/* Top Navigation Bar */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        {/* Logo */}
-                        <Link href="/app" className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-sm">
-                                DO
-                            </div>
-                            <span className="text-xl font-semibold text-gray-900">Dent Ops</span>
-                        </Link>
-
-                        {/* Navigation Links */}
-                        <nav className="flex items-center gap-1">
-                            {navItems.map((item) => {
-                                const isActive = pathname === item.href || (item.href !== '/app' && pathname?.startsWith(item.href));
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isActive
-                                                ? 'bg-[#3b82f6] text-white'
-                                                : 'text-gray-700 hover:bg-gray-100'
-                                            }`}
-                                    >
-                                        {item.icon}
-                                        <span className="font-medium">{item.label}</span>
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-
-                        {/* Right Side - Airtable Status & User */}
-                        <div className="flex items-center gap-4">
-                            {/* Airtable Sync Status - Now Live! */}
-                            <AirtableStatusBadge />
-
-                            {/* User Menu */}
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm">
-                                    {user?.name?.[0]?.toUpperCase() || 'U'}
-                                </div>
-                                <button
-                                    onClick={logout}
-                                    className="text-sm text-gray-600 hover:text-gray-900"
-                                >
-                                    Sign Out
-                                </button>
-                            </div>
+        <div className="min-h-screen bg-gray-50 flex">
+            {/* Sidebar */}
+            <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-gray-200 fixed inset-y-0 left-0 z-40">
+                {/* Logo */}
+                <div className="p-4 border-b border-gray-200">
+                    <Link href="/app" className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-sm">
+                            DO
                         </div>
+                        <span className="text-xl font-semibold text-gray-900">Dent Ops</span>
+                    </Link>
+                </div>
+
+                {/* Navigation - sections */}
+                <div className="flex-1 overflow-y-auto">
+                    {/* Dent Ops */}
+                    <p className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Dent Ops
+                    </p>
+                    <nav className="p-3 pt-0 space-y-0.5">
+                        {dentOpsNavItems.map((item) => {
+                            const isActive = pathname === item.href || (item.href !== '/app' && pathname?.startsWith(item.href));
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
+                                            ? 'bg-[#3b82f6] text-white'
+                                            : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    {item.icon}
+                                    <span className="font-medium">{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    {/* Baltimore Operations Engine — orange theme */}
+                    <div className="px-4 pt-6 pb-1 flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-700">Bet on Baltimore</span>
+                        <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-orange-500 text-white">2026</span>
+                    </div>
+                    <nav className="p-3 pt-0 space-y-0.5">
+                        {bobNavItems.map((item) => {
+                            const isActive = pathname === item.href || (item.href !== '/app/bob' && pathname?.startsWith(item.href));
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
+                                            ? 'bg-orange-500 text-white'
+                                            : 'text-gray-700 hover:bg-orange-50 hover:text-orange-700'
+                                        }`}
+                                >
+                                    {item.icon}
+                                    <span className="font-medium">{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                        <div className="pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setBobMoreOpen(!bobMoreOpen)}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left transition-colors text-gray-700 hover:bg-orange-50 hover:text-orange-700"
+                            >
+                                <HiOutlineViewGrid className="w-5 h-5 shrink-0" />
+                                <span className="font-medium flex-1">More</span>
+                                <svg className={`w-4 h-4 shrink-0 transition-transform ${bobMoreExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            {bobMoreExpanded && (
+                                <div className="mt-0.5 ml-3 pl-3 border-l border-orange-200 space-y-0.5">
+                                    {bobNavMoreItems.map((item) => {
+                                        const isActive = pathname === item.href || (item.href !== '/app/bob' && pathname?.startsWith(item.href));
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className={`flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${isActive ? 'bg-orange-100 text-orange-800 font-medium' : 'text-gray-600 hover:bg-orange-50 hover:text-orange-700'}`}
+                                            >
+                                                {item.icon}
+                                                <span>{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </nav>
+                </div>
+
+                {/* Bottom: Sync Status (BOB) or Airtable (Dent Ops) + User */}
+                <div className="p-3 border-t border-gray-200 space-y-3">
+                    <div className="w-full min-w-0">
+                        {pathname?.startsWith('/app/bob') ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5">
+                                <HiOutlineRefresh className="w-4 h-4 shrink-0 text-gray-400" />
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium text-gray-500">Sync Status</p>
+                                    <p className="text-xs text-gray-600 truncate">Last synced 2m ago</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <AirtableStatusBadge />
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                        <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                            {user?.name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="text-sm text-gray-600 hover:text-gray-900 text-left"
+                        >
+                            Sign Out
+                        </button>
                     </div>
                 </div>
-            </header>
+            </aside>
 
             {/* Main Content */}
-            <main className="bg-white">
+            <main className="flex-1 min-w-0 ml-64">
                 {children}
             </main>
         </div>
