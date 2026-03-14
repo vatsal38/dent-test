@@ -141,16 +141,14 @@ export default function BobMilestonesPage() {
     }
 
     return (
-        <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Milestones</h1>
-                    <p className="text-gray-600">Program milestones and review status.</p>
-                </div>
+        <div>
+            <div className="mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Milestones</h1>
+                <p className="text-gray-600">Program milestones and review status.</p>
             </div>
 
             {/* Tabs: Grid View / Pending Review — orange underline */}
-            <div className="flex items-center gap-2 mb-4 border-b border-gray-200">
+            <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 overflow-x-auto">
                 <button
                     type="button"
                     onClick={() => setTab('all')}
@@ -173,7 +171,7 @@ export default function BobMilestonesPage() {
             </div>
 
             {/* View toggle + week filter */}
-            <div className="mb-4 flex flex-wrap items-center gap-4">
+            <div className="mb-4 flex flex-wrap items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">View:</span>
                     <button type="button" onClick={() => setView('grid')} className={`px-3 py-1.5 rounded text-sm font-medium ${view === 'grid' ? 'bg-orange-100 text-orange-800' : 'text-gray-600 hover:bg-gray-100'}`}>Cards</button>

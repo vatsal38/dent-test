@@ -150,13 +150,13 @@ export default function DiscrepanciesPage() {
     }
 
     return (
-        <div className="px-6 py-8">
+        <div>
             <div className="mb-6">
                 <Link href="/app/bob/attendance" className="text-sm text-orange-600 hover:text-orange-700 hover:underline">← Back to Attendance</Link>
             </div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Payroll Discrepancies</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Payroll Discrepancies</h1>
                     <p className="text-gray-600">Missing clock-ins and flagged records for resolution.</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function DiscrepanciesPage() {
             </div>
 
             {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="p-4 bg-white border border-gray-200 rounded-lg">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Open this week</p>
                     <p className="text-2xl font-bold text-orange-600">{openCount}</p>
@@ -210,6 +210,7 @@ export default function DiscrepanciesPage() {
                         No open discrepancies for this week. Missing clock-ins will appear here after sync.
                     </div>
                 ) : (
+                    <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
@@ -243,6 +244,7 @@ export default function DiscrepanciesPage() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
         </div>

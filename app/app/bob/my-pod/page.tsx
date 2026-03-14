@@ -72,7 +72,7 @@ export default function MyPodPage() {
 
     if (!pod) {
         return (
-            <div className="px-6 py-8">
+            <div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">My Pod</h1>
                 <p className="text-gray-600 mb-6">No pod assigned yet.</p>
                 <div className="p-6 rounded-lg border border-gray-200 bg-gray-50 text-gray-700">
@@ -88,10 +88,10 @@ export default function MyPodPage() {
     const needsAttention = students.filter((s) => (s.milestoneStats?.submitted ?? 0) === 0 || (s.attendanceStats?.absent ?? 0) >= 2).slice(0, 2);
 
     return (
-        <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-6">
+        <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">My Pod</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Pod</h1>
                     <p className="text-gray-600">{pod.name} — Week 3 of 5 - {dateStr}</p>
                 </div>
                 <Link

@@ -13,6 +13,8 @@ export default function InboxPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [selectedThread, setSelectedThread] = useState<string | null>(null);
+    /** Keeps the thread we're viewing so the detail panel doesn't disappear after refetch (e.g. mark as reviewed). */
+    const [viewingThread, setViewingThread] = useState<GmailThread | null>(null);
     const [gmailStatus, setGmailStatus] = useState<{ connected: boolean; emailAddress?: string | null } | null>(null);
     const [connecting, setConnecting] = useState(false);
     const [disconnecting, setDisconnecting] = useState(false);
@@ -46,6 +48,15 @@ export default function InboxPage() {
         loadData();
     }, [loadData]);
 
+    // When threads load, update viewing thread if the selected one is in the list (must be before any early return)
+    useEffect(() => {
+        const list = data?.threads ?? [];
+        if (selectedThread && list.length > 0) {
+            const found = list.find((t) => t.id === selectedThread);
+            if (found) setViewingThread(found);
+        }
+    }, [data?.threads, selectedThread]);
+
     async function handleLinkThread(threadId: string, partnershipId: string) {
         try {
             await linkThread(threadId, partnershipId);
@@ -68,7 +79,9 @@ export default function InboxPage() {
     async function handleMarkReviewed(threadId: string) {
         try {
             await markThreadReviewed(threadId);
-            loadData();
+            setSelectedThread(null);
+            setViewingThread(null);
+            await loadData();
         } catch (err) {
             console.error('Failed to mark reviewed:', err);
         }
@@ -142,7 +155,11 @@ export default function InboxPage() {
         { id: 'mou_related', label: 'MOU & Invoices', count: counts.mou_related || 0, icon: '📄', color: 'bg-green-50 border-green-200' },
     ];
 
-    const selectedThreadData = threads.find(t => t.id === selectedThread) || null;
+    const selectedThreadFromList = threads.find(t => t.id === selectedThread) || null;
+    // Keep a stable thread for the detail panel so it doesn't disappear after refetch (e.g. mark as reviewed)
+    const threadForPanel =
+        selectedThreadFromList ??
+        (viewingThread?.id === selectedThread ? viewingThread : null);
 
     // Helper function to format relative time
     const formatRelativeTime = (date: string) => {
@@ -169,14 +186,14 @@ export default function InboxPage() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex flex-col md:flex-row h-[calc(100vh-5.5rem)] md:h-[calc(100vh-4rem)] bg-gray-50 overflow-hidden rounded-lg border border-gray-200 md:border-0">
             {/* Left Side - Email List */}
-            <div className={`flex flex-col transition-all bg-white border-r border-gray-200 ${selectedThread ? 'w-2/5' : 'w-full'}`}>
+            <div className={`flex flex-col transition-all bg-white border-r border-gray-200 flex-1 min-w-0 min-h-0 ${selectedThread ? 'hidden md:flex md:max-w-[40%]' : 'w-full'}`}>
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-200 bg-white">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex-1">
-                            <h1 className="text-xl font-semibold text-gray-900">Inbox</h1>
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Inbox</h1>
                             {gmailStatus?.connected && gmailStatus.emailAddress && (
                                 <div className="flex items-center gap-3 mt-1">
                                     <p className="text-sm text-gray-500">{gmailStatus.emailAddress}</p>
@@ -188,7 +205,7 @@ export default function InboxPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             {gmailStatus?.connected && (
                                 <button
                                     onClick={handleSyncGmail}
@@ -248,43 +265,42 @@ export default function InboxPage() {
                     </div>
 
                     {/* Filters */}
-                    <div className="flex items-center justify-between mb-2">
-                        {/* Category Tabs */}
-                        <div className="flex items-center gap-1 border-b border-gray-200">
-                            {categories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedCategory(cat.id)}
-                                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${selectedCategory === cat.id
-                                        ? 'border-[#3b82f6] text-[#3b82f6]'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900'
-                                        }`}
-                                >
-                                    {cat.label}
-                                    {cat.count > 0 && (
-                                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${selectedCategory === cat.id
-                                            ? 'bg-blue-100 text-blue-700'
-                                            : 'bg-gray-100 text-gray-600'
-                                            }`}>
-                                            {cat.count}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+                        {/* Category Tabs - horizontal scroll on small screens */}
+                        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-200 sm:border-b-0">
+                            <div className="flex gap-1 border-b border-gray-200 min-w-0">
+                                {categories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedCategory(cat.id)}
+                                        className={`shrink-0 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${selectedCategory === cat.id
+                                            ? 'border-[#3b82f6] text-[#3b82f6]'
+                                            : 'border-transparent text-gray-600 hover:text-gray-900'
+                                            }`}
+                                    >
+                                        {cat.label}
+                                        {cat.count > 0 && (
+                                            <span className={`ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-xs ${selectedCategory === cat.id
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                {cat.count}
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-
                         {/* Partnership Contacts Filter */}
-                        <div className="flex items-center gap-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={partnershipContactsOnly}
-                                    onChange={(e) => setPartnershipContactsOnly(e.target.checked)}
-                                    className="w-4 h-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]"
-                                />
-                                <span className="text-sm text-gray-700">Partnership contacts only</span>
-                            </label>
-                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                            <input
+                                type="checkbox"
+                                checked={partnershipContactsOnly}
+                                onChange={(e) => setPartnershipContactsOnly(e.target.checked)}
+                                className="w-4 h-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]"
+                            />
+                            <span className="text-sm text-gray-700 whitespace-nowrap">Partnership contacts only</span>
+                        </label>
                     </div>
                 </div>
 
@@ -325,7 +341,10 @@ export default function InboxPage() {
                                 return (
                                     <div
                                         key={thread.id}
-                                        onClick={() => setSelectedThread(thread.id)}
+                                        onClick={() => {
+                                            setSelectedThread(thread.id);
+                                            setViewingThread(thread);
+                                        }}
                                         className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50' : ''
                                             } ${!thread.isRead ? 'bg-white' : ''}`}
                                     >
@@ -407,10 +426,14 @@ export default function InboxPage() {
             </div>
 
             {/* Right Side - Email Detail Panel */}
-            {selectedThread && selectedThreadData && (
+            {selectedThread && threadForPanel && (
                 <EmailDetailPanel
-                    thread={selectedThreadData}
-                    onClose={() => setSelectedThread(null)}
+                    thread={threadForPanel}
+                    onClose={() => {
+                        setSelectedThread(null);
+                        setViewingThread(null);
+                    }}
+                    showBackOnMobile
                     onLink={handleLinkThread}
                     onUnlink={handleUnlinkThread}
                     onMarkReviewed={handleMarkReviewed}
@@ -457,6 +480,7 @@ function EmailDetailPanel({
     onUnlink,
     onMarkReviewed,
     onReply,
+    showBackOnMobile = false,
 }: {
     thread: GmailThread;
     onClose: () => void;
@@ -464,6 +488,7 @@ function EmailDetailPanel({
     onUnlink: (threadId: string) => void;
     onMarkReviewed: (threadId: string) => void;
     onReply: (thread: GmailThread) => void;
+    showBackOnMobile?: boolean;
 }) {
     const [linkPartnershipId, setLinkPartnershipId] = useState('');
     const [partnerships, setPartnerships] = useState<PartnershipsListResponse | null>(null);
@@ -525,35 +550,51 @@ function EmailDetailPanel({
     }, [showPartnershipDropdown]);
 
     return (
-        <div className="w-3/5 bg-white flex flex-col h-full overflow-y-auto border-l border-gray-200">
+        <div className="w-full flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-white md:w-3/5 border-l border-gray-200">
             {/* Email Header */}
-            <div className="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                        <h1 className="text-xl font-semibold text-gray-900 mb-3">{thread.subject}</h1>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
-                                {getInitials(thread.fromName, thread.fromEmail)}
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-900">{displayName}</span>
-                                    <span className="text-sm text-gray-500">&lt;{thread.fromEmail}&gt;</span>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(thread.receivedAt).toLocaleString('en-US', {
-                                        weekday: 'short',
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric',
-                                        hour: 'numeric',
-                                        minute: '2-digit'
-                                    })}
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10 shrink-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2">
+                            {showBackOnMobile && (
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-gray-100 shrink-0"
+                                    aria-label="Back to list"
+                                >
+                                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <h1 className="text-base sm:text-xl font-semibold text-gray-900 mb-2 break-words">{thread.subject}</h1>
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shrink-0">
+                                        {getInitials(thread.fromName, thread.fromEmail)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                            <span className="text-sm font-medium text-gray-900">{displayName}</span>
+                                            <span className="text-xs sm:text-sm text-gray-500 truncate max-w-[140px] sm:max-w-none" title={thread.fromEmail}>&lt;{thread.fromEmail}&gt;</span>
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-0.5">
+                                            {new Date(thread.receivedAt).toLocaleString('en-US', {
+                                                weekday: 'short',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric',
+                                                hour: 'numeric',
+                                                minute: '2-digit'
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <button
                             onClick={() => onReply(thread)}
                             className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
@@ -565,7 +606,7 @@ function EmailDetailPanel({
                             Reply
                         </button>
                         <button
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors hidden sm:block"
                             onClick={() => onMarkReviewed(thread.id)}
                             title="Mark as reviewed"
                         >
@@ -575,7 +616,8 @@ function EmailDetailPanel({
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors hidden md:block"
+                            aria-label="Close"
                         >
                             <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -610,7 +652,7 @@ function EmailDetailPanel({
 
             {/* Attachments Section */}
             {thread.hasAttachment && thread.attachments && thread.attachments.length > 0 && (
-                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50 shrink-0">
                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -645,7 +687,7 @@ function EmailDetailPanel({
             )}
 
             {/* Email Body */}
-            <div className="flex-1 px-6 py-6">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
                 <div className="prose prose-sm max-w-none">
                     <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                         {thread.snippet || 'No email content available'}
@@ -654,11 +696,11 @@ function EmailDetailPanel({
             </div>
 
             {/* Actions Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 shrink-0">
                 {thread.partnershipId ? (
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
                                     <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -715,9 +757,9 @@ function EmailDetailPanel({
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex-1 relative partnership-dropdown-container">
-                                <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                            <div className="flex-1 min-w-0 relative partnership-dropdown-container">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                                     <input
                                         type="text"
                                         value={searchQuery}
@@ -727,11 +769,11 @@ function EmailDetailPanel({
                                         }}
                                         onFocus={() => setShowPartnershipDropdown(true)}
                                         placeholder="Search partnerships to link..."
-                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent"
+                                        className="w-full min-w-0 px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent"
                                     />
                                     <button
                                         onClick={() => setShowPartnershipDropdown(!showPartnershipDropdown)}
-                                        className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium whitespace-nowrap"
+                                        className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium whitespace-nowrap shrink-0"
                                     >
                                         Link Email
                                     </button>

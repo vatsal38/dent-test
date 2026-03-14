@@ -93,14 +93,14 @@ export default function RunsPage() {
     };
 
     return (
-        <div className="p-8">
+        <div>
             {/* Header */}
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
                 <div className="flex items-center gap-2 mb-2">
                     <svg className="w-6 h-6 text-[#3b82f6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
-                    <h1 className="text-2xl font-bold text-gray-900">Guided Work Sessions</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Guided Work Sessions</h1>
                 </div>
                 <p className="text-gray-600">Focused work runs with step-by-step guidance</p>
             </div>

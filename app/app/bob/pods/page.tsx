@@ -43,13 +43,13 @@ export default function PodsPage() {
     }
 
     return (
-        <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Pods</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pods</h1>
                     <p className="text-gray-600">Manage pods and assign students.</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Link href="/app/bob/my-pod" className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium">
                         My Pod
                     </Link>
@@ -68,6 +68,7 @@ export default function PodsPage() {
                         No pods found. Create a pod to get started.
                     </div>
                 ) : (
+                    <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
@@ -101,6 +102,7 @@ export default function PodsPage() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
             {data && data.total > 0 && (

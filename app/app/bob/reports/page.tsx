@@ -29,7 +29,7 @@ export default function BobReportsPage() {
 
     if (loading) {
         return (
-            <div className="px-6 py-8 flex items-center justify-center min-h-[50vh]">
+            <div className="flex items-center justify-center min-h-[50vh]">
                 <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
             </div>
         );
@@ -37,7 +37,7 @@ export default function BobReportsPage() {
 
     if (error) {
         return (
-            <div className="px-6 py-8">
+            <div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{error}</div>
                 <Link href="/app/bob" className="mt-4 inline-block text-sm text-orange-600 hover:underline">← Back to Command Center</Link>
             </div>
@@ -45,8 +45,8 @@ export default function BobReportsPage() {
     }
 
     return (
-        <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-6">
+        <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Reports & analytics</h1>
                     <p className="text-gray-600">Program overview and key metrics.</p>

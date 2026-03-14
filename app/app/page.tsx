@@ -98,11 +98,11 @@ export default function HomePage() {
                 message={syncError || ''}
                 onClose={() => setSyncError(null)}
             />
-            <div className="px-6 py-8">
+            <div>
                 {/* Header Section */}
                 <div className="mb-6">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">Daily Command Center</h1>
-                    <p className="text-lg text-gray-600">{greetingTime}. Here&apos;s what matters today.</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">Daily Command Center</h1>
+                    <p className="text-base sm:text-lg text-gray-600">{greetingTime}. Here&apos;s what matters today.</p>
                 </div>
 
                 {/* Live Airtable Sync Card */}

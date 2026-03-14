@@ -211,13 +211,13 @@ export default function AttendancePage() {
     }
 
     return (
-        <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-4">
+        <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Attendance</h1>
                     <p className="text-gray-600">View and mark attendance by week.</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <button type="button" onClick={loadData} disabled={loading} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
                         <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -257,7 +257,7 @@ export default function AttendancePage() {
             )}
 
             {/* Week filter tabs */}
-            <div className="mb-4 flex items-center gap-1 border-b border-gray-200">
+            <div className="mb-4 flex flex-wrap items-center gap-1 border-b border-gray-200 overflow-x-auto">
                 {WEEK_TABS.map((w) => {
                     const isActive = weekOf === w.weekOf;
                     return (
@@ -281,11 +281,11 @@ export default function AttendancePage() {
             </div>
 
             {/* Filters */}
-            <div className="mb-4 flex flex-wrap items-center gap-4">
+            <div className="mb-4 flex flex-wrap items-center gap-3 sm:gap-4">
                 <select
                     value={podFilter}
                     onChange={(e) => setPodFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 min-w-0"
                 >
                     <option value="">All pods</option>
                     {pods.map((p) => (

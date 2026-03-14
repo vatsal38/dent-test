@@ -123,7 +123,7 @@ export default function PodDetailPage() {
         (pod.students || []).some((sid) => !selectedStudentIds.has(sid));
 
     return (
-        <div className="px-6 py-8">
+        <div>
             <div className="mb-6">
                 <Link href="/app/bob/pods" className="text-sm text-orange-600 hover:underline">← Back to Pods</Link>
             </div>

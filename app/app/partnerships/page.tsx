@@ -80,17 +80,17 @@ export default function PartnershipsPage() {
     if (!data) return null;
 
     return (
-        <div className="flex h-screen bg-white">
+        <div className="flex flex-col md:flex-row h-screen bg-white">
             {/* Main Content */}
-            <div className={`flex-1 overflow-auto transition-all ${selectedPartnership ? 'w-2/3' : 'w-full'}`}>
-                <div className="px-6 py-8">
+            <div className={`flex-1 min-w-0 overflow-auto transition-all ${selectedPartnership ? 'hidden md:block md:flex-none md:w-2/3' : 'w-full'}`}>
+                <div>
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Partnerships Pipeline</h1>
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Partnerships Pipeline</h1>
                             <p className="text-gray-600">Manage all partnership stages and activities in one view.</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <div className="flex bg-gray-100 rounded-lg p-1 mr-4">
                                 <button
                                     onClick={() => setShowOnlyMine(false)}
@@ -470,7 +470,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
 
     if (loading) {
         return (
-            <div className="w-1/3 border-l border-gray-200 bg-white p-6">
+            <div className="w-full md:w-1/3 md:border-l border-gray-200 bg-white p-6">
                 <div className="animate-spin w-6 h-6 border-2 border-[#3b82f6] border-t-transparent rounded-full mx-auto" />
             </div>
         );
@@ -486,7 +486,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
         (daysSinceContact !== null && daysSinceContact > 5);
 
     return (
-        <div className="w-1/3 border-l border-gray-200 bg-white flex flex-col h-full overflow-y-auto">
+        <div className="w-full md:w-1/3 md:border-l border-gray-200 bg-white flex flex-col h-full overflow-y-auto shrink-0">
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10 shadow-sm">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">

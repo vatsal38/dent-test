@@ -20,6 +20,8 @@ import {
     HiOutlineAcademicCap,
     HiOutlineRefresh,
     HiOutlineChartBar,
+    HiOutlineMenu,
+    HiOutlineX,
 } from 'react-icons/hi';
 
 function AirtableStatusBadge() {
@@ -119,6 +121,11 @@ export default function AppLayout({
     const router = useRouter();
     const pathname = usePathname();
     const [bobMoreOpen, setBobMoreOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        setSidebarOpen(false);
+    }, [pathname]);
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -164,16 +171,27 @@ export default function AppLayout({
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar */}
-            <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-gray-200 fixed inset-y-0 left-0 z-40">
-                {/* Logo */}
-                <div className="p-4 border-b border-gray-200">
-                    <Link href="/app" className="flex items-center gap-2">
+            {/* Mobile overlay when sidebar open */}
+            {sidebarOpen && (
+                <button
+                    type="button"
+                    aria-label="Close menu"
+                    onClick={() => setSidebarOpen(false)}
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                />
+            )}
+            {/* Sidebar: drawer on mobile, fixed on md+ */}
+            <aside className={`w-64 shrink-0 flex flex-col bg-white border-r border-gray-200 fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-out md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 md:justify-start">
+                    <Link href="/app" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
                         <div className="w-8 h-8 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-sm">
                             DO
                         </div>
                         <span className="text-xl font-semibold text-gray-900">Dent Ops</span>
                     </Link>
+                    <button type="button" onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-gray-100 md:hidden" aria-label="Close menu">
+                        <HiOutlineX className="w-6 h-6 text-gray-600" />
+                    </button>
                 </div>
 
                 {/* Navigation - sections */}
@@ -189,6 +207,7 @@ export default function AppLayout({
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onClick={() => setSidebarOpen(false)}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
                                             ? 'bg-[#3b82f6] text-white'
                                             : 'text-gray-700 hover:bg-gray-100'
@@ -213,6 +232,7 @@ export default function AppLayout({
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onClick={() => setSidebarOpen(false)}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
                                             ? 'bg-orange-500 text-white'
                                             : 'text-gray-700 hover:bg-orange-50 hover:text-orange-700'
@@ -243,6 +263,7 @@ export default function AppLayout({
                                             <Link
                                                 key={item.href}
                                                 href={item.href}
+                                                onClick={() => setSidebarOpen(false)}
                                                 className={`flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${isActive ? 'bg-orange-100 text-orange-800 font-medium' : 'text-gray-600 hover:bg-orange-50 hover:text-orange-700'}`}
                                             >
                                                 {item.icon}
@@ -285,9 +306,27 @@ export default function AppLayout({
                 </div>
             </aside>
 
+            {/* Mobile header */}
+            <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 md:hidden">
+                <button type="button" onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-gray-100" aria-label="Open menu">
+                    <HiOutlineMenu className="w-6 h-6 text-gray-700" />
+                </button>
+                <Link href="/app" className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-xs">DO</div>
+                    <span className="font-semibold text-gray-900">Dent Ops</span>
+                </Link>
+                <div className="w-10 flex justify-end">
+                    <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm">
+                        {user?.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                </div>
+            </header>
+
             {/* Main Content */}
-            <main className="flex-1 min-w-0 ml-64">
-                {children}
+            <main className="flex-1 min-w-0 pt-14 md:pt-0 md:ml-64">
+                <div className="min-h-screen md:min-h-0 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
+                    {children}
+                </div>
             </main>
         </div>
     );

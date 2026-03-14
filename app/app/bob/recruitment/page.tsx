@@ -98,13 +98,13 @@ export default function RecruitmentPage() {
     }
 
     return (
-        <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-6">
+        <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Recruitment</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recruitment</h1>
                     <p className="text-gray-600">BoB 2026 — Schools and student interviews</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Link
                         href="/app/bob/roster/new"
                         className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
@@ -239,6 +239,7 @@ export default function RecruitmentPage() {
 
             {tab === 'interviews' && (
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
@@ -287,6 +288,7 @@ export default function RecruitmentPage() {
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             )}
         </div>
