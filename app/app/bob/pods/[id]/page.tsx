@@ -131,7 +131,7 @@ export default function PodDetailPage() {
             <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
                 <h1 className="text-2xl font-bold text-gray-900">Pod: {pod.name}</h1>
 
-                {/* Pod details (admin can edit) */}
+                {/* Pod details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>

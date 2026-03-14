@@ -36,7 +36,13 @@ export default function RosterPage() {
     const [statusFilter, setStatusFilter] = useState<BobStudentStatus | ''>('');
     const [stageFilter, setStageFilter] = useState<BobInterviewStage | ''>('');
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [importing, setImporting] = useState(false);
+
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(t);
+    }, [search]);
     const [importMessage, setImportMessage] = useState<string | null>(null);
     const [detailStudentId, setDetailStudentId] = useState<string | null>(null);
 
@@ -47,7 +53,7 @@ export default function RosterPage() {
             const params: BobStudentsListParams = { limit: 100, offset: 0 };
             if (statusFilter) params.status = statusFilter;
             if (stageFilter) params.interviewStage = stageFilter;
-            if (search.trim()) params.search = search.trim();
+            if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
             const res = await getBobStudents(params);
             setData({ students: res.students, total: res.total });
         } catch (err) {
@@ -55,7 +61,7 @@ export default function RosterPage() {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, stageFilter, search]);
+    }, [statusFilter, stageFilter, debouncedSearch]);
 
     useEffect(() => {
         loadData();
