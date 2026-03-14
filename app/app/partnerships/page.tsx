@@ -80,7 +80,7 @@ export default function PartnershipsPage() {
     if (!data) return null;
 
     return (
-        <div className="flex h-[calc(100vh-80px)] bg-white">
+        <div className="flex h-screen bg-white">
             {/* Main Content */}
             <div className={`flex-1 overflow-auto transition-all ${selectedPartnership ? 'w-2/3' : 'w-full'}`}>
                 <div className="px-6 py-8">

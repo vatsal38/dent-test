@@ -169,7 +169,7 @@ export default function InboxPage() {
     };
 
     return (
-        <div className="flex h-[calc(100vh-80px)] bg-gray-50">
+        <div className="flex h-screen bg-gray-50">
             {/* Left Side - Email List */}
             <div className={`flex flex-col transition-all bg-white border-r border-gray-200 ${selectedThread ? 'w-2/5' : 'w-full'}`}>
                 {/* Header */}
