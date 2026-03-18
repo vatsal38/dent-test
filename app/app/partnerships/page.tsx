@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { getPartnerships, PartnershipsListResponse, getPartnershipTotals, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, updatePartnershipRoles, PartnershipDetail, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
 import Link from 'next/link';
 
+/** Fallback labels when backend hasn't returned types yet (e.g. before first sync). */
 const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
     'dentership_host': 'Denternship Host',
     'space_partner': 'Space Partner',
@@ -20,17 +21,32 @@ const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
 export default function PartnershipsPage() {
     const [view, setView] = useState<'list' | 'kanban'>('kanban');
     const [data, setData] = useState<PartnershipsListResponse | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // initial page load only
+    const [refreshing, setRefreshing] = useState(false); // in-place refresh (filters/view)
     const [error, setError] = useState<string | null>(null);
     const [selectedPartnership, setSelectedPartnership] = useState<string | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [showOnlyMine, setShowOnlyMine] = useState(false);
+    /** Dynamic partnership types (Role / Potential Roles) from API – from Airtable sync. */
+    const [partnershipTypes, setPartnershipTypes] = useState<Array<{ partnershipType: string; label: string; count: number }>>([]);
+    const [roleQuery, setRoleQuery] = useState('');
+    const [rolesOpen, setRolesOpen] = useState(false);
+    const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
+
+    const loadTotals = useCallback(async () => {
+        try {
+            const totals = await getPartnershipTotals();
+            setPartnershipTypes(totals.byType ?? []);
+        } catch {
+            setPartnershipTypes([]);
+        }
+    }, []);
 
     const loadData = useCallback(async (showLoading = true) => {
-        if (showLoading) {
-            setLoading(true);
-        }
+        // showLoading=true is used only for the first mount; subsequent refreshes use skeletons.
+        if (showLoading) setLoading(true);
+        else setRefreshing(true);
         setError(null);
         try {
             const userId = auth.currentUser?.uid;
@@ -46,18 +62,55 @@ export default function PartnershipsPage() {
                 assignedTo,
             });
             setData(response);
+            await loadTotals();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load partnerships');
         } finally {
-            if (showLoading) {
-                setLoading(false);
-            }
+            if (showLoading) setLoading(false);
+            setRefreshing(false);
         }
     }, [view, selectedTypes, showOnlyMine]);
 
     useEffect(() => {
-        loadData();
+        loadTotals();
+    }, [loadTotals]);
+
+    useEffect(() => {
+        // First mount = full-screen loader. Subsequent dependency changes refresh in-place.
+        const isFirst = data === null;
+        loadData(isFirst);
     }, [loadData]);
+
+    useEffect(() => {
+        if (!rolesOpen) return;
+        function onDocMouseDown(e: MouseEvent) {
+            const el = rolesPopoverRef.current;
+            if (!el) return;
+            if (e.target instanceof Node && el.contains(e.target)) return;
+            setRolesOpen(false);
+        }
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, [rolesOpen]);
+
+    /** Label for a partnership type (dynamic from API, fallback to static map, then raw value). */
+    const getTypeLabel = (value: string) =>
+        partnershipTypes.find((t) => t.partnershipType === value)?.label ?? PARTNERSHIP_TYPE_LABELS[value] ?? value;
+
+    const allRoleOptions = useMemo(() => {
+        const list = (partnershipTypes.length > 0
+            ? partnershipTypes
+            : Object.entries(PARTNERSHIP_TYPE_LABELS).map(([partnershipType, label]) => ({ partnershipType, label, count: 0 })))
+            .map((t) => ({ ...t, label: t.label || t.partnershipType }))
+            .sort((a, b) => (a.label || a.partnershipType).localeCompare(b.label || b.partnershipType));
+        return list;
+    }, [partnershipTypes]);
+
+    const filteredRoleOptions = useMemo(() => {
+        const q = roleQuery.trim().toLowerCase();
+        if (!q) return allRoleOptions;
+        return allRoleOptions.filter((t) => (t.label || '').toLowerCase().includes(q) || t.partnershipType.toLowerCase().includes(q));
+    }, [allRoleOptions, roleQuery]);
 
     if (loading) {
         return (
@@ -80,7 +133,7 @@ export default function PartnershipsPage() {
     if (!data) return null;
 
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-white">
+        <div className="flex flex-col md:flex-row h-screen bg-white p-4">
             {/* Main Content */}
             <div className={`flex-1 min-w-0 overflow-auto transition-all ${selectedPartnership ? 'hidden md:block md:flex-none md:w-2/3' : 'w-full'}`}>
                 <div>
@@ -141,35 +194,112 @@ export default function PartnershipsPage() {
                         </div>
                     </div>
 
-                    {/* Partnership Type Filter */}
+                    {/* Role filter (searchable multi-select) */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Partnership Type (FY26 Partner Role)</label>
-                        <div className="flex flex-wrap gap-2">
-                            {Object.entries(PARTNERSHIP_TYPE_LABELS).map(([value, label]) => (
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Role / Potential Roles</label>
+                        <div className="flex items-start gap-3 flex-wrap">
+                            <div ref={rolesPopoverRef} className="relative">
                                 <button
-                                    key={value}
-                                    onClick={() => {
-                                        if (selectedTypes.includes(value)) {
-                                            setSelectedTypes(selectedTypes.filter(t => t !== value));
-                                        } else {
-                                            setSelectedTypes([...selectedTypes, value]);
-                                        }
-                                    }}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedTypes.includes(value)
-                                        ? 'bg-[#3b82f6] text-white'
-                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                        }`}
+                                    type="button"
+                                    onClick={() => setRolesOpen((v) => !v)}
+                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
                                 >
-                                    {label}
+                                    <span>
+                                        {selectedTypes.length > 0 ? `Roles (${selectedTypes.length} selected)` : 'Select roles'}
+                                    </span>
+                                    <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                                    </svg>
                                 </button>
-                            ))}
+
+                                {rolesOpen && (
+                                    <div className="absolute z-30 mt-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-lg">
+                                        <div className="p-3 border-b border-gray-100">
+                                            <input
+                                                value={roleQuery}
+                                                onChange={(e) => setRoleQuery(e.target.value)}
+                                                placeholder="Search roles…"
+                                                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                            />
+                                        </div>
+                                        <div className="max-h-[320px] overflow-auto p-2">
+                                            {filteredRoleOptions.length === 0 ? (
+                                                <div className="p-6 text-center text-sm text-gray-500">No matching roles</div>
+                                            ) : (
+                                                filteredRoleOptions.map((opt) => {
+                                                    const checked = selectedTypes.includes(opt.partnershipType);
+                                                    return (
+                                                        <button
+                                                            key={opt.partnershipType}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedTypes((prev) =>
+                                                                    prev.includes(opt.partnershipType)
+                                                                        ? prev.filter((t) => t !== opt.partnershipType)
+                                                                        : [...prev, opt.partnershipType]
+                                                                );
+                                                            }}
+                                                            className={`w-full text-left flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 ${checked ? 'bg-blue-50' : ''}`}
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}>
+                                                                    {checked && (
+                                                                        <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                            <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    )}
+                                                                </span>
+                                                                <span className="text-sm text-gray-900 truncate">{opt.label}</span>
+                                                            </div>
+                                                            <span className="text-xs text-gray-500">{opt.count}</span>
+                                                        </button>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                        <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedTypes([]);
+                                                    setRoleQuery('');
+                                                }}
+                                                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                                            >
+                                                Clear
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRolesOpen(false)}
+                                                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                                            >
+                                                Done
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {selectedTypes.length > 0 && (
-                                <button
-                                    onClick={() => setSelectedTypes([])}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                                >
-                                    Clear Filters
-                                </button>
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedTypes.slice(0, 4).map((t) => (
+                                        <span key={t} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                                            {getTypeLabel(t)}
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedTypes((prev) => prev.filter((x) => x !== t))}
+                                                className="text-blue-700/70 hover:text-blue-900"
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                    {selectedTypes.length > 4 && (
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                                            +{selectedTypes.length - 4} more
+                                        </span>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -177,19 +307,41 @@ export default function PartnershipsPage() {
                     {/* Kanban View */}
                     {view === 'kanban' && data.columns && (
                         <div className="flex gap-6 overflow-x-auto pb-4 -mx-6 px-6">
-                            {data.columns.map((column) => (
-                                <div key={column.stage} className="flex flex-col min-w-[320px] w-[320px]">
-                                    <div className="mb-4 pb-3 border-b border-gray-200">
-                                        <h3 className="font-semibold text-gray-900 text-lg">{column.label}</h3>
-                                        <p className="text-sm text-gray-500 mt-1">{column.count} partnerships</p>
+                            {refreshing ? (
+                                Array.from({ length: Math.min(5, data.columns.length || 5) }).map((_, idx) => (
+                                    <div key={idx} className="flex flex-col min-w-[320px] w-[320px]">
+                                        <div className="mb-4 pb-3 border-b border-gray-200">
+                                            <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+                                            <div className="h-4 w-24 bg-gray-200 rounded mt-2 animate-pulse" />
+                                        </div>
+                                        <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
+                                            {Array.from({ length: 4 }).map((__, j) => (
+                                                <div key={j} className="p-4 rounded-lg bg-white border border-gray-200">
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                                                        <div className="h-5 w-16 bg-gray-200 rounded animate-pulse" />
+                                                    </div>
+                                                    <div className="h-3 w-28 bg-gray-200 rounded animate-pulse mb-2" />
+                                                    <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
-                                        {column.partnerships.length === 0 ? (
-                                            <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
-                                                <p className="text-sm text-gray-500">No partnerships</p>
-                                            </div>
-                                        ) : (
-                                            column.partnerships.map((partnership) => {
+                                ))
+                            ) : (
+                                data.columns.map((column) => (
+                                    <div key={column.stage} className="flex flex-col min-w-[320px] w-[320px]">
+                                        <div className="mb-4 pb-3 border-b border-gray-200">
+                                            <h3 className="font-semibold text-gray-900 text-lg">{column.label}</h3>
+                                            <p className="text-sm text-gray-500 mt-1">{column.count} partnerships</p>
+                                        </div>
+                                        <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
+                                            {column.partnerships.length === 0 ? (
+                                                <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+                                                    <p className="text-sm text-gray-500">No partnerships</p>
+                                                </div>
+                                            ) : (
+                                                column.partnerships.map((partnership) => {
                                                 // Determine status based on days since contact
                                                 let status = 'on track';
                                                 let statusColor = 'bg-green-100 text-green-700 border-green-200';
@@ -227,8 +379,8 @@ export default function PartnershipsPage() {
                                                         {partnership.partnershipType && (
                                                             <p className="text-[10px] text-gray-500 mb-2">
                                                                 {Array.isArray(partnership.partnershipType)
-                                                                    ? partnership.partnershipType.map(t => PARTNERSHIP_TYPE_LABELS[t] || t).join(', ')
-                                                                    : (PARTNERSHIP_TYPE_LABELS[partnership.partnershipType] || partnership.partnershipType)}
+                                                                    ? partnership.partnershipType.map((t) => getTypeLabel(t)).join(', ')
+                                                                    : getTypeLabel(partnership.partnershipType)}
                                                             </p>
                                                         )}
 
@@ -266,10 +418,11 @@ export default function PartnershipsPage() {
                                                     </div>
                                                 );
                                             })
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     )}
 
@@ -297,7 +450,29 @@ export default function PartnershipsPage() {
 
                             {/* Table Body */}
                             <div className="divide-y divide-gray-200">
-                                {data.partnerships && data.partnerships.length > 0 ? (
+                                {refreshing ? (
+                                    Array.from({ length: 8 }).map((_, i) => (
+                                        <div key={i} className="grid grid-cols-12 gap-4 px-6 py-4">
+                                            <div className="col-span-4 space-y-2">
+                                                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+                                                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <div className="h-6 w-24 bg-gray-200 rounded animate-pulse" />
+                                            </div>
+                                            <div className="col-span-2 space-y-2">
+                                                <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
+                                                <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                                            </div>
+                                            <div className="col-span-2 flex justify-end">
+                                                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : data.partnerships && data.partnerships.length > 0 ? (
                                     data.partnerships.map((partnership) => (
                                         <div
                                             key={partnership.id}
@@ -312,8 +487,8 @@ export default function PartnershipsPage() {
                                                 {partnership.partnershipType && (
                                                     <p className="text-xs text-gray-500 mt-1">
                                                         {Array.isArray(partnership.partnershipType)
-                                                            ? partnership.partnershipType.map(t => PARTNERSHIP_TYPE_LABELS[t] || t).join(', ')
-                                                            : (PARTNERSHIP_TYPE_LABELS[partnership.partnershipType] || partnership.partnershipType)}
+                                                            ? partnership.partnershipType.map((t) => getTypeLabel(t)).join(', ')
+                                                            : getTypeLabel(partnership.partnershipType)}
                                                     </p>
                                                 )}
                                             </div>
@@ -375,6 +550,11 @@ export default function PartnershipsPage() {
             <CreatePartnershipModal
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
+                onViewExisting={async (partnershipId) => {
+                    setShowCreateModal(false);
+                    // No need to reload just to view/edit; panel fetches its own details.
+                    setSelectedPartnership(partnershipId);
+                }}
                 onSuccess={async (partnershipId) => {
                     setShowCreateModal(false);
                     // Refresh the partnerships list (without showing loading spinner)
@@ -401,12 +581,20 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
     });
     const [addingContact, setAddingContact] = useState(false);
     const [showEmailComposer, setShowEmailComposer] = useState(false);
+    const [roleOptions, setRoleOptions] = useState<Array<{ partnershipType: string; label: string; count: number }>>([]);
+    const [rolesOpen, setRolesOpen] = useState(false);
+    const [roleQuery, setRoleQuery] = useState('');
+    const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
+    const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+    const [savingRoles, setSavingRoles] = useState(false);
 
     const loadPartnership = useCallback(async () => {
         setLoading(true);
         try {
             const data = await getPartnershipDetails(partnershipId);
             setPartnership(data);
+            const roles = Array.isArray(data.partnershipType) ? data.partnershipType : (data.partnershipType ? [data.partnershipType] : []);
+            setSelectedRoles(roles);
         } catch (err) {
             console.error('Failed to load partnership:', err);
         } finally {
@@ -414,9 +602,34 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
         }
     }, [partnershipId]);
 
+    const loadRoleOptions = useCallback(async () => {
+        try {
+            const totals = await getPartnershipTotals();
+            setRoleOptions(totals.byType ?? []);
+        } catch {
+            setRoleOptions([]);
+        }
+    }, []);
+
     useEffect(() => {
         loadPartnership();
     }, [loadPartnership]);
+
+    useEffect(() => {
+        loadRoleOptions();
+    }, [loadRoleOptions]);
+
+    useEffect(() => {
+        if (!rolesOpen) return;
+        function onDocMouseDown(e: MouseEvent) {
+            const el = rolesPopoverRef.current;
+            if (!el) return;
+            if (e.target instanceof Node && el.contains(e.target)) return;
+            setRolesOpen(false);
+        }
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, [rolesOpen]);
 
     async function handleAddNote() {
         if (!note.trim()) return;
@@ -455,6 +668,38 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
             await loadPartnership();
         } catch (err) {
             console.error('Failed to update stage:', err);
+        }
+    }
+
+    const roleLabel = (value: string) =>
+        roleOptions.find((t) => t.partnershipType === value)?.label ?? PARTNERSHIP_TYPE_LABELS[value] ?? value;
+
+    const allRoleOptions = useMemo(() => {
+        const list = (roleOptions.length > 0
+            ? roleOptions
+            : Object.entries(PARTNERSHIP_TYPE_LABELS).map(([partnershipType, label]) => ({ partnershipType, label, count: 0 })))
+            .map((t) => ({ ...t, label: t.label || t.partnershipType }))
+            .sort((a, b) => (a.label || a.partnershipType).localeCompare(b.label || b.partnershipType));
+        return list;
+    }, [roleOptions]);
+
+    const filteredRoleOptions = useMemo(() => {
+        const q = roleQuery.trim().toLowerCase();
+        if (!q) return allRoleOptions;
+        return allRoleOptions.filter((t) => (t.label || '').toLowerCase().includes(q) || t.partnershipType.toLowerCase().includes(q));
+    }, [allRoleOptions, roleQuery]);
+
+    async function handleSaveRoles() {
+        if (!selectedRoles.length) return;
+        setSavingRoles(true);
+        try {
+            await updatePartnershipRoles(partnershipId, selectedRoles);
+            if (onUpdate) await onUpdate(false);
+            await loadPartnership();
+        } catch (err) {
+            console.error('Failed to update roles:', err);
+        } finally {
+            setSavingRoles(false);
         }
     }
 
@@ -504,6 +749,109 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Roles</label>
+                            <div className="flex items-start gap-2 flex-wrap">
+                                <div ref={rolesPopoverRef} className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRolesOpen((v) => !v)}
+                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                                    >
+                                        <span>{selectedRoles.length ? `Roles (${selectedRoles.length})` : 'Select roles'}</span>
+                                        <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    {rolesOpen && (
+                                        <div className="absolute z-30 mt-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-lg">
+                                            <div className="p-3 border-b border-gray-100">
+                                                <input
+                                                    value={roleQuery}
+                                                    onChange={(e) => setRoleQuery(e.target.value)}
+                                                    placeholder="Search roles…"
+                                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                                />
+                                            </div>
+                                            <div className="max-h-[280px] overflow-auto p-2">
+                                                {filteredRoleOptions.map((opt) => {
+                                                    const checked = selectedRoles.includes(opt.partnershipType);
+                                                    return (
+                                                        <button
+                                                            key={opt.partnershipType}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedRoles((prev) =>
+                                                                    prev.includes(opt.partnershipType)
+                                                                        ? prev.filter((t) => t !== opt.partnershipType)
+                                                                        : [...prev, opt.partnershipType]
+                                                                );
+                                                            }}
+                                                            className={`w-full text-left flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 ${checked ? 'bg-blue-50' : ''}`}
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}>
+                                                                    {checked && (
+                                                                        <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                            <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    )}
+                                                                </span>
+                                                                <span className="text-sm text-gray-900 truncate">{opt.label}</span>
+                                                            </div>
+                                                            <span className="text-xs text-gray-500">{opt.count}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedRoles(['other']);
+                                                        setRoleQuery('');
+                                                    }}
+                                                    className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                                                >
+                                                    Reset
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRolesOpen(false)}
+                                                    className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                                                >
+                                                    Done
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleSaveRoles}
+                                    disabled={savingRoles || selectedRoles.length === 0}
+                                    className="px-3 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                >
+                                    {savingRoles ? 'Saving…' : 'Save'}
+                                </button>
+                            </div>
+                            {selectedRoles.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {selectedRoles.slice(0, 4).map((t) => (
+                                        <span key={t} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                                            {roleLabel(t)}
+                                            <button type="button" onClick={() => setSelectedRoles((prev) => prev.filter((x) => x !== t))} className="text-blue-700/70 hover:text-blue-900">×</button>
+                                        </span>
+                                    ))}
+                                    {selectedRoles.length > 4 && (
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                                            +{selectedRoles.length - 4} more
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <button

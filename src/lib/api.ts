@@ -303,6 +303,16 @@ export async function updatePartnershipStage(
     });
 }
 
+export async function updatePartnershipRoles(
+    partnershipId: string,
+    partnershipType: string[]
+): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/api/education/partnerships/${partnershipId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ partnershipType }),
+    });
+}
+
 export interface AddContactInput {
     name: string;
     email?: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     createPartnership,
     createPartnershipForExistingOrg,
@@ -9,6 +9,7 @@ import {
     searchAirtable as apiSearchAirtable,
     importAirtableRecord,
     getPartnerships,
+    getPartnershipTotals,
     PartnershipListItem,
 } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
@@ -17,9 +18,11 @@ interface CreatePartnershipModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: (partnershipId: string) => void;
+    onViewExisting?: (partnershipId: string) => void;
 }
 
-const PARTNERSHIP_TYPES = [
+// Fallback options used only before Airtable roles are available.
+const FALLBACK_PARTNERSHIP_TYPES = [
     { value: 'dentership_host', label: 'Denternship Host' },
     { value: 'space_partner', label: 'Space Partner' },
     { value: 'made_at_dent', label: 'Made@Dent' },
@@ -47,7 +50,7 @@ const ORG_TYPES = [
     { value: 'other', label: 'Other' },
 ];
 
-export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePartnershipModalProps) {
+export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExisting }: CreatePartnershipModalProps) {
     const [formData, setFormData] = useState<CreatePartnershipInput>({
         organizationName: '',
         organizationType: 'other',
@@ -55,7 +58,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
         primaryContactEmail: '',
         primaryContactJobTitle: '',
         primaryContactPhone: '',
-        partnershipType: ['dentership_host'],
+        partnershipType: ['other'],
         initialStage: 'need_outreach',
         season: '',
         source: '',
@@ -73,6 +76,50 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
     const [selectedDuplicate, setSelectedDuplicate] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string; count: number }>>([]);
+    const [rolesOpen, setRolesOpen] = useState(false);
+    const [roleQuery, setRoleQuery] = useState('');
+    const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const totals = await getPartnershipTotals();
+                const byType = totals.byType || [];
+                const opts = byType
+                    .map((t) => ({ value: t.partnershipType, label: t.label || t.partnershipType, count: t.count || 0 }))
+                    .sort((a, b) => (a.label || a.value).localeCompare(b.label || b.value));
+                if (!cancelled) setRoleOptions(opts);
+            } catch {
+                if (!cancelled) setRoleOptions([]);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isOpen]);
+
+    const partnershipTypeOptions = useMemo(() => {
+        return roleOptions.length > 0 ? roleOptions : FALLBACK_PARTNERSHIP_TYPES.map((t) => ({ ...t, count: 0 }));
+    }, [roleOptions]);
+
+    const filteredRoleOptions = useMemo(() => {
+        const q = roleQuery.trim().toLowerCase();
+        if (!q) return partnershipTypeOptions;
+        return partnershipTypeOptions.filter((t) => t.label.toLowerCase().includes(q) || t.value.toLowerCase().includes(q));
+    }, [partnershipTypeOptions, roleQuery]);
+
+    useEffect(() => {
+        if (!isOpen || !rolesOpen) return;
+        function onDocMouseDown(e: MouseEvent) {
+            const el = rolesPopoverRef.current;
+            if (!el) return;
+            if (e.target instanceof Node && el.contains(e.target)) return;
+            setRolesOpen(false);
+        }
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, [isOpen, rolesOpen]);
 
     if (!isOpen) return null;
 
@@ -129,7 +176,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
             primaryContactEmail: '',
             primaryContactJobTitle: '',
             primaryContactPhone: '',
-            partnershipType: ['dentership_host'],
+            partnershipType: ['other'],
             initialStage: 'need_outreach',
             season: '',
             source: '',
@@ -185,6 +232,12 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
             setError(err.message || 'Failed to import from Airtable');
             setCreating(false);
         }
+    };
+
+    const handleViewExisting = async (partnershipId: string) => {
+        if (onViewExisting) onViewExisting(partnershipId);
+        else if (onSuccess) await onSuccess(partnershipId);
+        handleClose();
     };
 
     const togglePartnershipType = (type: string) => {
@@ -353,14 +406,13 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                                                     {record.contactName && <span>• {record.contactName}</span>}
                                                 </div>
                                             </div>
-                                            <a
-                                                href={`/app/partnerships?id=${record.id}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                type="button"
+                                                onClick={() => handleViewExisting(record.id)}
                                                 className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                             >
-                                                View
-                                            </a>
+                                                View & Edit
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
@@ -527,20 +579,109 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess }: CreatePar
                                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
                                     Partnership Types *
                                 </label>
-                                <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    {PARTNERSHIP_TYPES.map((type) => (
-                                        <label key={type.value} className="flex items-center gap-2 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.partnershipType?.includes(type.value)}
-                                                onChange={() => togglePartnershipType(type.value)}
-                                                className="w-4 h-4 rounded border-gray-300 text-[#3b82f6] focus:ring-[#3b82f6]"
-                                            />
-                                            <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">
-                                                {type.label}
+                                <div className="flex items-start gap-3 flex-wrap">
+                                    <div ref={rolesPopoverRef} className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRolesOpen((v) => !v)}
+                                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                                        >
+                                            <span>
+                                                {formData.partnershipType?.length ? `Roles (${formData.partnershipType.length} selected)` : 'Select roles'}
                                             </span>
-                                        </label>
-                                    ))}
+                                            <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+
+                                        {rolesOpen && (
+                                            <div className="absolute z-30 mt-2 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-lg">
+                                                <div className="p-3 border-b border-gray-100">
+                                                    <input
+                                                        value={roleQuery}
+                                                        onChange={(e) => setRoleQuery(e.target.value)}
+                                                        placeholder="Search roles…"
+                                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                <div className="max-h-[320px] overflow-auto p-2">
+                                                    {filteredRoleOptions.length === 0 ? (
+                                                        <div className="p-6 text-center text-sm text-gray-500">No matching roles</div>
+                                                    ) : (
+                                                        filteredRoleOptions.map((opt) => {
+                                                            const checked = formData.partnershipType?.includes(opt.value);
+                                                            return (
+                                                                <button
+                                                                    key={opt.value}
+                                                                    type="button"
+                                                                    onClick={() => togglePartnershipType(opt.value)}
+                                                                    className={`w-full text-left flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 ${checked ? 'bg-blue-50' : ''}`}
+                                                                >
+                                                                    <div className="flex items-center gap-3 min-w-0">
+                                                                        <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}>
+                                                                            {checked && (
+                                                                                <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                                    <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </span>
+                                                                        <span className="text-sm text-gray-900 truncate">{opt.label}</span>
+                                                                    </div>
+                                                                    <span className="text-xs text-gray-500">{opt.count}</span>
+                                                                </button>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                                <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setFormData((prev) => ({ ...prev, partnershipType: ['other'] }));
+                                                            setRoleQuery('');
+                                                        }}
+                                                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                                                    >
+                                                        Reset
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRolesOpen(false)}
+                                                        className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                                                    >
+                                                        Done
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {formData.partnershipType?.length ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            {formData.partnershipType.slice(0, 4).map((t) => {
+                                                const label = partnershipTypeOptions.find((o) => o.value === t)?.label || t;
+                                                return (
+                                                    <span key={t} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                                                        {label}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => togglePartnershipType(t)}
+                                                            className="text-blue-700/70 hover:text-blue-900"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })}
+                                            {formData.partnershipType.length > 4 && (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                                                    +{formData.partnershipType.length - 4} more
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm text-gray-500 py-2">Select at least one role.</span>
+                                    )}
                                 </div>
                             </div>
 
