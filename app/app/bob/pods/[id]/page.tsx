@@ -10,6 +10,7 @@ import {
     BobPod,
     BobStudent,
 } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function PodDetailPage() {
     const params = useParams();
@@ -101,8 +102,46 @@ export default function PodDetailPage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <Skeleton className="h-4 w-40 mb-6" />
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <Skeleton className="h-7 w-56 mb-2" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-10 w-28" rounded="lg" />
+                        <Skeleton className="h-10 w-24" rounded="lg" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-5 w-44 mb-3" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-10 w-full" rounded="lg" />
+                                <Skeleton className="h-10 w-full" rounded="lg" />
+                                <Skeleton className="h-10 w-full" rounded="lg" />
+                            </div>
+                            <Skeleton className="h-10 w-32 mt-4" rounded="lg" />
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-5 w-40 mb-3" />
+                            <div className="space-y-2">
+                                {Array.from({ length: 8 }).map((_, i) => (
+                                    <div key={i} className="flex items-center gap-3">
+                                        <Skeleton className="w-4 h-4" rounded="sm" />
+                                        <Skeleton className="h-4 w-56" />
+                                    </div>
+                                ))}
+                            </div>
+                            <Skeleton className="h-10 w-28 mt-4" rounded="lg" />
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

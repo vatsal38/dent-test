@@ -6,6 +6,7 @@ import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { EmailComposer } from '@/components/EmailComposer';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function InboxPage() {
     const [data, setData] = useState<GmailThreadsResponse | null>(null);
@@ -137,11 +138,7 @@ export default function InboxPage() {
     }
 
     if (loading && !data) {
-        return (
-            <div className="p-8 flex items-center justify-center min-h-screen">
-                <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
-            </div>
-        );
+        return <InboxPageSkeleton />;
     }
 
     const threads = data?.threads || [];
@@ -473,6 +470,72 @@ export default function InboxPage() {
     );
 }
 
+function InboxPageSkeleton() {
+    return (
+        <div className="flex flex-col md:flex-row h-[calc(100vh-5.5rem)] md:h-[calc(100vh-4rem)] bg-gray-50 overflow-hidden rounded-lg border border-gray-200 md:border-0">
+            <div className="flex flex-col bg-white border-r border-gray-200 flex-1 min-w-0 min-h-0">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <div className="flex-1 min-w-0">
+                            <Skeleton className="h-6 w-28" />
+                            <Skeleton className="h-4 w-56 mt-2" />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Skeleton className="h-10 w-28" rounded="lg" />
+                            <Skeleton className="h-10 w-32" rounded="lg" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                <Skeleton className="h-4 w-20 mb-2" />
+                                <Skeleton className="h-6 w-10" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                        <Skeleton className="h-10 flex-1" rounded="lg" />
+                        <Skeleton className="h-10 w-40" rounded="lg" />
+                    </div>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-auto divide-y divide-gray-100">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="px-4 sm:px-6 py-4 bg-white">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <Skeleton className="w-9 h-9" rounded="full" />
+                                    <div className="min-w-0 space-y-2">
+                                        <Skeleton className="h-4 w-56" />
+                                        <Skeleton className="h-3 w-[520px] max-w-[70vw]" />
+                                        <Skeleton className="h-3 w-40" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-4 w-16" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="hidden md:flex md:flex-col md:w-[60%] bg-white">
+                <div className="p-6 border-b border-gray-200">
+                    <Skeleton className="h-6 w-72 mb-2" />
+                    <Skeleton className="h-4 w-56" />
+                </div>
+                <div className="p-6 space-y-4 overflow-auto">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                            <Skeleton className="h-4 w-64 mb-2" />
+                            <Skeleton className="h-3 w-[720px] max-w-full" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function EmailDetailPanel({
     thread,
     onClose,
@@ -784,8 +847,17 @@ function EmailDetailPanel({
                                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                                         {loadingPartnerships ? (
                                             <div className="p-4 text-center">
-                                                <div className="animate-spin w-5 h-5 border-2 border-[#3b82f6] border-t-transparent rounded-full mx-auto"></div>
-                                                <p className="text-xs text-gray-500 mt-2">Loading partnerships...</p>
+                                                <div className="space-y-3">
+                                                    <Skeleton className="h-4 w-40 mx-auto" />
+                                                    <div className="space-y-2">
+                                                        {Array.from({ length: 6 }).map((_, i) => (
+                                                            <div key={i} className="px-4 py-3">
+                                                                <Skeleton className="h-4 w-64 mb-2" />
+                                                                <Skeleton className="h-3 w-44" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         ) : filteredPartnerships.length === 0 ? (
                                             <div className="p-4 text-center text-sm text-gray-500">

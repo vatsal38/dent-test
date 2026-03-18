@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getRuns, getRunTemplates, RunListItem, RunTemplate, createRun, getPartnerships, PartnershipsListResponse } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function RunsPage() {
     const router = useRouter();
@@ -126,7 +127,28 @@ export default function RunsPage() {
                         + Create Custom Run
                     </button>
                 </div>
-                {templates.length === 0 ? (
+                {loading && templates.length === 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="p-6 rounded-lg bg-white border border-gray-200">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-5 w-56" />
+                                        <Skeleton className="h-4 w-[520px] max-w-full" />
+                                    </div>
+                                    <Skeleton className="w-6 h-6" rounded="md" />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-4 w-16" />
+                                    </div>
+                                    <Skeleton className="h-10 w-28" rounded="lg" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : templates.length === 0 ? (
                     <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
                         <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -194,8 +216,22 @@ export default function RunsPage() {
             <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Sessions</h2>
                 {loading ? (
-                    <div className="flex items-center justify-center py-16">
-                        <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
+                    <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="p-4 rounded-lg bg-white border border-gray-200">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-4 w-56" />
+                                        <Skeleton className="h-3 w-40" />
+                                        <div className="flex items-center gap-4 mt-2">
+                                            <Skeleton className="h-3 w-28" />
+                                            <Skeleton className="h-3 w-24" />
+                                        </div>
+                                    </div>
+                                    <Skeleton className="h-5 w-24" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : runs.length === 0 ? (
                     <div className="p-12 text-center bg-gray-50 rounded-lg border border-gray-200">
@@ -402,8 +438,20 @@ function CreateRunModal({
                                 </div>
                                 {loadingPartnerships ? (
                                     <div className="p-4 text-center">
-                                        <div className="animate-spin w-5 h-5 border-2 border-[#3b82f6] border-t-transparent rounded-full mx-auto"></div>
-                                        <p className="text-xs text-gray-500 mt-2">Loading partnerships...</p>
+                                        <div className="space-y-3">
+                                            <Skeleton className="h-4 w-40 mx-auto" />
+                                            <div className="space-y-2">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <div key={i} className="flex items-start gap-3 px-4 py-3">
+                                                        <Skeleton className="w-4 h-4 mt-1" rounded="sm" />
+                                                        <div className="flex-1 space-y-2">
+                                                            <Skeleton className="h-4 w-56" />
+                                                            <Skeleton className="h-3 w-32" />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : filteredPartnerships.length === 0 ? (
                                     <div className="p-4 text-center text-sm text-gray-500">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { getBobAttendance, getBobPods, getBobStudents, BobAttendance, BobPod, BobStudent } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 function getWeekMonday(d: Date): string {
     const date = new Date(d);
@@ -134,8 +135,41 @@ export default function DiscrepanciesPage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <Skeleton className="h-4 w-40 mb-6" />
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <Skeleton className="h-7 w-64 mb-2" />
+                        <Skeleton className="h-4 w-[520px] max-w-full" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Skeleton className="h-10 w-40" rounded="lg" />
+                        <Skeleton className="h-10 w-32" rounded="lg" />
+                    </div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-6">
+                        <Skeleton className="h-4 w-44" />
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24 ml-auto" />
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                        {Array.from({ length: 10 }).map((_, i) => (
+                            <div key={i} className="px-4 py-4 flex items-center gap-6">
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-4 w-56" />
+                                    <Skeleton className="h-3 w-44" />
+                                </div>
+                                <Skeleton className="h-4 w-28" />
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-6 w-20" rounded="full" />
+                                <Skeleton className="h-8 w-24 ml-auto" rounded="lg" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

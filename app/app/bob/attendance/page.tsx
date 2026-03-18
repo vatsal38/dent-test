@@ -11,6 +11,7 @@ import {
     BobStudent,
     BobAttendanceStatus,
 } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 const STATUS_LABELS: Record<BobAttendanceStatus, string> = {
     present: 'Present',
@@ -196,8 +197,43 @@ export default function AttendancePage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <div>
+                        <Skeleton className="h-7 w-44 mb-2" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Skeleton className="h-10 w-28" rounded="lg" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-40" rounded="lg" />
+                        <Skeleton className="h-10 w-40" rounded="lg" />
+                    </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-6">
+                        <Skeleton className="h-4 w-44" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-4 w-28" />
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                        {Array.from({ length: 10 }).map((_, i) => (
+                            <div key={i} className="px-4 py-4 flex items-center gap-6">
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-4 w-56" />
+                                    <Skeleton className="h-3 w-40" />
+                                </div>
+                                <Skeleton className="h-6 w-16" rounded="full" />
+                                <Skeleton className="h-6 w-16" rounded="full" />
+                                <Skeleton className="h-6 w-16" rounded="full" />
+                                <Skeleton className="h-6 w-16" rounded="full" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

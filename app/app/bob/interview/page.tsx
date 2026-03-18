@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { getBobStudents, BobStudent, BobInterviewStage } from '@/lib/api';
 import { HiOutlineFilter, HiOutlineUserGroup } from 'react-icons/hi';
+import { Skeleton } from '@/components/Skeleton';
 
 const STAGE_LABELS: Record<BobInterviewStage, string> = {
     applied: 'Applied',
@@ -58,8 +59,32 @@ export default function BobInterviewPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <Skeleton className="h-7 w-44 mb-2" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Skeleton className="h-10 w-48" rounded="lg" />
+                        <Skeleton className="h-10 w-32" rounded="lg" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 3 }).map((_, col) => (
+                        <div key={col} className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-5 w-32 mb-4" />
+                            <div className="space-y-3">
+                                {Array.from({ length: 6 }).map((__, i) => (
+                                    <div key={i} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                        <Skeleton className="h-4 w-44 mb-2" />
+                                        <Skeleton className="h-3 w-28" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

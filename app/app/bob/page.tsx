@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { getBobCommandCenterStats, BobCommandCenterStats } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 /**
  * Bet On Baltimore Operations Engine — Command Center dashboard.
@@ -51,8 +52,35 @@ export default function BobDashboardPage() {
 
             {/* BOB Command Center widgets — orange theme */}
             {loading ? (
-                <div className="mb-6 flex justify-center py-8">
-                    <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+                <div className="mb-8 space-y-6">
+                    <Skeleton className="h-4 w-48" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                                <Skeleton className="h-3 w-28 mb-2" />
+                                <Skeleton className="h-8 w-16" />
+                            </div>
+                        ))}
+                    </div>
+                    <Skeleton className="h-4 w-24" />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {Array.from({ length: 2 }).map((_, i) => (
+                            <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                                <Skeleton className="h-5 w-44 mb-4" />
+                                <div className="space-y-3">
+                                    {Array.from({ length: 4 }).map((__, j) => (
+                                        <div key={j}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <Skeleton className="h-3 w-40" />
+                                                <Skeleton className="h-3 w-24" />
+                                            </div>
+                                            <Skeleton className="h-2 w-full rounded-full" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             ) : bobStats ? (
                 <div className="mb-8 space-y-6">

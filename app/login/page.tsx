@@ -3,6 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function LoginPage() {
     const { signInWithGoogle, isAuthenticated, isLoading } = useAuth();
@@ -29,7 +30,22 @@ export default function LoginPage() {
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
+                <div className="max-w-md w-full mx-4">
+                    <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+                        <div className="text-center mb-8">
+                            <div className="flex items-center justify-center gap-2 mb-4">
+                                <Skeleton className="w-12 h-12" rounded="md" />
+                                <Skeleton className="h-8 w-36" />
+                            </div>
+                            <Skeleton className="h-4 w-56 mx-auto" />
+                        </div>
+
+                        <div className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 border-gray-200">
+                            <Skeleton className="w-5 h-5" rounded="full" />
+                            <Skeleton className="h-4 w-40" />
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

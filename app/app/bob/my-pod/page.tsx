@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { getBobPods, getBobStudents, BobPod, BobStudent } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 const TODAY_SCHEDULE_PLACEHOLDER = [
     { time: '9:30 AM', label: 'Sign-in' },
@@ -55,8 +56,50 @@ export default function MyPodPage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <Skeleton className="h-8 w-40 mb-2" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-10 w-32" rounded="lg" />
+                        <Skeleton className="h-10 w-28" rounded="lg" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-5 w-48 mb-3" />
+                            <div className="space-y-2">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                                        <Skeleton className="h-4 w-56 mb-2" />
+                                        <Skeleton className="h-3 w-44" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-5 w-36 mb-3" />
+                            <div className="space-y-2">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <Skeleton className="h-3 w-28" />
+                                        <Skeleton className="h-3 w-16" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-5 w-40 mb-3" />
+                            <Skeleton className="h-20 w-full" rounded="lg" />
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

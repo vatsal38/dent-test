@@ -6,6 +6,7 @@ import { formatPartnerName } from '@/lib/utils';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
 import Link from 'next/link';
+import { Skeleton } from '@/components/Skeleton';
 
 /** Fallback labels when backend hasn't returned types yet (e.g. before first sync). */
 const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
@@ -121,11 +122,7 @@ export default function PartnershipsPage() {
     }, [allRoleOptions, roleQuery]);
 
     if (loading) {
-        return (
-            <div className="p-8 flex items-center justify-center min-h-screen">
-                <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
-            </div>
-        );
+        return <PartnershipsPageSkeleton />;
     }
 
     if (error) {
@@ -596,6 +593,76 @@ export default function PartnershipsPage() {
     );
 }
 
+function PartnershipsPageSkeleton() {
+    return (
+        <div className="flex flex-col md:flex-row h-screen bg-white p-4">
+            <div className="flex-1 min-w-0 overflow-auto">
+                <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                        <div>
+                            <Skeleton className="h-7 w-56 mb-2" />
+                            <Skeleton className="h-4 w-[420px] max-w-full" />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Skeleton className="h-10 w-[260px] max-w-[70vw]" rounded="lg" />
+                            <Skeleton className="h-10 w-40" rounded="lg" />
+                            <Skeleton className="h-10 w-32" rounded="lg" />
+                            <Skeleton className="h-10 w-28" rounded="lg" />
+                            <Skeleton className="h-10 w-40" rounded="lg" />
+                            <Skeleton className="h-10 w-40" rounded="lg" />
+                        </div>
+                    </div>
+
+                    <div className="mb-6">
+                        <Skeleton className="h-4 w-72 mb-2" />
+                        <div className="flex items-start gap-3 flex-wrap">
+                            <Skeleton className="h-10 w-40" rounded="lg" />
+                            <Skeleton className="h-7 w-28" rounded="full" />
+                            <Skeleton className="h-7 w-32" rounded="full" />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-6 overflow-x-auto pb-4 -mx-6 px-6">
+                        {Array.from({ length: 5 }).map((_, idx) => (
+                            <div key={idx} className="flex flex-col min-w-[320px] w-[320px]">
+                                <div className="mb-4 pb-3 border-b border-gray-200">
+                                    <Skeleton className="h-5 w-40" />
+                                    <Skeleton className="h-4 w-24 mt-2" />
+                                </div>
+                                <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
+                                    {Array.from({ length: 4 }).map((__, j) => (
+                                        <div key={j} className="p-4 rounded-lg bg-white border border-gray-200">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <Skeleton className="h-4 w-40" />
+                                                <Skeleton className="h-5 w-16" rounded="sm" />
+                                            </div>
+                                            <Skeleton className="h-3 w-28 mb-2" />
+                                            <Skeleton className="h-3 w-24" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="hidden md:block md:w-1/3 md:border-l border-gray-200 bg-white p-6">
+                <Skeleton className="h-6 w-48 mb-4" />
+                <Skeleton className="h-10 w-full mb-4" rounded="lg" />
+                <div className="space-y-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                            <Skeleton className="h-4 w-44 mb-2" />
+                            <Skeleton className="h-3 w-56" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId: string; onClose: () => void; onUpdate?: (showLoading?: boolean) => Promise<void> }) {
     const [partnership, setPartnership] = useState<PartnershipDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -745,7 +812,24 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
     if (loading) {
         return (
             <div className="w-full md:w-1/3 md:border-l border-gray-200 bg-white p-6">
-                <div className="animate-spin w-6 h-6 border-2 border-[#3b82f6] border-t-transparent rounded-full mx-auto" />
+                <div className="space-y-4">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-10 w-full" rounded="lg" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-10 w-full" rounded="lg" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Skeleton className="h-9 w-full" rounded="lg" />
+                        <Skeleton className="h-9 w-full" rounded="lg" />
+                    </div>
+                    <div className="space-y-3 pt-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                                <Skeleton className="h-4 w-44 mb-2" />
+                                <Skeleton className="h-3 w-56" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getPartnerships, PartnershipsListResponse, PartnershipTotalsResponse, getPartnershipTotals, PartnershipSummary } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
+import { Skeleton } from '@/components/Skeleton';
 
 const STAGE_COLORS: Record<string, string> = {
     'new_intro_made': 'from-blue-400 to-blue-600',
@@ -72,8 +73,56 @@ export default function PartnershipTrackerPage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
+            <div className="px-6 py-8">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-28" />
+                            <Skeleton className="h-4 w-16" />
+                        </div>
+                        <div>
+                            <Skeleton className="h-10 w-[520px] max-w-full mb-2" />
+                            <Skeleton className="h-5 w-[620px] max-w-full" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10" rounded="lg" />
+                        <Skeleton className="h-10 w-32" rounded="lg" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="p-5 rounded-2xl border border-gray-200 bg-white">
+                            <Skeleton className="h-4 w-24 mb-3" />
+                            <Skeleton className="h-8 w-20" />
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-3 mb-6">
+                    <Skeleton className="h-11 flex-1" rounded="lg" />
+                    <Skeleton className="h-11 w-48" rounded="lg" />
+                </div>
+
+                <div className="space-y-3">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="p-5 rounded-2xl border border-gray-200 bg-white">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-5 w-56" />
+                                    <Skeleton className="h-4 w-44" />
+                                </div>
+                                <Skeleton className="h-7 w-24" rounded="full" />
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {Array.from({ length: 4 }).map((__, j) => (
+                                    <Skeleton key={j} className="h-10 w-full" rounded="lg" />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

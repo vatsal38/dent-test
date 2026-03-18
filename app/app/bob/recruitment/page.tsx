@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { getBobStudents, BobStudent, BobInterviewStage } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 const STAGE_LABELS: Record<BobInterviewStage, string> = {
     applied: 'Applied',
@@ -82,8 +83,38 @@ export default function RecruitmentPage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <Skeleton className="h-7 w-56 mb-2" />
+                        <Skeleton className="h-4 w-[520px] max-w-full" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-10 w-28" rounded="lg" />
+                        <Skeleton className="h-10 w-28" rounded="lg" />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 mb-6">
+                    <Skeleton className="h-9 w-32" rounded="lg" />
+                    <Skeleton className="h-9 w-32" rounded="lg" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                        <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-56" />
+                                    <Skeleton className="h-3 w-40" />
+                                </div>
+                                <Skeleton className="h-6 w-20" rounded="full" />
+                            </div>
+                            <div className="mt-4 flex items-center gap-2">
+                                <Skeleton className="h-7 w-24" rounded="full" />
+                                <Skeleton className="h-7 w-28" rounded="full" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

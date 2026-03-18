@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getAirtableStatus, syncAirtable, AirtableStatus } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 import {
     HiOutlineHome,
     HiOutlineClipboardList,
@@ -135,8 +136,42 @@ export default function AppLayout({
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
+            <div className="min-h-screen bg-gray-50 flex">
+                <div className="hidden md:flex w-64 bg-white border-r border-gray-200 p-4 flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="w-9 h-9" rounded="lg" />
+                        <Skeleton className="h-5 w-24" />
+                    </div>
+                    <div className="space-y-2 pt-2">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                                <Skeleton className="w-5 h-5" rounded="md" />
+                                <Skeleton className="h-4 w-28" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-auto pt-4 border-t border-gray-200 space-y-2">
+                        <div className="flex items-center gap-3 px-3 py-2">
+                            <Skeleton className="w-8 h-8" rounded="full" />
+                            <div className="flex-1 space-y-1">
+                                <Skeleton className="h-4 w-28" />
+                                <Skeleton className="h-3 w-36" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex-1 p-6">
+                    <Skeleton className="h-8 w-64 mb-4" />
+                    <Skeleton className="h-4 w-[520px] max-w-full mb-8" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                                <Skeleton className="h-4 w-48 mb-2" />
+                                <Skeleton className="h-3 w-[520px] max-w-full" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

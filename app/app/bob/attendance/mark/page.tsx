@@ -14,6 +14,7 @@ import {
     BOB_ATTENDANCE_STATUSES,
     BobAttendanceStatus,
 } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 
 const STATUS_LABELS: Record<BobAttendanceStatus, string> = {
     present: 'Present',
@@ -170,7 +171,24 @@ export default function MarkAttendancePage() {
 
                 {loading && (
                     <div className="flex justify-center py-8">
-                        <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+                        <div className="w-full max-w-2xl space-y-3">
+                            <Skeleton className="h-4 w-48 mx-auto" />
+                            <div className="space-y-2">
+                                {Array.from({ length: 8 }).map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between gap-4 p-3 rounded-lg border border-gray-200 bg-white">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-56" />
+                                            <Skeleton className="h-3 w-40" />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton className="h-8 w-16" rounded="lg" />
+                                            <Skeleton className="h-8 w-16" rounded="lg" />
+                                            <Skeleton className="h-8 w-16" rounded="lg" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
 

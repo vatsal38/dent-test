@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { getBobCommandCenterStats, BobCommandCenterStats } from '@/lib/api';
 import { HiOutlineChartBar, HiOutlineClipboardCheck, HiOutlineUserGroup, HiOutlineExclamationCircle } from 'react-icons/hi';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function BobReportsPage() {
     const [stats, setStats] = useState<BobCommandCenterStats | null>(null);
@@ -29,8 +30,38 @@ export default function BobReportsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <div>
+                        <Skeleton className="h-8 w-48 mb-2" />
+                        <Skeleton className="h-4 w-72" />
+                    </div>
+                    <Skeleton className="h-10 w-24" rounded="lg" />
+                </div>
+                <div className="space-y-6">
+                    <div>
+                        <Skeleton className="h-4 w-40 mb-4" />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                                    <Skeleton className="h-3 w-28 mb-2" />
+                                    <Skeleton className="h-8 w-16" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <Skeleton className="h-4 w-44 mb-4" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                                    <Skeleton className="h-4 w-56 mb-2" />
+                                    <Skeleton className="h-3 w-[520px] max-w-full" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

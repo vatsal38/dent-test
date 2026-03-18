@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getRunDetails, updateRunStep, updateRunStatus, createRunStep, RunDetail, RunStep, getPartnerships, PartnershipsListResponse } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function RunDetailPage() {
     const params = useParams();
@@ -53,8 +54,52 @@ export default function RunDetailPage() {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-screen bg-white">
-                <div className="animate-spin w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
+            <div className="p-8 bg-white">
+                <div className="mb-8">
+                    <Skeleton className="h-4 w-28 mb-6" />
+                    <div className="flex items-center justify-between gap-6">
+                        <div className="min-w-0">
+                            <Skeleton className="h-9 w-[520px] max-w-full mb-2" />
+                            <Skeleton className="h-5 w-[420px] max-w-full" />
+                            <Skeleton className="h-4 w-56 mt-2" />
+                        </div>
+                        <Skeleton className="h-7 w-28" rounded="full" />
+                    </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
+                    <div className="flex items-center justify-between mb-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-44" />
+                    </div>
+                    <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-3">
+                        <Skeleton className="h-6 w-40 mb-1" />
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="p-4 rounded-lg border border-gray-200 bg-white">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-72" />
+                                        <Skeleton className="h-3 w-[620px] max-w-full" />
+                                    </div>
+                                    <Skeleton className="h-6 w-24" rounded="full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-3">
+                        <Skeleton className="h-6 w-44 mb-1" />
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                                <Skeleton className="h-4 w-56 mb-2" />
+                                <Skeleton className="h-3 w-44" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -545,7 +590,11 @@ function StepCard({
             {/* Loading State */}
             {step.status === 'in_progress' && loadingData && (
                 <div className="ml-12 mb-4 flex items-center justify-center p-8">
-                    <div className="animate-spin w-6 h-6 border-2 border-[#3b82f6] border-t-transparent rounded-full" />
+                    <div className="w-full max-w-xl space-y-3">
+                        <Skeleton className="h-4 w-56 mx-auto" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
+                    </div>
                 </div>
             )}
 
