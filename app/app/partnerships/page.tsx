@@ -28,6 +28,8 @@ export default function PartnershipsPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [showOnlyMine, setShowOnlyMine] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     /** Dynamic partnership types (Role / Potential Roles) from API – from Airtable sync. */
     const [partnershipTypes, setPartnershipTypes] = useState<Array<{ partnershipType: string; label: string; count: number }>>([]);
     const [roleQuery, setRoleQuery] = useState('');
@@ -59,6 +61,7 @@ export default function PartnershipsPage() {
                 sortBy: view === 'kanban' ? 'createdAt' : 'priorityScore',
                 sortOrder: 'desc',
                 type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+                search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
                 assignedTo,
             });
             setData(response);
@@ -69,7 +72,7 @@ export default function PartnershipsPage() {
             if (showLoading) setLoading(false);
             setRefreshing(false);
         }
-    }, [view, selectedTypes, showOnlyMine]);
+    }, [view, selectedTypes, showOnlyMine, debouncedSearch]);
 
     useEffect(() => {
         loadTotals();
@@ -80,6 +83,11 @@ export default function PartnershipsPage() {
         const isFirst = data === null;
         loadData(isFirst);
     }, [loadData]);
+
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchQuery), 250);
+        return () => clearTimeout(t);
+    }, [searchQuery]);
 
     useEffect(() => {
         if (!rolesOpen) return;
@@ -144,6 +152,27 @@ export default function PartnershipsPage() {
                             <p className="text-gray-600">Manage all partnership stages and activities in one view.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
+                            <div className="relative mr-2">
+                                <input
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search partners, contacts, notes…"
+                                    className="w-[260px] max-w-[70vw] px-3 py-2 pl-9 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm"
+                                />
+                                <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l3.387 3.387a1 1 0 01-1.414 1.414l-3.387-3.387zM14 8a6 6 0 11-12 0 6 6 0 0112 0z" clipRule="evenodd" />
+                                </svg>
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 px-1"
+                                        aria-label="Clear search"
+                                    >
+                                        ×
+                                    </button>
+                                )}
+                            </div>
                             <div className="flex bg-gray-100 rounded-lg p-1 mr-4">
                                 <button
                                     onClick={() => setShowOnlyMine(false)}
