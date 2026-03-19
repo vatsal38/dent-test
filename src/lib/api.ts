@@ -652,14 +652,21 @@ export interface AirtableRecord {
     fields: Record<string, any>;
 }
 
-export async function searchAirtable(query: string): Promise<{ records: AirtableRecord[] }> {
-    return apiRequest<{ records: AirtableRecord[] }>(`/api/integrations/airtable/search?search=${encodeURIComponent(query)}`);
+export async function searchAirtable(query: string, options?: { partnershipType?: string }): Promise<{ records: AirtableRecord[] }> {
+    const params = new URLSearchParams();
+    params.set('search', query);
+    if (options?.partnershipType) params.set('partnershipType', options.partnershipType);
+    return apiRequest<{ records: AirtableRecord[] }>(`/api/integrations/airtable/search?${params.toString()}`);
 }
 
-export async function importAirtableRecord(recordId: string): Promise<{ partnershipId: string; success: boolean }> {
+export async function importAirtableRecord(recordId: string, options?: { partnershipType?: string; tags?: string[] }): Promise<{ partnershipId: string; success: boolean }> {
     return apiRequest<{ partnershipId: string; success: boolean }>('/api/education/partnerships/import-airtable', {
         method: 'POST',
-        body: JSON.stringify({ recordId }),
+        body: JSON.stringify({
+            recordId,
+            partnershipType: options?.partnershipType,
+            tags: options?.tags || [],
+        }),
     });
 }
 

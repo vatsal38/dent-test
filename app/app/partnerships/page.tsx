@@ -36,6 +36,7 @@ export default function PartnershipsPage() {
     const [roleQuery, setRoleQuery] = useState('');
     const [rolesOpen, setRolesOpen] = useState(false);
     const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
+    const [successToast, setSuccessToast] = useState<string | null>(null);
 
     const loadTotals = useCallback(async () => {
         try {
@@ -102,6 +103,12 @@ export default function PartnershipsPage() {
         return () => document.removeEventListener('mousedown', onDocMouseDown);
     }, [rolesOpen]);
 
+    useEffect(() => {
+        if (!successToast) return;
+        const t = setTimeout(() => setSuccessToast(null), 3000);
+        return () => clearTimeout(t);
+    }, [successToast]);
+
     /** Label for a partnership type (dynamic from API, fallback to static map, then raw value). */
     const getTypeLabel = (value: string) =>
         partnershipTypes.find((t) => t.partnershipType === value)?.label ?? PARTNERSHIP_TYPE_LABELS[value] ?? value;
@@ -139,6 +146,31 @@ export default function PartnershipsPage() {
 
     return (
         <div className="flex flex-col md:flex-row h-screen bg-white p-4">
+            {successToast && (
+                <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
+                    <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 max-w-md">
+                        <div className="flex items-start gap-3">
+                            <div className="shrink-0">
+                                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-green-900">Success</p>
+                                <p className="text-sm text-green-700 mt-1">{successToast}</p>
+                            </div>
+                            <button
+                                onClick={() => setSuccessToast(null)}
+                                className="shrink-0 text-green-400 hover:text-green-600 transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Main Content */}
             <div className={`flex-1 min-w-0 overflow-auto transition-all ${selectedPartnership ? 'hidden md:block md:flex-none md:w-2/3' : 'w-full'}`}>
                 <div>
@@ -565,6 +597,7 @@ export default function PartnershipsPage() {
                 <PartnershipPanel
                     partnershipId={selectedPartnership}
                     onClose={() => setSelectedPartnership(null)}
+                    onSuccessToast={setSuccessToast}
                     onUpdate={async (showLoading = false) => {
                         // Refresh the data
                         await loadData(showLoading);
@@ -576,6 +609,7 @@ export default function PartnershipsPage() {
             <CreatePartnershipModal
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
+                onSuccessToast={setSuccessToast}
                 onViewExisting={async (partnershipId) => {
                     setShowCreateModal(false);
                     // No need to reload just to view/edit; panel fetches its own details.
@@ -663,7 +697,17 @@ function PartnershipsPageSkeleton() {
     );
 }
 
-function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId: string; onClose: () => void; onUpdate?: (showLoading?: boolean) => Promise<void> }) {
+function PartnershipPanel({
+    partnershipId,
+    onClose,
+    onUpdate,
+    onSuccessToast,
+}: {
+    partnershipId: string;
+    onClose: () => void;
+    onUpdate?: (showLoading?: boolean) => Promise<void>;
+    onSuccessToast?: (message: string) => void;
+}) {
     const [partnership, setPartnership] = useState<PartnershipDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [note, setNote] = useState('');
@@ -743,6 +787,7 @@ function PartnershipPanel({ partnershipId, onClose, onUpdate }: { partnershipId:
         setAddingContact(true);
         try {
             await addPartnershipContact(partnershipId, newContact);
+            onSuccessToast?.(`Added ${newContact.name.trim()} to contacts.`);
             setNewContact({ name: '', email: '', phone: '', jobTitle: '', isPrimary: false });
             setShowAddContact(false);
             loadPartnership();

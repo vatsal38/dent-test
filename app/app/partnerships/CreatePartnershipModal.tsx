@@ -19,6 +19,7 @@ interface CreatePartnershipModalProps {
     onClose: () => void;
     onSuccess?: (partnershipId: string) => void;
     onViewExisting?: (partnershipId: string) => void;
+    onSuccessToast?: (message: string) => void;
 }
 
 // Fallback options used only before Airtable roles are available.
@@ -42,6 +43,14 @@ const PARTNERSHIP_STAGES = [
     { value: 'not_this_season', label: 'Not This Season' },
 ];
 
+function recommendedStageForTypes(types: string[]): string {
+    const values = Array.isArray(types) ? types : [];
+    if (values.includes('space_partner') || values.includes('sponsor')) return 'conversation_active';
+    if (values.includes('made_at_dent')) return 'interested';
+    if (values.includes('food_for_thought_speaker') || values.includes('aixdt_irc_evaluator')) return 'awaiting_response';
+    return 'need_outreach';
+}
+
 const ORG_TYPES = [
     { value: 'school', label: 'School' },
     { value: 'nonprofit', label: 'Nonprofit' },
@@ -50,7 +59,7 @@ const ORG_TYPES = [
     { value: 'other', label: 'Other' },
 ];
 
-export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExisting }: CreatePartnershipModalProps) {
+export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExisting, onSuccessToast }: CreatePartnershipModalProps) {
     const [formData, setFormData] = useState<CreatePartnershipInput>({
         organizationName: '',
         organizationType: 'other',
@@ -71,6 +80,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
     const [existingResults, setExistingResults] = useState<PartnershipListItem[]>([]);
     const [isSearchingAirtable, setIsSearchingAirtable] = useState(false);
     const [showAirtableSearch, setShowAirtableSearch] = useState(false);
+    const [searchPartnershipType, setSearchPartnershipType] = useState<string>('');
 
     const [duplicates, setDuplicates] = useState<DuplicateOrg[] | null>(null);
     const [selectedDuplicate, setSelectedDuplicate] = useState<string | null>(null);
@@ -79,6 +89,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
     const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string; count: number }>>([]);
     const [rolesOpen, setRolesOpen] = useState(false);
     const [roleQuery, setRoleQuery] = useState('');
+    const [stageOverridden, setStageOverridden] = useState(false);
     const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -120,6 +131,14 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
         document.addEventListener('mousedown', onDocMouseDown);
         return () => document.removeEventListener('mousedown', onDocMouseDown);
     }, [isOpen, rolesOpen]);
+
+    useEffect(() => {
+        if (stageOverridden) return;
+        const nextStage = recommendedStageForTypes(formData.partnershipType || []);
+        if (formData.initialStage !== nextStage) {
+            setFormData((prev) => ({ ...prev, initialStage: nextStage }));
+        }
+    }, [formData.partnershipType, formData.initialStage, stageOverridden]);
 
     if (!isOpen) return null;
 
@@ -187,9 +206,11 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
         setAirtableResults([]);
         setExistingResults([]);
         setShowAirtableSearch(false);
+        setSearchPartnershipType('');
         setDuplicates(null);
         setSelectedDuplicate(null);
         setError(null);
+        setStageOverridden(false);
         onClose();
     };
 
@@ -199,11 +220,11 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
         setError(null);
         try {
             const [airtableData, dbData] = await Promise.all([
-                apiSearchAirtable(airtableSearch).catch(err => {
+                apiSearchAirtable(airtableSearch, { partnershipType: searchPartnershipType || undefined }).catch(err => {
                     console.error('Airtable search error:', err);
                     return { records: [] };
                 }),
-                getPartnerships({ search: airtableSearch, limit: 10 }).catch(err => {
+                getPartnerships({ search: airtableSearch, limit: 10, type: searchPartnershipType || undefined }).catch(err => {
                     console.error('DB search error:', err);
                     return { partnerships: [] };
                 })
@@ -222,11 +243,19 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
         setCreating(true);
         setError(null);
         try {
-            const data = await importAirtableRecord(record.id);
+            const data = await importAirtableRecord(record.id, {
+                partnershipType: searchPartnershipType || undefined,
+                tags: searchPartnershipType ? [`partnership-type:${searchPartnershipType}`, 'added-from-search'] : ['added-from-search'],
+            });
 
             if (onSuccess) {
                 await onSuccess(data.partnershipId);
             }
+            onSuccessToast?.(
+                searchPartnershipType
+                    ? `Added from search and tagged as ${searchPartnershipType.replace(/_/g, ' ')}.`
+                    : 'Added from search successfully.'
+            );
             handleClose();
         } catch (err: any) {
             setError(err.message || 'Failed to import from Airtable');
@@ -375,6 +404,23 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
                                 {isSearchingAirtable ? 'Searching...' : 'Search'}
                             </button>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 block">
+                                    Add from search for role
+                                </label>
+                                <select
+                                    value={searchPartnershipType}
+                                    onChange={(e) => setSearchPartnershipType(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="">All roles</option>
+                                    {partnershipTypeOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
 
                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
                             {airtableResults.length === 0 && existingResults.length === 0 && !isSearchingAirtable && (
@@ -468,7 +514,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
                                                             : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50'
                                                             }`}
                                                     >
-                                                        {creating ? 'Importing...' : isAlreadyImported ? 'Imported' : 'Import Record'}
+                                                        {creating ? 'Adding...' : isAlreadyImported ? 'Imported' : 'Add from Search'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -692,7 +738,10 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
                                     </label>
                                     <select
                                         value={formData.initialStage}
-                                        onChange={(e) => setFormData({ ...formData, initialStage: e.target.value })}
+                                        onChange={(e) => {
+                                            setStageOverridden(true);
+                                            setFormData({ ...formData, initialStage: e.target.value });
+                                        }}
                                         required
                                         className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 focus:border-[#3b82f6] focus:outline-none focus:ring-2 focus:ring-blue-100"
                                     >
@@ -702,6 +751,9 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
                                             </option>
                                         ))}
                                     </select>
+                                    <p className="text-[11px] text-gray-500 mt-1">
+                                        Recommended from roles: {PARTNERSHIP_STAGES.find((s) => s.value === recommendedStageForTypes(formData.partnershipType || []))?.label}
+                                    </p>
                                 </div>
 
                                 <div>
