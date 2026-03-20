@@ -7,6 +7,14 @@ import Link from 'next/link';
 import { ErrorToast } from '@/components/ErrorToast';
 import { Skeleton } from '@/components/Skeleton';
 
+/** Match backend PARTNERSHIP_STALE_RECORD_DAYS — stalled if partnership not updated in this many days. */
+const PARTNERSHIP_RECORD_STALE_DAYS = 7;
+
+function priorityIsRecordStale(p: EducationHomePriority) {
+    const du = p.daysSinceUpdate ?? null;
+    return du === null || du >= PARTNERSHIP_RECORD_STALE_DAYS;
+}
+
 export default function HomePage() {
     const [data, setData] = useState<{
         greeting: string;
@@ -346,10 +354,17 @@ export default function HomePage() {
                                 <p className="font-semibold text-gray-900">{topAction.stage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">Last Contact</p>
-                                <p className={`font-semibold ${topAction.daysSinceContact !== null && topAction.daysSinceContact > 7 ? 'text-red-600' : 'text-gray-900'}`}>
-                                    {topAction.daysSinceContact !== null ? `${topAction.daysSinceContact} days ago` : 'Never'}
+                                <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">Last update</p>
+                                <p className={`font-semibold ${priorityIsRecordStale(topAction) ? 'text-red-600' : 'text-gray-900'}`}>
+                                    {topAction.daysSinceUpdate != null
+                                        ? topAction.daysSinceUpdate === 0
+                                            ? 'Today'
+                                            : `${topAction.daysSinceUpdate} days ago`
+                                        : '—'}
                                 </p>
+                                {topAction.daysSinceContact != null && (
+                                    <p className="text-xs text-gray-500 mt-1">{topAction.daysSinceContact}d since contact</p>
+                                )}
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">Deadline</p>
@@ -378,8 +393,7 @@ export default function HomePage() {
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Priorities</h2>
                         <div className="space-y-3">
                             {data?.priorities?.slice(1, 6).map((priority, idx) => {
-                                // Determine if partnership is stuck (no contact for 14+ days)
-                                const isStuck = priority.daysSinceContact !== null && priority.daysSinceContact >= 14;
+                                const isStuck = priorityIsRecordStale(priority);
                                 const isUrgent = priority.daysUntilDeadline !== null && priority.daysUntilDeadline < 7 && priority.daysUntilDeadline >= 0;
 
                                 return (
@@ -437,8 +451,18 @@ export default function HomePage() {
                                                                 ${priority.estimatedRevenue.toLocaleString()}
                                                             </span>
                                                         )}
-                                                        <span className={priority.daysSinceContact !== null && priority.daysSinceContact >= 14 ? 'text-red-600 font-semibold' : ''}>
-                                                            {priority.daysSinceContact !== null ? `${priority.daysSinceContact} days since contact` : 'No contact'}
+                                                        <span className={isStuck ? 'text-red-600 font-semibold' : ''}>
+                                                            {priority.daysSinceUpdate != null
+                                                                ? priority.daysSinceUpdate === 0
+                                                                    ? 'Updated today'
+                                                                    : `Last updated ${priority.daysSinceUpdate}d ago`
+                                                                : 'No activity on record'}
+                                                            {priority.daysSinceContact != null && (
+                                                                <span className="text-gray-500 font-normal">
+                                                                    {' '}
+                                                                    · {priority.daysSinceContact}d since contact
+                                                                </span>
+                                                            )}
                                                         </span>
                                                         {priority.daysUntilDeadline !== null && (
                                                             <span className={priority.daysUntilDeadline < 7 ? 'text-red-600 font-semibold' : ''}>

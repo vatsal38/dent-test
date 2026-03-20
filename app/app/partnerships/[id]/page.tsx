@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { Skeleton } from '@/components/Skeleton';
+import { AirtableNotesBlock } from '@/components/AirtableNotesBlock';
+import { TextWithLinks } from '@/components/TextWithLinks';
 
 export default function PartnershipDetailPage() {
     const params = useParams();
@@ -219,6 +221,20 @@ export default function PartnershipDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes</h2>
+                        <AirtableNotesBlock partnership={partnership} />
+                        {!(
+                            (partnership.organizationNotes || '').trim() ||
+                            partnership.contacts.some((c) => (c.notes || '').trim()) ||
+                            partnership.airtableRecordUrl
+                        ) && (
+                            <p className="text-sm text-gray-500">
+                                After an Airtable sync, organization notes and contact notes appear here. URLs in text are
+                                clickable.
+                            </p>
+                        )}
+                    </div>
                     {/* Activities */}
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Timeline</h2>
@@ -276,7 +292,9 @@ export default function PartnershipDetailPage() {
                                                         </span>
                                                     </div>
                                                     {activity.content && (
-                                                        <p className="text-sm text-gray-900 mt-1">{activity.content}</p>
+                                                        <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
+                                                            <TextWithLinks text={activity.content} />
+                                                        </p>
                                                     )}
                                                     {activity.previousStage && activity.newStage && (
                                                         <p className="text-xs text-gray-600 mt-2">

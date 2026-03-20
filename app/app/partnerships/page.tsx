@@ -7,6 +7,8 @@ import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
 import Link from 'next/link';
 import { Skeleton } from '@/components/Skeleton';
+import { AirtableNotesBlock } from '@/components/AirtableNotesBlock';
+import { TextWithLinks } from '@/components/TextWithLinks';
 
 /** Fallback labels when backend hasn't returned types yet (e.g. before first sync). */
 const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
@@ -18,6 +20,52 @@ const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
     'aixdt_irc_evaluator': 'AIxDT IRC Evaluator',
     'other': 'Other',
 };
+
+/** Card/list title: individual when known, else organization. */
+function partnershipListPrimaryTitle(p: {
+    primaryContactName?: string | null;
+    contactName: string | null;
+    partnerName: string;
+}) {
+    const person = p.primaryContactName || p.contactName;
+    return person ? formatPartnerName(person) : formatPartnerName(p.partnerName);
+}
+
+/** Shown under staleness when title is a person — the organization name. */
+function partnershipListOrgLine(p: {
+    primaryContactName?: string | null;
+    contactName: string | null;
+    partnerName: string;
+}): string | null {
+    const person = p.primaryContactName || p.contactName;
+    return person ? formatPartnerName(p.partnerName) : null;
+}
+
+function partnershipPanelPrimaryTitle(partnership: PartnershipDetail) {
+    const primary = partnership.contacts?.find((c) => c.isPrimary);
+    const name = primary?.name || partnership.contacts?.[0]?.name;
+    return name ? formatPartnerName(name) : formatPartnerName(partnership.partnerName);
+}
+
+function partnershipPanelOrgLine(partnership: PartnershipDetail): string | null {
+    const primary = partnership.contacts?.find((c) => c.isPrimary);
+    const name = primary?.name || partnership.contacts?.[0]?.name;
+    return name ? formatPartnerName(partnership.partnerName) : null;
+}
+
+/** Stalled if partnership record not updated in this many days (see backend PARTNERSHIP_STALE_RECORD_DAYS). */
+const PARTNERSHIP_STALL_DAYS = 7;
+
+function daysSinceLastPartnershipUpdate(p: { daysSinceUpdate?: number | null }) {
+    return p.daysSinceUpdate ?? null;
+}
+
+function lastUpdateLabel(days: number | null) {
+    if (days === null) return 'No activity on record';
+    if (days === 0) return 'Updated today';
+    if (days === 1) return 'Last updated 1 day ago';
+    return `Last updated ${days} days ago`;
+}
 
 export default function PartnershipsPage() {
     const [view, setView] = useState<'list' | 'kanban'>('kanban');
@@ -400,23 +448,17 @@ export default function PartnershipsPage() {
                                                 </div>
                                             ) : (
                                                 column.partnerships.map((partnership) => {
-                                                // Determine status based on days since contact
-                                                let status = 'on track';
-                                                let statusColor = 'bg-green-100 text-green-700 border-green-200';
-
-                                                if (partnership.daysSinceContact !== null) {
-                                                    if (partnership.daysSinceContact >= 14) {
-                                                        status = 'stalled';
-                                                        statusColor = 'bg-red-100 text-red-700 border-red-200';
-                                                    } else if (partnership.daysSinceContact >= 7 || partnership.stage === 'mou_sent') {
-                                                        status = 'at risk';
-                                                        statusColor = 'bg-yellow-100 text-yellow-700 border-yellow-200';
-                                                    }
-                                                }
+                                                const daysSinceUpdate = daysSinceLastPartnershipUpdate(partnership);
+                                                const isStuck =
+                                                    daysSinceUpdate === null || daysSinceUpdate >= PARTNERSHIP_STALL_DAYS;
+                                                const status = isStuck ? 'stalled' : 'active';
+                                                const statusColor = isStuck
+                                                    ? 'bg-red-100 text-red-700 border-red-200'
+                                                    : 'bg-green-100 text-green-700 border-green-200';
 
                                                 const isSelected = selectedPartnership === partnership.id;
 
-                                                const isStuck = partnership.daysSinceContact !== null && partnership.daysSinceContact >= 14;
+                                                const orgLine = partnershipListOrgLine(partnership);
 
                                                 return (
                                                     <div
@@ -427,7 +469,7 @@ export default function PartnershipsPage() {
                                                     >
                                                         <div className="flex items-start justify-between mb-1">
                                                             <h4 className="font-semibold text-gray-900 text-sm flex-1 pr-2">
-                                                                {formatPartnerName(partnership.partnerName)}
+                                                                {partnershipListPrimaryTitle(partnership)}
                                                             </h4>
                                                             <span className={`px-2 py-0.5 rounded text-xs font-medium border shrink-0 ${statusColor}`}>
                                                                 {status}
@@ -454,13 +496,16 @@ export default function PartnershipsPage() {
                                                         {/* Contact Info */}
                                                         <div className="space-y-1 mb-2">
                                                             <p className={`text-xs ${isStuck ? 'text-red-700 font-semibold' : 'text-gray-500'}`}>
-                                                                {partnership.daysSinceContact !== null
-                                                                    ? `${partnership.daysSinceContact} days since contact`
-                                                                    : 'No contact'}
+                                                                {lastUpdateLabel(daysSinceUpdate)}
+                                                                {partnership.daysSinceContact !== null && (
+                                                                    <span className="block text-[10px] text-gray-400 mt-0.5">
+                                                                        {partnership.daysSinceContact} days since contact
+                                                                    </span>
+                                                                )}
                                                             </p>
-                                                            {partnership.contactName && (
+                                                            {orgLine && (
                                                                 <p className="text-xs text-gray-600">
-                                                                    {partnership.contactName}
+                                                                    {orgLine}
                                                                 </p>
                                                             )}
                                                         </div>
@@ -490,13 +535,13 @@ export default function PartnershipsPage() {
                             {/* Table Header */}
                             <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200">
                                 <div className="col-span-4">
-                                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Partner</span>
+                                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Contact / org</span>
                                 </div>
                                 <div className="col-span-2">
                                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stage</span>
                                 </div>
                                 <div className="col-span-2">
-                                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Contact</span>
+                                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</span>
                                 </div>
                                 <div className="col-span-2">
                                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Last Contact</span>
@@ -531,7 +576,9 @@ export default function PartnershipsPage() {
                                         </div>
                                     ))
                                 ) : data.partnerships && data.partnerships.length > 0 ? (
-                                    data.partnerships.map((partnership) => (
+                                    data.partnerships.map((partnership) => {
+                                        const listOrgLine = partnershipListOrgLine(partnership);
+                                        return (
                                         <div
                                             key={partnership.id}
                                             onClick={() => setSelectedPartnership(partnership.id)}
@@ -541,7 +588,10 @@ export default function PartnershipsPage() {
                                                 }`}
                                         >
                                             <div className="col-span-4">
-                                                <h3 className="font-semibold text-gray-900">{formatPartnerName(partnership.partnerName)}</h3>
+                                                <h3 className="font-semibold text-gray-900">{partnershipListPrimaryTitle(partnership)}</h3>
+                                                {listOrgLine && (
+                                                    <p className="text-xs text-gray-500 mt-0.5">{listOrgLine}</p>
+                                                )}
                                                 {partnership.partnershipType && (
                                                     <p className="text-xs text-gray-500 mt-1">
                                                         {Array.isArray(partnership.partnershipType)
@@ -556,7 +606,9 @@ export default function PartnershipsPage() {
                                                 </span>
                                             </div>
                                             <div className="col-span-2">
-                                                <p className="text-sm text-gray-900">{partnership.contactName || '—'}</p>
+                                                <p className="text-sm text-gray-900">
+                                                    {partnership.primaryContactEmail || partnership.contactEmail || partnership.contactName || '—'}
+                                                </p>
                                                 {partnership.latestActivity && (
                                                     <p className="text-xs text-gray-500 mt-1">
                                                         {partnership.latestActivity.type}
@@ -580,7 +632,8 @@ export default function PartnershipsPage() {
                                                 )}
                                             </div>
                                         </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="p-12 text-center">
                                         <p className="text-gray-500">No partnerships found</p>
@@ -888,12 +941,17 @@ function PartnershipPanel({
     const needsAttention = partnership.stage === 'mou_sent' &&
         (daysSinceContact !== null && daysSinceContact > 5);
 
+    const panelOrgLine = partnershipPanelOrgLine(partnership);
+
     return (
         <div className="w-full md:w-1/3 md:border-l border-gray-200 bg-white flex flex-col h-full overflow-y-auto shrink-0">
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10 shadow-sm">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-bold text-gray-900 truncate">{formatPartnerName(partnership.partnerName)}</h2>
+                        <h2 className="text-xl font-bold text-gray-900 truncate">{partnershipPanelPrimaryTitle(partnership)}</h2>
+                        {panelOrgLine && (
+                            <p className="text-sm text-gray-600 truncate mt-1">{panelOrgLine}</p>
+                        )}
                         <div className="mt-2">
                             <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Stage</label>
                             <select
@@ -1183,31 +1241,43 @@ function PartnershipPanel({
                     </button>
                 </div>
 
-                {/* Notes Section */}
+                {/* Notes Section — Airtable + app notes */}
                 <div>
                     <div className="flex items-center gap-2 mb-3">
                         <h3 className="font-semibold text-gray-900">Notes</h3>
                     </div>
+                    <AirtableNotesBlock partnership={partnership} />
                     <div className="space-y-3 mb-4">
                         {partnership.activities
-                            .filter(a => a.type === 'note')
+                            .filter((a) => a.type === 'note')
                             .map((activity) => (
                                 <div key={activity.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <p className="text-sm text-gray-700 leading-relaxed">{activity.content}</p>
+                                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">App</p>
+                                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                        {activity.content ? <TextWithLinks text={activity.content} /> : null}
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-2">
                                         {new Date(activity.createdAt).toLocaleDateString('en-US', {
                                             month: 'short',
                                             day: 'numeric',
-                                            year: 'numeric'
+                                            year: 'numeric',
                                         })}
                                     </p>
                                 </div>
                             ))}
-                        {partnership.activities.filter(a => a.type === 'note').length === 0 && (
-                            <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
-                                <p className="text-sm text-gray-500">No notes yet</p>
-                            </div>
-                        )}
+                        {(() => {
+                            const hasAirtable =
+                                (partnership.organizationNotes || '').trim().length > 0 ||
+                                partnership.contacts.some((c) => (c.notes || '').trim().length > 0) ||
+                                !!partnership.airtableRecordUrl;
+                            const noteActivities = partnership.activities.filter((a) => a.type === 'note');
+                            if (hasAirtable || noteActivities.length > 0) return null;
+                            return (
+                                <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-500">No notes yet</p>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Add Note */}

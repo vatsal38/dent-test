@@ -106,6 +106,10 @@ export interface EducationHomePriority {
     whyNow: string;
     lastContactAt: string | null;
     daysSinceContact: number | null;
+    /** ISO date used for staleness (updatedAt or createdAt on partnership). */
+    updatedAt?: string | null;
+    /** Days since partnership record was last updated (or created). */
+    daysSinceUpdate?: number | null;
     commitmentDate: string | null;
     daysUntilDeadline: number | null;
     okrAlignmentScore: number;
@@ -120,6 +124,7 @@ export interface EducationHomeAtRisk {
     reason: 'stale' | 'deadline' | 'unsigned_mou';
     detail: string;
     daysSinceContact: number | null;
+    daysSinceUpdate?: number | null;
     daysUntilDeadline: number | null;
 }
 
@@ -168,6 +173,8 @@ export interface PartnershipListItem {
     priorityScore: number;
     lastContactAt: string | null;
     daysSinceContact: number | null;
+    updatedAt?: string | null;
+    daysSinceUpdate?: number | null;
     commitmentDate: string | null;
     tags: string[];
     latestActivity: {
@@ -209,6 +216,8 @@ export interface PartnershipDetail {
     estimatedRevenue: number | null;
     priorityScore: number;
     lastContactAt: string | null;
+    updatedAt?: string | null;
+    daysSinceUpdate?: number | null;
     commitmentDate: string | null;
     tags: string[];
     createdAt: string;
@@ -218,8 +227,15 @@ export interface PartnershipDetail {
         email: string | null;
         phone: string | null;
         jobTitle: string | null;
+        /** From Airtable / CRM (e.g. Other Key People). */
+        notes?: string | null;
         isPrimary: boolean;
     }>;
+    /** Partner-org notes from Airtable (Notes, FY26 Partner Notes, Notes Link). */
+    organizationNotes?: string | null;
+    airtableRecordId?: string | null;
+    /** Deep link to this row when base/table env is configured. */
+    airtableRecordUrl?: string | null;
     activities: Array<{
         id: string;
         type: string;
