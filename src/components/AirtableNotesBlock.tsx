@@ -4,10 +4,18 @@ import { useState } from 'react';
 import type { PartnershipDetail } from '@/lib/api';
 import { TextWithLinks } from '@/components/TextWithLinks';
 
+function isRecordIdText(value: string): boolean {
+    return /^rec[A-Za-z0-9]{14,}$/i.test((value || '').trim());
+}
+
 export function AirtableNotesBlock({ partnership }: { partnership: PartnershipDetail }) {
     const [linkCopied, setLinkCopied] = useState(false);
-    const orgNotes = partnership.organizationNotes?.trim() || '';
-    const contactsWithNotes = partnership.contacts.filter((c) => (c.notes || '').trim());
+    const orgNotesRaw = partnership.organizationNotes?.trim() || '';
+    const orgNotes = isRecordIdText(orgNotesRaw) ? '' : orgNotesRaw;
+    const contactsWithNotes = partnership.contacts.filter((c) => {
+        const n = (c.notes || '').trim();
+        return !!n && !isRecordIdText(n);
+    });
     const hasContent = orgNotes.length > 0 || contactsWithNotes.length > 0;
     const recordUrl = partnership.airtableRecordUrl;
 

@@ -135,6 +135,14 @@ export interface EducationHomeResponse {
     priorities: EducationHomePriority[];
     urgentCount: number;
     atRisk: EducationHomeAtRisk[];
+    // Dashboard metrics
+    meetingsThisWeek: number;
+    mouSentCount: number;
+    partnershipsConfirmedCount: number;
+    partnershipsInterestedCount: number;
+    invoicesOrMousConfirmedCount: number;
+    confirmedPartnersOutOf55: { confirmed: number; total: number };
+    revenueCommitment: number;
     recentRuns: Array<{
         id: string;
         name: string;
@@ -170,6 +178,10 @@ export interface PartnershipListItem {
     season: string | null;
     source: string | null;
     estimatedRevenue: number | null;
+    revenueCommitment?: number | null;
+    estimatedQuote?: number | null;
+    finalQuote?: number | null;
+    tFocus?: string | null;
     priorityScore: number;
     lastContactAt: string | null;
     daysSinceContact: number | null;
@@ -214,6 +226,10 @@ export interface PartnershipDetail {
     season: string | null;
     source: string | null;
     estimatedRevenue: number | null;
+    revenueCommitment?: number | null;
+    estimatedQuote?: number | null;
+    finalQuote?: number | null;
+    tFocus?: string | null;
     priorityScore: number;
     lastContactAt: string | null;
     updatedAt?: string | null;
@@ -329,6 +345,21 @@ export async function updatePartnershipRoles(
     });
 }
 
+export async function updatePartnershipFields(
+    partnershipId: string,
+    fields: {
+        tFocus?: string | null;
+        revenueCommitment?: number | null;
+        estimatedQuote?: number | null;
+        finalQuote?: number | null;
+    }
+): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/api/education/partnerships/${partnershipId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(fields),
+    });
+}
+
 export interface AddContactInput {
     name: string;
     email?: string;
@@ -396,6 +427,10 @@ export interface CreatePartnershipInput {
     season?: string;
     source?: string;
     estimatedRevenue?: number;
+    revenueCommitment?: number;
+    estimatedQuote?: number;
+    finalQuote?: number;
+    tFocus?: string;
     tags?: string[];
 }
 

@@ -249,6 +249,7 @@ export default function PartnershipDetailPage() {
                                         switch (activity.type) {
                                             case 'email_sent':
                                             case 'email_received':
+                                            case 'email_reply_sent':
                                                 return (
                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -261,6 +262,31 @@ export default function PartnershipDetailPage() {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                                     </svg>
                                                 );
+                                            case 'stage_changed':
+                                                return (
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h10m0 0l-3-3m3 3l-3 3M20 17H10m0 0l3-3m-3 3l3 3" />
+                                                    </svg>
+                                                );
+                                            case 'roles_updated':
+                                                return (
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V9H2v11h5m10 0v-4a3 3 0 00-3-3H10a3 3 0 00-3 3v4m10 0H7m8-13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                );
+                                            case 'contact_added':
+                                                return (
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3M5 20a7 7 0 1111.95-4.95M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                );
+                                            case 'airtable_imported':
+                                            case 'airtable_updated':
+                                                return (
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m14.836 2A8 8 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-14.836-2M15 15h.01" />
+                                                    </svg>
+                                                );
                                             default:
                                                 return (
                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -269,17 +295,69 @@ export default function PartnershipDetailPage() {
                                                 );
                                         }
                                     };
+                                    const getActivityLabel = () => {
+                                        switch (activity.type) {
+                                            case 'email_reply_sent': return 'Email reply sent';
+                                            case 'email_sent': return 'Email sent';
+                                            case 'email_received': return 'Email received';
+                                            case 'stage_changed': return 'Stage changed';
+                                            case 'roles_updated': return 'Roles updated';
+                                            case 'contact_added': return 'Contact added';
+                                            case 'airtable_imported': return 'Airtable imported';
+                                            case 'airtable_updated': return 'Airtable updated';
+                                            default: return activity.type.replace(/_/g, ' ');
+                                        }
+                                    };
+                                    const getActivityStyles = () => {
+                                        switch (activity.type) {
+                                            case 'email_sent':
+                                            case 'email_received':
+                                            case 'email_reply_sent':
+                                                return {
+                                                    row: 'bg-blue-50 border-blue-200',
+                                                    iconWrap: 'bg-blue-100 border-blue-200 text-blue-700',
+                                                };
+                                            case 'airtable_imported':
+                                            case 'airtable_updated':
+                                                return {
+                                                    row: 'bg-amber-50 border-amber-200',
+                                                    iconWrap: 'bg-amber-100 border-amber-200 text-amber-700',
+                                                };
+                                            case 'stage_changed':
+                                            case 'roles_updated':
+                                                return {
+                                                    row: 'bg-purple-50 border-purple-200',
+                                                    iconWrap: 'bg-purple-100 border-purple-200 text-purple-700',
+                                                };
+                                            case 'contact_added':
+                                                return {
+                                                    row: 'bg-emerald-50 border-emerald-200',
+                                                    iconWrap: 'bg-emerald-100 border-emerald-200 text-emerald-700',
+                                                };
+                                            case 'note':
+                                                return {
+                                                    row: 'bg-gray-50 border-gray-200',
+                                                    iconWrap: 'bg-white border-gray-200 text-gray-600',
+                                                };
+                                            default:
+                                                return {
+                                                    row: 'bg-gray-50 border-gray-200',
+                                                    iconWrap: 'bg-white border-gray-200 text-gray-600',
+                                                };
+                                        }
+                                    };
+                                    const styles = getActivityStyles();
 
                                     return (
-                                        <div key={activity.id} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                                        <div key={activity.id} className={`p-4 rounded-lg border ${styles.row}`}>
                                             <div className="flex items-start gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 flex-shrink-0">
+                                                <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${styles.iconWrap}`}>
                                                     {getActivityIcon()}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                                            {activity.type.replace(/_/g, ' ')}
+                                                            {getActivityLabel()}
                                                         </span>
                                                         <span className="text-xs text-gray-500">
                                                             {new Date(activity.createdAt).toLocaleDateString('en-US', {

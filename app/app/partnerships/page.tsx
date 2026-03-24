@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, getPartnershipTotals, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, updatePartnershipRoles, PartnershipDetail, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
+import { getPartnerships, PartnershipsListResponse, getPartnershipTotals, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, updatePartnershipRoles, updatePartnershipFields, PartnershipDetail, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
@@ -55,6 +55,8 @@ function partnershipPanelOrgLine(partnership: PartnershipDetail): string | null 
 
 /** Stalled if partnership record not updated in this many days (see backend PARTNERSHIP_STALE_RECORD_DAYS). */
 const PARTNERSHIP_STALL_DAYS = 7;
+/** For Need outreach column, hide very old records (before mid-2024). */
+const NEED_OUTREACH_CUTOFF = new Date('2024-07-01T00:00:00.000Z');
 
 function daysSinceLastPartnershipUpdate(p: { daysSinceUpdate?: number | null }) {
     return p.daysSinceUpdate ?? null;
@@ -65,6 +67,11 @@ function lastUpdateLabel(days: number | null) {
     if (days === 0) return 'Updated today';
     if (days === 1) return 'Last updated 1 day ago';
     return `Last updated ${days} days ago`;
+}
+
+function formatMoney(value?: number | null): string {
+    if (value == null || Number.isNaN(Number(value))) return '—';
+    return `$${Number(value).toLocaleString()}`;
 }
 
 export default function PartnershipsPage() {
@@ -437,17 +444,29 @@ export default function PartnershipsPage() {
                             ) : (
                                 data.columns.map((column) => (
                                     <div key={column.stage} className="flex flex-col min-w-[320px] w-[320px]">
+                                        {/** Need outreach only: hide records created before mid-2024. */}
+                                        {(() => {
+                                            const filteredPartnerships =
+                                                column.stage === 'need_outreach'
+                                                    ? column.partnerships.filter((p) => {
+                                                        if (!p.createdAt) return false;
+                                                        const created = new Date(p.createdAt);
+                                                        return !isNaN(created.getTime()) && created >= NEED_OUTREACH_CUTOFF;
+                                                    })
+                                                    : column.partnerships;
+                                            return (
+                                                <>
                                         <div className="mb-4 pb-3 border-b border-gray-200">
                                             <h3 className="font-semibold text-gray-900 text-lg">{column.label}</h3>
-                                            <p className="text-sm text-gray-500 mt-1">{column.count} partnerships</p>
+                                            <p className="text-sm text-gray-500 mt-1">{filteredPartnerships.length} partnerships</p>
                                         </div>
                                         <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
-                                            {column.partnerships.length === 0 ? (
+                                            {filteredPartnerships.length === 0 ? (
                                                 <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
                                                     <p className="text-sm text-gray-500">No partnerships</p>
                                                 </div>
                                             ) : (
-                                                column.partnerships.map((partnership) => {
+                                                filteredPartnerships.map((partnership) => {
                                                 const daysSinceUpdate = daysSinceLastPartnershipUpdate(partnership);
                                                 const isStuck =
                                                     daysSinceUpdate === null || daysSinceUpdate >= PARTNERSHIP_STALL_DAYS;
@@ -493,6 +512,23 @@ export default function PartnershipsPage() {
                                                             </div>
                                                         )}
 
+                                                        {(partnership.tFocus || partnership.revenueCommitment != null || partnership.estimatedQuote != null || partnership.finalQuote != null) && (
+                                                            <div className="mb-2 grid grid-cols-2 gap-1 text-[10px]">
+                                                                <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                                    T Focus: {partnership.tFocus || '—'}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                                    Commitment: {formatMoney(partnership.revenueCommitment)}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-100">
+                                                                    Est Quote: {formatMoney(partnership.estimatedQuote)}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100">
+                                                                    Final Quote: {formatMoney(partnership.finalQuote)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
                                                         {/* Contact Info */}
                                                         <div className="space-y-1 mb-2">
                                                             <p className={`text-xs ${isStuck ? 'text-red-700 font-semibold' : 'text-gray-500'}`}>
@@ -523,6 +559,9 @@ export default function PartnershipsPage() {
                                             })
                                             )}
                                         </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 ))
                             )}
@@ -597,6 +636,17 @@ export default function PartnershipsPage() {
                                                         {Array.isArray(partnership.partnershipType)
                                                             ? partnership.partnershipType.map((t) => getTypeLabel(t)).join(', ')
                                                             : getTypeLabel(partnership.partnershipType)}
+                                                    </p>
+                                                )}
+                                                {(partnership.tFocus || partnership.revenueCommitment != null || partnership.estimatedQuote != null || partnership.finalQuote != null) && (
+                                                    <p className="text-[11px] text-gray-600 mt-1">
+                                                        <span className="font-medium">T:</span> {partnership.tFocus || '—'}
+                                                        {' • '}
+                                                        <span className="font-medium">Commit:</span> {formatMoney(partnership.revenueCommitment)}
+                                                        {' • '}
+                                                        <span className="font-medium">Est:</span> {formatMoney(partnership.estimatedQuote)}
+                                                        {' • '}
+                                                        <span className="font-medium">Final:</span> {formatMoney(partnership.finalQuote)}
                                                     </p>
                                                 )}
                                             </div>
@@ -780,6 +830,11 @@ function PartnershipPanel({
     const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
     const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
     const [savingRoles, setSavingRoles] = useState(false);
+    const [tFocusInput, setTFocusInput] = useState<string>('T1');
+    const [revenueCommitmentInput, setRevenueCommitmentInput] = useState<string>('');
+    const [estimatedQuoteInput, setEstimatedQuoteInput] = useState<string>('');
+    const [finalQuoteInput, setFinalQuoteInput] = useState<string>('');
+    const [savingBusinessFields, setSavingBusinessFields] = useState(false);
 
     const loadPartnership = useCallback(async () => {
         setLoading(true);
@@ -788,6 +843,10 @@ function PartnershipPanel({
             setPartnership(data);
             const roles = Array.isArray(data.partnershipType) ? data.partnershipType : (data.partnershipType ? [data.partnershipType] : []);
             setSelectedRoles(roles);
+            setTFocusInput(data.tFocus || 'T1');
+            setRevenueCommitmentInput(data.revenueCommitment != null ? String(data.revenueCommitment) : '');
+            setEstimatedQuoteInput(data.estimatedQuote != null ? String(data.estimatedQuote) : '');
+            setFinalQuoteInput(data.finalQuote != null ? String(data.finalQuote) : '');
         } catch (err) {
             console.error('Failed to load partnership:', err);
         } finally {
@@ -894,6 +953,31 @@ function PartnershipPanel({
             console.error('Failed to update roles:', err);
         } finally {
             setSavingRoles(false);
+        }
+    }
+
+    async function handleSaveBusinessFields() {
+        setSavingBusinessFields(true);
+        try {
+            const parseMoney = (v: string) => {
+                const s = (v || '').trim();
+                if (!s) return null;
+                const n = Number(s);
+                return Number.isFinite(n) ? n : null;
+            };
+            await updatePartnershipFields(partnershipId, {
+                tFocus: tFocusInput || null,
+                revenueCommitment: parseMoney(revenueCommitmentInput),
+                estimatedQuote: parseMoney(estimatedQuoteInput),
+                finalQuote: parseMoney(finalQuoteInput),
+            });
+            if (onUpdate) await onUpdate(false);
+            await loadPartnership();
+            onSuccessToast?.('Updated T focus and quote fields.');
+        } catch (err) {
+            console.error('Failed to update business fields:', err);
+        } finally {
+            setSavingBusinessFields(false);
         }
     }
 
@@ -1068,6 +1152,61 @@ function PartnershipPanel({
                                     )}
                                 </div>
                             )}
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Business Fields</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="col-span-1">
+                                    <label className="block text-[11px] text-gray-600 mb-1">T Focus</label>
+                                    <select
+                                        value={tFocusInput}
+                                        onChange={(e) => setTFocusInput(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                    >
+                                        <option value="T1">T1</option>
+                                        <option value="T2">T2</option>
+                                        <option value="T3">T3</option>
+                                    </select>
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-[11px] text-gray-600 mb-1">Revenue Commitment</label>
+                                    <input
+                                        type="number"
+                                        value={revenueCommitmentInput}
+                                        onChange={(e) => setRevenueCommitmentInput(e.target.value)}
+                                        placeholder="0"
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                    />
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-[11px] text-gray-600 mb-1">Estimated Quote</label>
+                                    <input
+                                        type="number"
+                                        value={estimatedQuoteInput}
+                                        onChange={(e) => setEstimatedQuoteInput(e.target.value)}
+                                        placeholder="0"
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                    />
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-[11px] text-gray-600 mb-1">Final Quote</label>
+                                    <input
+                                        type="number"
+                                        value={finalQuoteInput}
+                                        onChange={(e) => setFinalQuoteInput(e.target.value)}
+                                        placeholder="0"
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleSaveBusinessFields}
+                                disabled={savingBusinessFields}
+                                className="mt-2 px-3 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                            >
+                                {savingBusinessFields ? 'Saving…' : 'Save fields'}
+                            </button>
                         </div>
                     </div>
                     <button
@@ -1312,6 +1451,7 @@ function PartnershipPanel({
                                     switch (activity.type) {
                                         case 'email_sent':
                                         case 'email_received':
+                                        case 'email_reply_sent':
                                             return (
                                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1324,6 +1464,31 @@ function PartnershipPanel({
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                                 </svg>
                                             );
+                                        case 'stage_changed':
+                                            return (
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h10m0 0l-3-3m3 3l-3 3M20 17H10m0 0l3-3m-3 3l3 3" />
+                                                </svg>
+                                            );
+                                        case 'roles_updated':
+                                            return (
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V9H2v11h5m10 0v-4a3 3 0 00-3-3H10a3 3 0 00-3 3v4m10 0H7m8-13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                            );
+                                        case 'contact_added':
+                                            return (
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3M5 20a7 7 0 1111.95-4.95M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                            );
+                                        case 'airtable_imported':
+                                        case 'airtable_updated':
+                                            return (
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m14.836 2A8 8 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-14.836-2M15 15h.01" />
+                                                </svg>
+                                            );
                                         default:
                                             return (
                                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1332,14 +1497,66 @@ function PartnershipPanel({
                                             );
                                     }
                                 };
+                                const getActivityLabel = () => {
+                                    switch (activity.type) {
+                                        case 'email_reply_sent': return 'Email reply sent';
+                                        case 'email_sent': return 'Email sent';
+                                        case 'email_received': return 'Email received';
+                                        case 'stage_changed': return 'Stage changed';
+                                        case 'roles_updated': return 'Roles updated';
+                                        case 'contact_added': return 'Contact added';
+                                        case 'airtable_imported': return 'Airtable imported';
+                                        case 'airtable_updated': return 'Airtable updated';
+                                        default: return activity.type.replace(/_/g, ' ');
+                                    }
+                                };
+                                const getActivityStyles = () => {
+                                    switch (activity.type) {
+                                        case 'email_sent':
+                                        case 'email_received':
+                                        case 'email_reply_sent':
+                                            return {
+                                                row: 'bg-blue-50 border-blue-200',
+                                                iconWrap: 'bg-blue-100 border-blue-200 text-blue-700',
+                                            };
+                                        case 'airtable_imported':
+                                        case 'airtable_updated':
+                                            return {
+                                                row: 'bg-amber-50 border-amber-200',
+                                                iconWrap: 'bg-amber-100 border-amber-200 text-amber-700',
+                                            };
+                                        case 'stage_changed':
+                                        case 'roles_updated':
+                                            return {
+                                                row: 'bg-purple-50 border-purple-200',
+                                                iconWrap: 'bg-purple-100 border-purple-200 text-purple-700',
+                                            };
+                                        case 'contact_added':
+                                            return {
+                                                row: 'bg-emerald-50 border-emerald-200',
+                                                iconWrap: 'bg-emerald-100 border-emerald-200 text-emerald-700',
+                                            };
+                                        case 'note':
+                                            return {
+                                                row: 'bg-gray-50 border-gray-200',
+                                                iconWrap: 'bg-white border-gray-200 text-gray-600',
+                                            };
+                                        default:
+                                            return {
+                                                row: 'bg-gray-50 border-gray-200',
+                                                iconWrap: 'bg-white border-gray-200 text-gray-600',
+                                            };
+                                    }
+                                };
+                                const styles = getActivityStyles();
 
                                 return (
-                                    <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                        <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 shrink-0">
+                                    <div key={activity.id} className={`flex items-start gap-3 p-3 rounded-lg border ${styles.row}`}>
+                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${styles.iconWrap}`}>
                                             {getActivityIcon()}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-gray-900">{activity.content || activity.type.replace(/_/g, ' ')}</p>
+                                            <p className="text-sm text-gray-900">{activity.content || getActivityLabel()}</p>
                                             <p className="text-xs text-gray-500 mt-1">
                                                 {new Date(activity.createdAt).toLocaleDateString('en-US', {
                                                     month: 'short',

@@ -23,6 +23,13 @@ export default function HomePage() {
         priorities: EducationHomePriority[];
         urgentCount: number;
         atRisk: EducationHomeAtRisk[];
+        meetingsThisWeek: number;
+        mouSentCount: number;
+        partnershipsConfirmedCount: number;
+        partnershipsInterestedCount: number;
+        invoicesOrMousConfirmedCount: number;
+        confirmedPartnersOutOf55: { confirmed: number; total: number };
+        revenueCommitment: number;
         recentRuns: Array<{
             id: string;
             name: string;
@@ -313,6 +320,41 @@ export default function HomePage() {
                             placeholder="Who should I follow up with? What deals might miss deadlines?"
                             className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent text-gray-900"
                         />
+                    </div>
+                </div>
+
+                {/* Dashboard Metrics */}
+                <div className="mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Meetings this week</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{data?.meetingsThisWeek ?? 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">MOUs sent</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{data?.mouSentCount ?? 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Partnerships interested</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{data?.partnershipsInterestedCount ?? 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Partnerships confirmed</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{data?.partnershipsConfirmedCount ?? 0}</p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Invoices / MOUs confirmed</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{data?.invoicesOrMousConfirmedCount ?? 0}</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Confirmed partners: {data?.confirmedPartnersOutOf55?.confirmed ?? 0} / {data?.confirmedPartnersOutOf55?.total ?? 55}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-gray-200 bg-white">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Revenue commitment</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                                ${(data?.revenueCommitment ?? 0).toLocaleString()}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
