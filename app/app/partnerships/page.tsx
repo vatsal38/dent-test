@@ -200,7 +200,7 @@ export default function PartnershipsPage() {
     if (!data) return null;
 
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-white p-4">
+        <div className="flex flex-col md:flex-row h-screen min-h-0 bg-white p-4">
             {successToast && (
                 <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
                     <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 max-w-md">
@@ -227,7 +227,7 @@ export default function PartnershipsPage() {
                 </div>
             )}
             {/* Main Content */}
-            <div className={`flex-1 min-w-0 overflow-auto transition-all ${selectedPartnership ? 'hidden md:block md:flex-none md:w-2/3' : 'w-full'}`}>
+            <div className={`flex-1 min-w-0 min-h-0 overflow-auto transition-all ${selectedPartnership ? 'hidden md:block md:flex-none md:w-2/3' : 'w-full'}`}>
                 <div>
                     {/* Header */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -1028,8 +1028,8 @@ function PartnershipPanel({
     const panelOrgLine = partnershipPanelOrgLine(partnership);
 
     return (
-        <div className="w-full md:w-1/3 md:border-l border-gray-200 bg-white flex flex-col h-full overflow-y-auto shrink-0">
-            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10 shadow-sm">
+        <div className="w-full md:w-1/3 md:border-l border-gray-200 bg-white flex flex-col h-full min-h-0 overflow-y-auto shrink-0">
+            <div className="p-6 border-b border-gray-200 bg-white">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
                         <h2 className="text-xl font-bold text-gray-900 truncate">{partnershipPanelPrimaryTitle(partnership)}</h2>
@@ -1231,7 +1231,7 @@ function PartnershipPanel({
                 )}
             </div>
 
-            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+            <div className="p-6 space-y-6">
                 {/* Contact Details Section */}
                 <div>
                     <div className="flex items-center justify-between mb-3">
