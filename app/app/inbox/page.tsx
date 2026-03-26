@@ -365,8 +365,8 @@ export default function InboxPage() {
                                         </button>
 
                                         {/* Avatar */}
-                                        <div className="flex-shrink-0">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                                        <div className="shrink-0">
+                                            <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
                                                 {getInitials(thread.fromName, thread.fromEmail)}
                                             </div>
                                         </div>
@@ -383,7 +383,7 @@ export default function InboxPage() {
                                                             {formatPartnerName(thread.partnerName)}
                                                         </span>
                                                     )}
-                                                    {thread.category === 'needs_response' && (
+                                                    {thread.needsResponse && (
                                                         <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full shrink-0">
                                                             Needs Response
                                                         </span>
@@ -632,9 +632,9 @@ function EmailDetailPanel({
                                 </button>
                             )}
                             <div className="flex-1 min-w-0">
-                                <h1 className="text-base sm:text-xl font-semibold text-gray-900 mb-2 break-words">{thread.subject}</h1>
+                                <h1 className="text-base sm:text-xl font-semibold text-gray-900 mb-2 wrap-break-word">{thread.subject}</h1>
                                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shrink-0">
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shrink-0">
                                         {getInitials(thread.fromName, thread.fromEmail)}
                                     </div>
                                     <div className="min-w-0">

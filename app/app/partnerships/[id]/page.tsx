@@ -1,12 +1,35 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getPartnershipDetails, addPartnershipNote, updatePartnershipStage, PartnershipDetail } from '@/lib/api';
+import {
+    addPartnershipContact,
+    addPartnershipNote,
+    AddContactInput,
+    getPartnershipDetails,
+    getPartnershipTotals,
+    PartnershipDetail,
+    sendEmail,
+    updatePartnershipFields,
+    updatePartnershipRoles,
+    updatePartnershipStage,
+} from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { Skeleton } from '@/components/Skeleton';
 import { AirtableNotesBlock } from '@/components/AirtableNotesBlock';
 import { TextWithLinks } from '@/components/TextWithLinks';
+import { EmailComposer } from '@/components/EmailComposer';
+
+/** Fallback labels when backend hasn't returned types yet (e.g. before first sync). */
+const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
+    dentership_host: 'Denternship Host',
+    space_partner: 'Space Partner',
+    made_at_dent: 'Made@Dent',
+    sponsor: 'Sponsor',
+    food_for_thought_speaker: 'Food-for-Thought Speaker',
+    aixdt_irc_evaluator: 'AIxDT IRC Evaluator',
+    other: 'Other',
+};
 
 export default function PartnershipDetailPage() {
     const params = useParams();
@@ -16,6 +39,32 @@ export default function PartnershipDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [note, setNote] = useState('');
+    const [successToast, setSuccessToast] = useState<string | null>(null);
+
+    const [roleOptions, setRoleOptions] = useState<Array<{ partnershipType: string; label: string; count: number }>>([]);
+    const [rolesOpen, setRolesOpen] = useState(false);
+    const [roleQuery, setRoleQuery] = useState('');
+    const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
+    const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+    const [savingRoles, setSavingRoles] = useState(false);
+
+    const [tFocusInput, setTFocusInput] = useState<string>('T1');
+    const [revenueCommitmentInput, setRevenueCommitmentInput] = useState<string>('');
+    const [estimatedQuoteInput, setEstimatedQuoteInput] = useState<string>('');
+    const [finalQuoteInput, setFinalQuoteInput] = useState<string>('');
+    const [savingBusinessFields, setSavingBusinessFields] = useState(false);
+
+    const [showAddContact, setShowAddContact] = useState(false);
+    const [newContact, setNewContact] = useState<AddContactInput>({
+        name: '',
+        email: '',
+        phone: '',
+        jobTitle: '',
+        isPrimary: false,
+    });
+    const [addingContact, setAddingContact] = useState(false);
+
+    const [showEmailComposer, setShowEmailComposer] = useState(false);
 
     const loadPartnership = useCallback(async () => {
         if (!partnershipId) return;
@@ -35,6 +84,51 @@ export default function PartnershipDetailPage() {
         loadPartnership();
     }, [loadPartnership]);
 
+    useEffect(() => {
+        if (!partnership) return;
+        const roles = Array.isArray(partnership.partnershipType)
+            ? partnership.partnershipType
+            : partnership.partnershipType
+                ? [String(partnership.partnershipType)]
+                : [];
+        setSelectedRoles(roles);
+        setTFocusInput(partnership.tFocus || 'T1');
+        setRevenueCommitmentInput(partnership.revenueCommitment != null ? String(partnership.revenueCommitment) : '');
+        setEstimatedQuoteInput(partnership.estimatedQuote != null ? String(partnership.estimatedQuote) : '');
+        setFinalQuoteInput(partnership.finalQuote != null ? String(partnership.finalQuote) : '');
+    }, [partnership]);
+
+    const loadRoleOptions = useCallback(async () => {
+        try {
+            const totals = await getPartnershipTotals();
+            setRoleOptions(totals.byType ?? []);
+        } catch {
+            setRoleOptions([]);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadRoleOptions();
+    }, [loadRoleOptions]);
+
+    useEffect(() => {
+        if (!rolesOpen) return;
+        function onDocMouseDown(e: MouseEvent) {
+            const el = rolesPopoverRef.current;
+            if (!el) return;
+            if (e.target instanceof Node && el.contains(e.target)) return;
+            setRolesOpen(false);
+        }
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, [rolesOpen]);
+
+    useEffect(() => {
+        if (!successToast) return;
+        const t = setTimeout(() => setSuccessToast(null), 3000);
+        return () => clearTimeout(t);
+    }, [successToast]);
+
     async function handleAddNote() {
         if (!note.trim()) return;
         try {
@@ -46,12 +140,95 @@ export default function PartnershipDetailPage() {
         }
     }
 
+    async function handleAddContact() {
+        if (!newContact.name.trim()) return;
+        setAddingContact(true);
+        try {
+            await addPartnershipContact(partnershipId, newContact);
+            setSuccessToast(`Added ${newContact.name.trim()} to contacts.`);
+            setNewContact({ name: '', email: '', phone: '', jobTitle: '', isPrimary: false });
+            setShowAddContact(false);
+            loadPartnership();
+        } catch (err) {
+            console.error('Failed to add contact:', err);
+        } finally {
+            setAddingContact(false);
+        }
+    }
+
     async function handleStageChange(newStage: string) {
         try {
             await updatePartnershipStage(partnershipId, newStage);
             loadPartnership();
         } catch (err) {
             console.error('Failed to update stage:', err);
+        }
+    }
+
+    const roleLabel = useCallback(
+        (value: string) =>
+            roleOptions.find((t) => t.partnershipType === value)?.label ??
+            PARTNERSHIP_TYPE_LABELS[value] ??
+            value,
+        [roleOptions]
+    );
+
+    const allRoleOptions = useMemo(() => {
+        const list = (roleOptions.length > 0
+            ? roleOptions
+            : Object.entries(PARTNERSHIP_TYPE_LABELS).map(([partnershipType, label]) => ({
+                partnershipType,
+                label,
+                count: 0,
+            })))
+            .map((t) => ({ ...t, label: t.label || t.partnershipType }))
+            .sort((a, b) => (a.label || a.partnershipType).localeCompare(b.label || b.partnershipType));
+        return list;
+    }, [roleOptions]);
+
+    const filteredRoleOptions = useMemo(() => {
+        const q = roleQuery.trim().toLowerCase();
+        if (!q) return allRoleOptions;
+        return allRoleOptions.filter(
+            (t) => (t.label || '').toLowerCase().includes(q) || t.partnershipType.toLowerCase().includes(q)
+        );
+    }, [allRoleOptions, roleQuery]);
+
+    async function handleSaveRoles() {
+        if (!selectedRoles.length) return;
+        setSavingRoles(true);
+        try {
+            await updatePartnershipRoles(partnershipId, selectedRoles);
+            await loadPartnership();
+            setSuccessToast('Updated roles.');
+        } catch (err) {
+            console.error('Failed to update roles:', err);
+        } finally {
+            setSavingRoles(false);
+        }
+    }
+
+    async function handleSaveBusinessFields() {
+        setSavingBusinessFields(true);
+        try {
+            const parseMoney = (v: string) => {
+                const s = (v || '').trim();
+                if (!s) return null;
+                const n = Number(s);
+                return Number.isFinite(n) ? n : null;
+            };
+            await updatePartnershipFields(partnershipId, {
+                tFocus: tFocusInput || null,
+                revenueCommitment: parseMoney(revenueCommitmentInput),
+                estimatedQuote: parseMoney(estimatedQuoteInput),
+                finalQuote: parseMoney(finalQuoteInput),
+            });
+            await loadPartnership();
+            setSuccessToast('Updated T focus and quote fields.');
+        } catch (err) {
+            console.error('Failed to update business fields:', err);
+        } finally {
+            setSavingBusinessFields(false);
         }
     }
 
@@ -120,16 +297,42 @@ export default function PartnershipDetailPage() {
     if (!partnership) return null;
 
     const stages = [
-        { value: 'new_intro_made', label: 'New Intro Made' },
+        { value: 'need_outreach', label: 'Need 1st Outreach' },
         { value: 'awaiting_response', label: 'Awaiting Response' },
         { value: 'conversation_active', label: 'Conversation Active' },
-        { value: 'mou_sent', label: 'MOU Sent' },
-        { value: 'confirmed_locked', label: 'Confirmed & Locked' },
+        { value: 'interested', label: 'Interested' },
+        { value: 'mou_sent', label: 'MOU/Invoice Sent' },
+        { value: 'confirmed_locked', label: 'Confirmed/Locked' },
         { value: 'not_this_season', label: 'Not This Season' },
     ];
 
     return (
         <div className="px-6 py-8 bg-white">
+            {successToast && (
+                <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
+                    <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 max-w-md">
+                        <div className="flex items-start gap-3">
+                            <div className="shrink-0">
+                                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-green-900">Success</p>
+                                <p className="text-sm text-green-700 mt-1">{successToast}</p>
+                            </div>
+                            <button
+                                onClick={() => setSuccessToast(null)}
+                                className="shrink-0 text-green-400 hover:text-green-600 transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <button
                 onClick={() => router.push('/app/partnerships')}
                 className="text-gray-600 hover:text-gray-900 mb-6 text-sm font-medium flex items-center gap-1"
@@ -409,9 +612,269 @@ export default function PartnershipDetailPage() {
 
                 {/* Sidebar */}
                 <div className="space-y-6">
+                    {/* Roles */}
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Roles</h2>
+                        <div className="flex items-start gap-2 flex-wrap">
+                            <div ref={rolesPopoverRef} className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setRolesOpen((v) => !v)}
+                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                                >
+                                    <span>{selectedRoles.length ? `Roles (${selectedRoles.length})` : 'Select roles'}</span>
+                                    <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+
+                                {rolesOpen && (
+                                    <div className="absolute z-30 mt-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-lg">
+                                        <div className="p-3 border-b border-gray-100">
+                                            <input
+                                                value={roleQuery}
+                                                onChange={(e) => setRoleQuery(e.target.value)}
+                                                placeholder="Search roles…"
+                                                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                            />
+                                        </div>
+                                        <div className="max-h-[280px] overflow-auto p-2">
+                                            {filteredRoleOptions.length === 0 ? (
+                                                <div className="p-6 text-center text-sm text-gray-500">No matching roles</div>
+                                            ) : (
+                                                filteredRoleOptions.map((opt) => {
+                                                    const checked = selectedRoles.includes(opt.partnershipType);
+                                                    return (
+                                                        <button
+                                                            key={opt.partnershipType}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedRoles((prev) =>
+                                                                    prev.includes(opt.partnershipType)
+                                                                        ? prev.filter((t) => t !== opt.partnershipType)
+                                                                        : [...prev, opt.partnershipType]
+                                                                );
+                                                            }}
+                                                            className={`w-full text-left flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 ${checked ? 'bg-blue-50' : ''}`}
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}>
+                                                                    {checked && (
+                                                                        <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                            <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    )}
+                                                                </span>
+                                                                <span className="text-sm text-gray-900 truncate">{opt.label}</span>
+                                                            </div>
+                                                            <span className="text-xs text-gray-500">{opt.count}</span>
+                                                        </button>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                        <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedRoles(['other']);
+                                                    setRoleQuery('');
+                                                }}
+                                                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                                            >
+                                                Reset
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRolesOpen(false)}
+                                                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                                            >
+                                                Done
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveRoles}
+                                disabled={savingRoles || selectedRoles.length === 0}
+                                className="px-3 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                            >
+                                {savingRoles ? 'Saving…' : 'Save'}
+                            </button>
+                        </div>
+
+                        {selectedRoles.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {selectedRoles.slice(0, 4).map((t) => (
+                                    <span key={t} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                                        {roleLabel(t)}
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedRoles((prev) => prev.filter((x) => x !== t))}
+                                            className="text-blue-700/70 hover:text-blue-900"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                ))}
+                                {selectedRoles.length > 4 && (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                                        +{selectedRoles.length - 4} more
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Business fields */}
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Business Fields</h2>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="col-span-1">
+                                <label className="block text-[11px] text-gray-600 mb-1">T Focus</label>
+                                <select
+                                    value={tFocusInput}
+                                    onChange={(e) => setTFocusInput(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                >
+                                    <option value="T1">T1</option>
+                                    <option value="T2">T2</option>
+                                    <option value="T3">T3</option>
+                                </select>
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-[11px] text-gray-600 mb-1">Revenue Commitment</label>
+                                <input
+                                    type="number"
+                                    value={revenueCommitmentInput}
+                                    onChange={(e) => setRevenueCommitmentInput(e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-[11px] text-gray-600 mb-1">Estimated Quote</label>
+                                <input
+                                    type="number"
+                                    value={estimatedQuoteInput}
+                                    onChange={(e) => setEstimatedQuoteInput(e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="block text-[11px] text-gray-600 mb-1">Final Quote</label>
+                                <input
+                                    type="number"
+                                    value={finalQuoteInput}
+                                    onChange={(e) => setFinalQuoteInput(e.target.value)}
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                                />
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleSaveBusinessFields}
+                            disabled={savingBusinessFields}
+                            className="mt-3 px-3 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        >
+                            {savingBusinessFields ? 'Saving…' : 'Save fields'}
+                        </button>
+                    </div>
+
                     {/* Contacts */}
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Contacts</h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold text-gray-900">Contacts</h2>
+                            <button
+                                onClick={() => setShowAddContact((v) => !v)}
+                                className="px-3 py-1.5 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-xs font-medium"
+                            >
+                                + Add Contact
+                            </button>
+                        </div>
+
+                        {showAddContact && (
+                            <div className="mb-4 p-4 rounded-lg bg-gray-50 border border-gray-200 space-y-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                                    <input
+                                        type="text"
+                                        value={newContact.name}
+                                        onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                        placeholder="Contact name"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            value={newContact.email}
+                                            onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                            placeholder="email@example.com"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                                        <input
+                                            type="tel"
+                                            value={newContact.phone}
+                                            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                            placeholder="(555) 123-4567"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Job Title</label>
+                                    <input
+                                        type="text"
+                                        value={newContact.jobTitle}
+                                        onChange={(e) => setNewContact({ ...newContact, jobTitle: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                                        placeholder="e.g., Director of Partnerships"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isPrimary"
+                                        checked={!!newContact.isPrimary}
+                                        onChange={(e) => setNewContact({ ...newContact, isPrimary: e.target.checked })}
+                                        className="w-4 h-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]"
+                                    />
+                                    <label htmlFor="isPrimary" className="text-xs text-gray-700">
+                                        Set as primary contact
+                                    </label>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setShowAddContact(false);
+                                            setNewContact({ name: '', email: '', phone: '', jobTitle: '', isPrimary: false });
+                                        }}
+                                        className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleAddContact}
+                                        disabled={!newContact.name.trim() || addingContact}
+                                        className="flex-1 px-3 py-2 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium disabled:opacity-50"
+                                    >
+                                        {addingContact ? 'Adding...' : 'Add Contact'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="space-y-3">
                             {partnership.contacts.length === 0 ? (
                                 <div className="p-4 text-center bg-gray-50 rounded-lg border border-gray-200">
@@ -420,7 +883,14 @@ export default function PartnershipDetailPage() {
                             ) : (
                                 partnership.contacts.map((contact) => (
                                     <div key={contact.id} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
-                                        <p className="font-medium text-gray-900">{contact.name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-medium text-gray-900">{contact.name}</p>
+                                            {contact.isPrimary && (
+                                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                                    Primary
+                                                </span>
+                                            )}
+                                        </div>
                                         {contact.email && (
                                             <a href={`mailto:${contact.email}`} className="text-sm text-[#3b82f6] hover:text-[#2563eb] mt-1 block">
                                                 {contact.email}
@@ -436,6 +906,20 @@ export default function PartnershipDetailPage() {
                                 ))
                             )}
                         </div>
+                    </div>
+
+                    {/* Quick actions */}
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                        <button
+                            onClick={() => setShowEmailComposer(true)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors text-sm font-medium"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Send Email
+                        </button>
                     </div>
 
                     {/* Tasks */}
@@ -499,6 +983,29 @@ export default function PartnershipDetailPage() {
                     )}
                 </div>
             </div>
+
+            {/* Email Composer */}
+            {showEmailComposer && partnership && (
+                <EmailComposer
+                    isOpen={showEmailComposer}
+                    to={partnership.contacts?.find((c) => c.isPrimary)?.email || partnership.contacts?.[0]?.email || ''}
+                    partnershipId={partnership.id}
+                    onClose={() => setShowEmailComposer(false)}
+                    onSend={async (data) => {
+                        try {
+                            await sendEmail({
+                                ...data,
+                                partnershipId: partnership.id,
+                                preserveSignature: true,
+                            });
+                            await loadPartnership();
+                        } catch (err) {
+                            console.error('Failed to send email:', err);
+                            throw err;
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 }

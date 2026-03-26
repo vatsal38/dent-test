@@ -1,28 +1,68 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, PartnershipTotalsResponse, getPartnershipTotals, PartnershipSummary } from '@/lib/api';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { getPartnerships, PartnershipTotalsResponse, getPartnershipTotals, PartnershipSummary } from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import Link from 'next/link';
 import { Skeleton } from '@/components/Skeleton';
 
-const STAGE_COLORS: Record<string, string> = {
-    'new_intro_made': 'from-blue-400 to-blue-600',
-    'awaiting_response': 'from-amber-400 to-amber-600',
-    'conversation_active': 'from-emerald-400 to-emerald-600',
-    'mou_sent': 'from-purple-400 to-purple-600',
-    'confirmed_locked': 'from-indigo-400 to-indigo-600',
-    'not_this_season': 'from-gray-400 to-gray-600',
+const KNOWN_STAGE_GRADIENTS: Record<string, string> = {
+    new_intro_made: 'from-blue-400 to-blue-600',
+    awaiting_response: 'from-amber-400 to-amber-600',
+    conversation_active: 'from-emerald-400 to-emerald-600',
+    mou_sent: 'from-purple-400 to-purple-600',
+    confirmed_locked: 'from-indigo-400 to-indigo-600',
+    not_this_season: 'from-gray-400 to-gray-600',
 };
 
-const STAGE_BG: Record<string, string> = {
-    'new_intro_made': 'bg-blue-50 text-blue-700 border-blue-100',
-    'awaiting_response': 'bg-amber-50 text-amber-700 border-amber-100',
-    'conversation_active': 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    'mou_sent': 'bg-purple-50 text-purple-700 border-purple-100',
-    'confirmed_locked': 'bg-indigo-50 text-indigo-700 border-indigo-100',
-    'not_this_season': 'bg-gray-50 text-gray-700 border-gray-100',
+const KNOWN_STAGE_BADGES: Record<string, string> = {
+    new_intro_made: 'bg-blue-50 text-blue-700 border-blue-100',
+    awaiting_response: 'bg-amber-50 text-amber-700 border-amber-100',
+    conversation_active: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    mou_sent: 'bg-purple-50 text-purple-700 border-purple-100',
+    confirmed_locked: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+    not_this_season: 'bg-gray-50 text-gray-700 border-gray-100',
 };
+
+const FALLBACK_STAGE_GRADIENTS = [
+    'from-sky-400 to-sky-600',
+    'from-teal-400 to-teal-600',
+    'from-rose-400 to-rose-600',
+    'from-orange-400 to-orange-600',
+    'from-lime-400 to-lime-600',
+    'from-fuchsia-400 to-fuchsia-600',
+    'from-cyan-400 to-cyan-600',
+];
+
+const FALLBACK_STAGE_BADGES = [
+    'bg-sky-50 text-sky-700 border-sky-100',
+    'bg-teal-50 text-teal-700 border-teal-100',
+    'bg-rose-50 text-rose-700 border-rose-100',
+    'bg-orange-50 text-orange-700 border-orange-100',
+    'bg-lime-50 text-lime-700 border-lime-100',
+    'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100',
+    'bg-cyan-50 text-cyan-700 border-cyan-100',
+];
+
+function simpleHash(s: string) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h;
+}
+
+function stageGradient(stage: string) {
+    return (
+        KNOWN_STAGE_GRADIENTS[stage] ??
+        FALLBACK_STAGE_GRADIENTS[simpleHash(stage) % FALLBACK_STAGE_GRADIENTS.length]
+    );
+}
+
+function stageBadge(stage: string) {
+    return (
+        KNOWN_STAGE_BADGES[stage] ??
+        FALLBACK_STAGE_BADGES[simpleHash(stage) % FALLBACK_STAGE_BADGES.length]
+    );
+}
 
 function formatRelativeDate(dateStr: string | null) {
     if (!dateStr) return 'Never';
@@ -44,12 +84,38 @@ export default function PartnershipTrackerPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [stageFilter, setStageFilter] = useState('all');
 
+    const stageOptions = useMemo(() => {
+        const byStage = totals?.byStage ?? [];
+        // Preserve backend ordering; just ensure deterministic type.
+        return byStage
+            .filter((s) => !!s?.stage)
+            .map((s) => ({ value: s.stage, label: s.label || s.stage, count: s.count ?? 0 }));
+    }, [totals]);
+
+    const stageCount = useCallback(
+        (stage: string) => {
+            return (
+                totals?.countsByStage?.[stage] ??
+                totals?.byStage?.find((s) => s.stage === stage)?.count ??
+                0
+            );
+        },
+        [totals]
+    );
+
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const [resp, totalsResp] = await Promise.all([
-                getPartnerships({ limit: 100 }),
-                getPartnershipTotals()
+                getPartnerships({
+                    view: 'list',
+                    limit: 200,
+                    sortBy: 'priorityScore',
+                    sortOrder: 'desc',
+                    stage: stageFilter !== 'all' ? stageFilter : undefined,
+                    search: searchQuery.trim() ? searchQuery.trim() : undefined,
+                }),
+                getPartnershipTotals(),
             ]);
             setPartnerships(resp.partnerships || []);
             setTotals(totalsResp);
@@ -58,18 +124,14 @@ export default function PartnershipTrackerPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [searchQuery, stageFilter]);
 
     useEffect(() => {
-        loadData();
+        const t = setTimeout(() => loadData(), 250);
+        return () => clearTimeout(t);
     }, [loadData]);
 
-    const filteredPartnerships = partnerships.filter(p => {
-        const matchesSearch = p.partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (p.primaryContactName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-        const matchesStage = stageFilter === 'all' || p.stage === stageFilter;
-        return matchesSearch && matchesStage;
-    });
+    const filteredPartnerships = partnerships;
 
     if (loading) {
         return (
@@ -180,7 +242,7 @@ export default function PartnershipTrackerPage() {
                     </div>
                     <div className="space-y-1">
                         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Partnerships</h3>
-                        <p className="text-3xl font-bold text-gray-900">{totals?.totalCount || 0}</p>
+                        <p className="text-3xl font-bold text-gray-900">{totals?.totals?.totalPartnerships ?? totals?.totalCount ?? 0}</p>
                     </div>
                 </div>
 
@@ -195,7 +257,7 @@ export default function PartnershipTrackerPage() {
                     <div className="space-y-1">
                         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Estimated Revenue</h3>
                         <p className="text-3xl font-bold text-gray-900">
-                            ${(totals?.totalEstimatedRevenue || 0).toLocaleString()}
+                            ${(totals?.totals?.totalRevenue ?? totals?.totalEstimatedRevenue ?? 0).toLocaleString()}
                         </p>
                     </div>
                 </div>
@@ -210,7 +272,7 @@ export default function PartnershipTrackerPage() {
                     </div>
                     <div className="space-y-1">
                         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Confirmed Partnerships</h3>
-                        <p className="text-3xl font-bold text-gray-900">{totals?.countsByStage?.confirmed_locked || 0}</p>
+                        <p className="text-3xl font-bold text-gray-900">{stageCount('confirmed_locked')}</p>
                     </div>
                 </div>
 
@@ -224,7 +286,7 @@ export default function PartnershipTrackerPage() {
                     </div>
                     <div className="space-y-1">
                         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">MOU Sent</h3>
-                        <p className="text-3xl font-bold text-gray-900">{totals?.countsByStage?.mou_sent || 0}</p>
+                        <p className="text-3xl font-bold text-gray-900">{stageCount('mou_sent')}</p>
                     </div>
                 </div>
             </div>
@@ -249,12 +311,11 @@ export default function PartnershipTrackerPage() {
                     className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium text-gray-700 bg-white"
                 >
                     <option value="all">All Stages</option>
-                    <option value="new_intro_made">New Intro</option>
-                    <option value="awaiting_response">Awaiting Response</option>
-                    <option value="conversation_active">Active Conversation</option>
-                    <option value="mou_sent">MOU Sent</option>
-                    <option value="confirmed_locked">Confirmed</option>
-                    <option value="not_this_season">Not This Season</option>
+                    {stageOptions.map((s) => (
+                        <option key={s.value} value={s.value}>
+                            {s.label} ({s.count})
+                        </option>
+                    ))}
                 </select>
             </div>
 
@@ -302,8 +363,8 @@ export default function PartnershipTrackerPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-5">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${STAGE_BG[partnership.stage] || 'bg-gray-100 text-gray-700'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${STAGE_COLORS[partnership.stage] || 'from-gray-400 to-gray-600'} shadow-sm shadow-black/10`} />
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${stageBadge(partnership.stage)}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${stageGradient(partnership.stage)} shadow-sm shadow-black/10`} />
                                                 {partnership.stageLabel}
                                             </span>
                                         </td>

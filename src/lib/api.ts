@@ -545,6 +545,12 @@ export interface GmailThread {
     fromEmail: string;
     snippet: string | null;
     category: 'unlinked_intro' | 'needs_response' | 'hot_lead' | 'mou_related';
+    /** Computed from Gmail thread messages; true if the latest inbound is newer than latest outbound. */
+    needsResponse?: boolean;
+    waitingOn?: 'us' | 'them' | 'none' | null;
+    lastMessageAt?: string | null;
+    lastInboundAt?: string | null;
+    lastOutboundAt?: string | null;
     isRead: boolean;
     hasAttachment: boolean;
     attachments?: Array<{

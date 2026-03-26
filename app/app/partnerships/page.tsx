@@ -200,7 +200,7 @@ export default function PartnershipsPage() {
     if (!data) return null;
 
     return (
-        <div className="flex flex-col md:flex-row h-screen min-h-0 bg-white p-4">
+        <div className="flex flex-col md:flex-row h-screen min-h-0 bg-white">
             {successToast && (
                 <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
                     <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 max-w-md">
@@ -1023,7 +1023,7 @@ function PartnershipPanel({
         : null;
 
     const needsAttention = partnership.stage === 'mou_sent' &&
-        (daysSinceContact !== null && daysSinceContact > 5);
+        (daysSinceContact !== null && daysSinceContact > 7);
 
     const panelOrgLine = partnershipPanelOrgLine(partnership);
 

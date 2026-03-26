@@ -359,7 +359,7 @@ export default function AppLayout({
 
             {/* Main Content */}
             <main className="flex-1 min-w-0 pt-14 md:pt-0 md:ml-64">
-                <div className="min-h-screen md:min-h-0 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
+                <div className="min-h-screen md:min-h-0 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 bg-white">
                     {children}
                 </div>
             </main>
