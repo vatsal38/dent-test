@@ -7,18 +7,22 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/Skeleton';
 
 const KNOWN_STAGE_GRADIENTS: Record<string, string> = {
-    new_intro_made: 'from-blue-400 to-blue-600',
+    general_contact: 'from-slate-400 to-slate-600',
+    need_outreach: 'from-blue-400 to-blue-600',
     awaiting_response: 'from-amber-400 to-amber-600',
     conversation_active: 'from-emerald-400 to-emerald-600',
+    interested: 'from-orange-400 to-orange-600',
     mou_sent: 'from-purple-400 to-purple-600',
     confirmed_locked: 'from-indigo-400 to-indigo-600',
     not_this_season: 'from-gray-400 to-gray-600',
 };
 
 const KNOWN_STAGE_BADGES: Record<string, string> = {
-    new_intro_made: 'bg-blue-50 text-blue-700 border-blue-100',
+    general_contact: 'bg-slate-50 text-slate-700 border-slate-100',
+    need_outreach: 'bg-blue-50 text-blue-700 border-blue-100',
     awaiting_response: 'bg-amber-50 text-amber-700 border-amber-100',
     conversation_active: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    interested: 'bg-orange-50 text-orange-700 border-orange-100',
     mou_sent: 'bg-purple-50 text-purple-700 border-purple-100',
     confirmed_locked: 'bg-indigo-50 text-indigo-700 border-indigo-100',
     not_this_season: 'bg-gray-50 text-gray-700 border-gray-100',

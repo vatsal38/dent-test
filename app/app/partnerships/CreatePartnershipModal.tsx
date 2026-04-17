@@ -34,7 +34,8 @@ const FALLBACK_PARTNERSHIP_TYPES = [
 ];
 
 const PARTNERSHIP_STAGES = [
-    { value: 'need_outreach', label: 'Need 1st Outreach' },
+    { value: 'general_contact', label: 'General Contact' },
+    { value: 'need_outreach', label: 'Needs Outreach' },
     { value: 'awaiting_response', label: 'Awaiting Response' },
     { value: 'conversation_active', label: 'Conversation Active' },
     { value: 'interested', label: 'Interested' },
@@ -45,10 +46,11 @@ const PARTNERSHIP_STAGES = [
 
 function recommendedStageForTypes(types: string[]): string {
     const values = Array.isArray(types) ? types : [];
+    if (values.includes('dentership_host')) return 'need_outreach';
     if (values.includes('space_partner') || values.includes('sponsor')) return 'conversation_active';
     if (values.includes('made_at_dent')) return 'interested';
     if (values.includes('food_for_thought_speaker') || values.includes('aixdt_irc_evaluator')) return 'awaiting_response';
-    return 'need_outreach';
+    return 'general_contact';
 }
 
 const ORG_TYPES = [
@@ -68,7 +70,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
         primaryContactJobTitle: '',
         primaryContactPhone: '',
         partnershipType: ['other'],
-        initialStage: 'need_outreach',
+        initialStage: 'general_contact',
         season: '',
         source: '',
         estimatedRevenue: undefined,
@@ -196,7 +198,7 @@ export function CreatePartnershipModal({ isOpen, onClose, onSuccess, onViewExist
             primaryContactJobTitle: '',
             primaryContactPhone: '',
             partnershipType: ['other'],
-            initialStage: 'need_outreach',
+            initialStage: 'general_contact',
             season: '',
             source: '',
             estimatedRevenue: undefined,

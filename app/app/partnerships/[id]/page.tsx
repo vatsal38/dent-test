@@ -297,7 +297,8 @@ export default function PartnershipDetailPage() {
     if (!partnership) return null;
 
     const stages = [
-        { value: 'need_outreach', label: 'Need 1st Outreach' },
+        { value: 'general_contact', label: 'General Contact' },
+        { value: 'need_outreach', label: 'Needs Outreach' },
         { value: 'awaiting_response', label: 'Awaiting Response' },
         { value: 'conversation_active', label: 'Conversation Active' },
         { value: 'interested', label: 'Interested' },
