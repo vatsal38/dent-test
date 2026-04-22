@@ -197,6 +197,11 @@ export interface PartnershipListItem {
     pendingTasks: number;
     mouStatus: string | null;
     createdAt: string;
+    internalOperator?: {
+        userId: string;
+        name: string | null;
+        email: string | null;
+    } | null;
 }
 
 export type PartnershipSummary = PartnershipListItem;
@@ -281,6 +286,11 @@ export interface PartnershipDetail {
         sentAt: string | null;
         signedAt: string | null;
     }>;
+    internalOperator?: {
+        userId: string;
+        name: string | null;
+        email: string | null;
+    } | null;
 }
 
 export async function getPartnerships(options?: {
@@ -358,6 +368,26 @@ export async function updatePartnershipFields(
         method: 'PATCH',
         body: JSON.stringify(fields),
     });
+}
+
+export async function updatePartnershipInternalOperator(
+    partnershipId: string,
+    internalOperatorUserId: string | null
+): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/api/education/partnerships/${partnershipId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ internalOperatorUserId }),
+    });
+}
+
+export interface EducationUser {
+    id: string;
+    name: string | null;
+    email: string;
+}
+
+export async function getEducationUsers(): Promise<{ users: EducationUser[] }> {
+    return apiRequest<{ users: EducationUser[] }>('/api/education/users');
 }
 
 export interface AddContactInput {

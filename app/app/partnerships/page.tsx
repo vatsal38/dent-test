@@ -1,7 +1,24 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { getPartnerships, PartnershipsListResponse, getPartnershipTotals, getPartnershipDetails, addPartnershipNote, updatePartnershipStage, updatePartnershipRoles, updatePartnershipFields, PartnershipDetail, addPartnershipContact, AddContactInput, sendEmail, auth } from '@/lib/api';
+import {
+    getPartnerships,
+    PartnershipsListResponse,
+    getPartnershipTotals,
+    getPartnershipDetails,
+    addPartnershipNote,
+    updatePartnershipStage,
+    updatePartnershipRoles,
+    updatePartnershipFields,
+    updatePartnershipInternalOperator,
+    getEducationUsers,
+    PartnershipDetail,
+    addPartnershipContact,
+    AddContactInput,
+    sendEmail,
+    auth,
+    type EducationUser,
+} from '@/lib/api';
 import { formatPartnerName } from '@/lib/utils';
 import { CreatePartnershipModal } from './CreatePartnershipModal';
 import { EmailComposer } from '@/components/EmailComposer';
@@ -836,6 +853,16 @@ function PartnershipPanel({
     const [finalQuoteInput, setFinalQuoteInput] = useState<string>('');
     const [savingBusinessFields, setSavingBusinessFields] = useState(false);
 
+    const [orgUsers, setOrgUsers] = useState<EducationUser[]>([]);
+    const [orgUsersError, setOrgUsersError] = useState<string | null>(null);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [savingInternalOperator, setSavingInternalOperator] = useState(false);
+    const partnershipRef = useRef<PartnershipDetail | null>(null);
+
+    useEffect(() => {
+        partnershipRef.current = partnership;
+    }, [partnership]);
+
     const loadPartnership = useCallback(async () => {
         setLoading(true);
         try {
@@ -872,6 +899,38 @@ function PartnershipPanel({
     }, [loadRoleOptions]);
 
     useEffect(() => {
+        let mounted = true;
+        (async () => {
+            setLoadingUsers(true);
+            try {
+                setOrgUsersError(null);
+                const res = await getEducationUsers();
+                if (!mounted) return;
+                setOrgUsers(res.users || []);
+            } catch (e) {
+                if (!mounted) return;
+                setOrgUsers([]);
+                setOrgUsersError(e instanceof Error ? e.message : 'Could not load team members');
+            } finally {
+                if (mounted) setLoadingUsers(false);
+            }
+        })();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        function onPageShow(ev: PageTransitionEvent) {
+            if (ev.persisted && partnershipId) {
+                loadPartnership();
+            }
+        }
+        window.addEventListener('pageshow', onPageShow);
+        return () => window.removeEventListener('pageshow', onPageShow);
+    }, [partnershipId, loadPartnership]);
+
+    useEffect(() => {
         if (!rolesOpen) return;
         function onDocMouseDown(e: MouseEvent) {
             const el = rolesPopoverRef.current;
@@ -882,6 +941,40 @@ function PartnershipPanel({
         document.addEventListener('mousedown', onDocMouseDown);
         return () => document.removeEventListener('mousedown', onDocMouseDown);
     }, [rolesOpen]);
+
+    const operatorSelectOptions = useMemo(() => {
+        const list = [...orgUsers];
+        const op = partnership?.internalOperator;
+        if (op?.userId && !list.some((u) => String(u.id) === String(op.userId))) {
+            list.unshift({
+                id: String(op.userId),
+                name: op.name,
+                email: op.email || '',
+            });
+        }
+        return list;
+    }, [orgUsers, partnership?.internalOperator]);
+
+    async function handleInternalOperatorChange(nextUserId: string) {
+        const prev = partnershipRef.current;
+        if (!prev) return;
+        const normalized = nextUserId === '' ? null : nextUserId;
+        const currentId = prev.internalOperator?.userId ? String(prev.internalOperator.userId) : '';
+        const nextId = normalized ? String(normalized) : '';
+        if (currentId === nextId) return;
+
+        setSavingInternalOperator(true);
+        try {
+            await updatePartnershipInternalOperator(partnershipId, normalized);
+            if (onUpdate) await onUpdate(false);
+            await loadPartnership();
+            onSuccessToast?.(normalized ? 'Assigned internal operator.' : 'Cleared internal operator.');
+        } catch (err) {
+            console.error('Failed to update internal operator:', err);
+        } finally {
+            setSavingInternalOperator(false);
+        }
+    }
 
     async function handleAddNote() {
         if (!note.trim()) return;
@@ -1050,6 +1143,31 @@ function PartnershipPanel({
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Assignment</label>
+                            <label className="block text-[11px] text-gray-600 mb-1">Internal Operator</label>
+                            <select
+                                value={partnership.internalOperator?.userId || ''}
+                                onChange={(e) => handleInternalOperatorChange(e.target.value)}
+                                disabled={savingInternalOperator || loadingUsers}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:opacity-60"
+                            >
+                                <option value="">Unassigned</option>
+                                {operatorSelectOptions.map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                        {(u.name || u.email) + (u.name ? ` (${u.email})` : '')}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="mt-1.5 text-[11px] text-gray-500">
+                                App only — not synced to Airtable.
+                            </p>
+                            {orgUsersError && (
+                                <p className="mt-1.5 text-xs text-red-600" role="alert">
+                                    {orgUsersError}
+                                </p>
+                            )}
                         </div>
                         <div className="mt-4">
                             <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Roles</label>
