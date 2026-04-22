@@ -758,8 +758,8 @@ function EmailDetailPanel({
                 </div>
             </div>
 
-            {/* Actions Footer */}
-            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 shrink-0">
+            {/* Actions Footer — overflow-visible so partnership link dropdown is not clipped */}
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 shrink-0 overflow-visible relative z-20">
                 {thread.partnershipId ? (
                     <div className="space-y-3">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -821,7 +821,7 @@ function EmailDetailPanel({
                 ) : (
                     <div className="space-y-3">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                            <div className="flex-1 min-w-0 relative partnership-dropdown-container">
+                            <div className="flex-1 min-w-0 relative z-30 partnership-dropdown-container">
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                                     <input
                                         type="text"
@@ -842,9 +842,9 @@ function EmailDetailPanel({
                                     </button>
                                 </div>
 
-                                {/* Partnership Dropdown */}
+                                {/* Partnership Dropdown — opens upward so it stays above the footer (avoids overflow clip) */}
                                 {showPartnershipDropdown && (
-                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                                         {loadingPartnerships ? (
                                             <div className="p-4 text-center">
                                                 <div className="space-y-3">
