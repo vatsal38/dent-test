@@ -5,6 +5,19 @@ export { auth };
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+function isNetworkFetchError(err: unknown): boolean {
+  return (
+    err instanceof TypeError &&
+    (err.message === "Failed to fetch" ||
+      err.message.includes("NetworkError") ||
+      err.message.includes("Load failed"))
+  );
+}
+
+function apiUnreachableMessage(): string {
+  return `Cannot reach the API at ${API_BASE}. Start the backend with: cd dent-be && npm run dev`;
+}
+
 /**
  * Get Firebase ID token for authenticated requests
  */
@@ -27,20 +40,30 @@ export async function apiRequest<T>(
     throw new Error("Not authenticated. Please sign in.");
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } catch (err) {
+    if (isNetworkFetchError(err)) throw new Error(apiUnreachableMessage());
+    throw err;
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(
+    const err = new Error(
       error.error || error.message || `API error: ${response.status}`,
-    );
+    ) as Error & { status?: number; code?: string; details?: unknown };
+    err.status = response.status;
+    if (error.code) err.code = error.code;
+    if (error.details) err.details = error.details;
+    throw err;
   }
 
   return response.json();
@@ -74,13 +97,19 @@ export async function bootstrap(): Promise<BootstrapResponse> {
     throw new Error("Not authenticated. Please sign in.");
   }
 
-  const response = await fetch(`${API_BASE}/api/auth/bootstrap`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/auth/bootstrap`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (err) {
+    if (isNetworkFetchError(err)) throw new Error(apiUnreachableMessage());
+    throw err;
+  }
 
   const data = await response.json();
   if (!response.ok) {
@@ -1083,16 +1112,42 @@ export interface BobStudent {
   ywStatus?: string | null;
   attendanceStats?: BobStudentAttendanceStats | null;
   milestoneStats?: BobStudentMilestoneStats | null;
+  /** Full Airtable row fields from "All Students" (when requested). */
+  airtableFields?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BobStudentsFacetOption {
+  value: string;
+  count: number;
+}
+
+export interface BobStudentsFacetsResponse {
+  statuses: BobStudentsFacetOption[];
+  interviewStages: BobStudentsFacetOption[];
+  schools: BobStudentsFacetOption[];
+  grades: BobStudentsFacetOption[];
+  tracks: BobStudentsFacetOption[];
+  coaches: BobStudentsFacetOption[];
+  pipeline: {
+    total: number;
+    synced: number;
+    notSynced: number;
+  };
 }
 
 export interface BobStudentsListParams {
   status?: BobStudentStatus;
   interviewStage?: BobInterviewStage;
   search?: string;
+  /** JSON string: { match, conditions } — Airtable-style filter builder */
+  filters?: string;
+  sortBy?: "name" | "label";
+  sortOrder?: "asc" | "desc";
   limit?: number;
   offset?: number;
+  includeAirtableFields?: boolean;
 }
 
 export interface BobStudentsListResponse {
@@ -1109,12 +1164,370 @@ export async function getBobStudents(
   if (params?.status) sp.set("status", params.status);
   if (params?.interviewStage) sp.set("interviewStage", params.interviewStage);
   if (params?.search) sp.set("search", params.search);
+  if (params?.filters) sp.set("filters", params.filters);
+  if (params?.sortBy) sp.set("sortBy", params.sortBy);
+  if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
   if (params?.limit != null) sp.set("limit", String(params.limit));
   if (params?.offset != null) sp.set("offset", String(params.offset));
+  if (params?.includeAirtableFields) sp.set("includeAirtableFields", "1");
   const qs = sp.toString();
   return apiRequest<BobStudentsListResponse>(
     `/api/bob/students${qs ? `?${qs}` : ""}`,
   );
+}
+
+export interface BobRosterSchemaField {
+  name: string;
+  type: string;
+  linkedTableId?: string | null;
+}
+
+export interface BobRosterSchemaResponse {
+  table: { id: string; name: string };
+  primaryFieldId: string | null;
+  fields: BobRosterSchemaField[];
+  intakeTable?: { id: string; name: string };
+  studentsAlumsTable?: { id: string; name: string } | null;
+  programsTable?: {
+    id: string;
+    name: string;
+    fields: BobRosterSchemaField[];
+  } | null;
+  programsFieldName?: string | null;
+  programOptions?: Array<{ id: string; label: string }>;
+  recruitmentStatuses?: string[];
+}
+
+export async function resolveBobAirtableRecordLabels(params: {
+  tableId: string;
+  recordIds: string[];
+}): Promise<{ tableId: string; labels: Record<string, string | null> }> {
+  const sp = new URLSearchParams();
+  sp.set("tableId", params.tableId);
+  for (const id of params.recordIds || []) sp.append("recordIds", id);
+  return apiRequest<{ tableId: string; labels: Record<string, string | null> }>(
+    `/api/bob/airtable/resolve-record-labels?${sp.toString()}`,
+  );
+}
+
+export async function getBobRosterSchema(): Promise<BobRosterSchemaResponse> {
+  return apiRequest<BobRosterSchemaResponse>("/api/bob/roster/schema");
+}
+
+export async function getBobStudentsFacets(): Promise<BobStudentsFacetsResponse> {
+  return apiRequest<BobStudentsFacetsResponse>("/api/bob/students/facets");
+}
+
+// --- BoB Recruitment (Airtable pipeline table ↔ Mongo `bob_recruitment`) ---
+
+export interface BobRecruitmentRecord {
+  id: string;
+  label: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  recruitmentStatus?: string | null;
+  counselor?: string | null;
+  /** Youth Apps & Intake Airtable record id */
+  airtableRecordId?: string | null;
+  /** Students & Alums row after transfer */
+  studentsAlumsAirtableRecordId?: string | null;
+  studentsAlumsFields?: Record<string, unknown>;
+  programRecordIds?: string[];
+  transferredAt?: string | null;
+  studentsAlumsSyncState?: string | null;
+  transferDuplicateResolution?: string | null;
+  rosterStudentId?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  airtableFields?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type BobRecruitmentTriState = "yes" | "no";
+
+export interface BobRecruitmentFilterGroupPayload {
+  match?: "and" | "or";
+  conditions?: Array<{
+    field: string;
+    operator: string;
+    value?: string;
+  }>;
+}
+
+export interface BobRecruitmentListParams {
+  search?: string;
+  /** JSON string: { match, conditions } — Airtable-style filter builder */
+  filters?: string;
+  status?: string;
+  ywStatus?: string;
+  transferred?: BobRecruitmentTriState;
+  onRoster?: BobRecruitmentTriState;
+  hasPrograms?: BobRecruitmentTriState;
+  synced?: BobRecruitmentTriState;
+  school?: string;
+  grade?: string;
+  assignedTo?: string;
+  sortBy?: "label" | "name";
+  sortOrder?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
+export interface BobRecruitmentFacetOption {
+  value: string;
+  count: number;
+}
+
+export interface BobRecruitmentFacetsResponse {
+  appStatuses: BobRecruitmentFacetOption[];
+  ywStatuses: BobRecruitmentFacetOption[];
+  schools: BobRecruitmentFacetOption[];
+  grades: BobRecruitmentFacetOption[];
+  assignedTo: BobRecruitmentFacetOption[];
+  pipeline: {
+    total: number;
+    transferred: number;
+    notTransferred: number;
+    onRoster: number;
+    notOnRoster: number;
+    withPrograms: number;
+    withoutPrograms: number;
+    synced: number;
+    notSynced: number;
+  };
+}
+
+export interface BobRecruitmentListResponse {
+  records: BobRecruitmentRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getBobRecruitmentSchema(): Promise<BobRosterSchemaResponse> {
+  return apiRequest<BobRosterSchemaResponse>("/api/bob/recruitment/schema");
+}
+
+export async function getBobRecruitmentList(
+  params?: BobRecruitmentListParams,
+): Promise<BobRecruitmentListResponse> {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.filters) sp.set("filters", params.filters);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.ywStatus) sp.set("ywStatus", params.ywStatus);
+  if (params?.transferred) sp.set("transferred", params.transferred);
+  if (params?.onRoster) sp.set("onRoster", params.onRoster);
+  if (params?.hasPrograms) sp.set("hasPrograms", params.hasPrograms);
+  if (params?.synced) sp.set("synced", params.synced);
+  if (params?.school) sp.set("school", params.school);
+  if (params?.grade) sp.set("grade", params.grade);
+  if (params?.assignedTo) sp.set("assignedTo", params.assignedTo);
+  if (params?.sortBy) sp.set("sortBy", params.sortBy);
+  if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
+  if (params?.limit != null) sp.set("limit", String(params.limit));
+  if (params?.offset != null) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return apiRequest<BobRecruitmentListResponse>(
+    `/api/bob/recruitment${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function getBobRecruitmentFacets(): Promise<BobRecruitmentFacetsResponse> {
+  return apiRequest<BobRecruitmentFacetsResponse>(
+    "/api/bob/recruitment/facets",
+  );
+}
+
+export async function getBobRecruitmentRecord(
+  id: string,
+): Promise<BobRecruitmentRecord> {
+  return apiRequest<BobRecruitmentRecord>(`/api/bob/recruitment/${id}`);
+}
+
+export interface CreateBobRecruitmentInput {
+  label: string;
+  name?: string;
+  airtableFields?: Record<string, unknown>;
+}
+
+export async function createBobRecruitment(
+  data: CreateBobRecruitmentInput,
+): Promise<BobRecruitmentRecord> {
+  return apiRequest<BobRecruitmentRecord>("/api/bob/recruitment", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function approveBobRecruitment(
+  id: string,
+): Promise<BobRecruitmentRecord> {
+  return apiRequest<BobRecruitmentRecord>(
+    `/api/bob/recruitment/${id}/approve`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export interface BobTransferValidationIssue {
+  code: string;
+  message: string;
+}
+
+export interface BobRecruitmentTransferPreview {
+  valid: boolean;
+  errors: BobTransferValidationIssue[];
+  warnings: BobTransferValidationIssue[];
+  checks: Record<string, unknown>;
+  action: "create" | "update";
+  duplicate?: {
+    source: string;
+    matchType: string;
+    studentsAlumsAirtableRecordId: string;
+    label?: string | null;
+    resolution?: string;
+  } | null;
+  duplicateCandidates?: Array<Record<string, unknown>>;
+  programRecordIds: string[];
+  programLabels: Record<string, string>;
+  proposedFieldKeys?: string[];
+  intakeSync?: { syncState?: string; exists?: boolean | null };
+  alreadyTransferred?: boolean;
+  studentsAlumsSyncState?: string | null;
+}
+
+export interface BobRecruitmentTransferResult {
+  studentsAlumsAirtableRecordId: string;
+  studentsAlumsFields?: Record<string, unknown>;
+  programRecordIds?: string[];
+  alreadyTransferred?: boolean;
+  action?: string;
+  duplicateResolution?: string | null;
+  warnings?: BobTransferValidationIssue[];
+  syncState?: string;
+}
+
+export async function previewBobRecruitmentTransfer(
+  id: string,
+  options?: { programRecordIds?: string[] },
+): Promise<BobRecruitmentTransferPreview> {
+  return apiRequest<BobRecruitmentTransferPreview>(
+    `/api/bob/recruitment/${id}/transfer-preview`,
+    {
+      method: "POST",
+      body: JSON.stringify(options ?? {}),
+    },
+  );
+}
+
+export async function transferBobRecruitment(
+  id: string,
+  options?: { programRecordIds?: string[] },
+): Promise<BobRecruitmentTransferResult> {
+  return apiRequest<BobRecruitmentTransferResult>(
+    `/api/bob/recruitment/${id}/transfer`,
+    {
+      method: "POST",
+      body: JSON.stringify(options ?? {}),
+    },
+  );
+}
+
+export async function updateBobRecruitmentPrograms(
+  id: string,
+  programRecordIds: string[],
+): Promise<BobRecruitmentRecord> {
+  return apiRequest<BobRecruitmentRecord>(
+    `/api/bob/recruitment/${id}/programs`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ programRecordIds }),
+    },
+  );
+}
+
+export async function resetBobPipeline(): Promise<{
+  success: boolean;
+  deleted: Record<string, number>;
+}> {
+  return apiRequest("/api/bob/pipeline/reset", {
+    method: "POST",
+    body: JSON.stringify({ confirm: "RESET_PIPELINE" }),
+  });
+}
+
+export async function updateBobRecruitment(
+  id: string,
+  data: Partial<
+    Pick<BobRecruitmentRecord, "label" | "airtableFields" | "recruitmentStatus">
+  >,
+): Promise<BobRecruitmentRecord> {
+  return apiRequest<BobRecruitmentRecord>(`/api/bob/recruitment/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBobRecruitment(
+  id: string,
+): Promise<{ deleted: true }> {
+  return apiRequest<{ deleted: true }>(`/api/bob/recruitment/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export interface BobImportJobStatus {
+  running: boolean;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  elapsed?: string | null;
+  recordsPerSecond?: number | null;
+  progress: {
+    phase: string;
+    message?: string | null;
+    scanned: number;
+    imported: number;
+    updated: number;
+    skipped: number;
+    promoted?: number;
+    totalInMongo?: number | null;
+  };
+  result?: {
+    message?: string;
+    scanned?: number;
+    imported?: number;
+    updated?: number;
+    skipped?: number;
+    totalInMongo?: number;
+    elapsedSec?: number;
+  } | null;
+  lastError?: { message?: string } | null;
+}
+
+export async function startBobRecruitmentImport(): Promise<{
+  started: boolean;
+  startedAt?: string;
+  pollPath?: string;
+}> {
+  return apiRequest("/api/bob/recruitment/import-airtable", { method: "POST" });
+}
+
+export async function getBobRecruitmentImportStatus(): Promise<BobImportJobStatus> {
+  return apiRequest<BobImportJobStatus>(
+    "/api/bob/recruitment/import-airtable/status",
+  );
+}
+
+/** @deprecated Use startBobRecruitmentImport + poll getBobRecruitmentImportStatus */
+export async function importBobRecruitmentFromAirtable(): Promise<{
+  started: boolean;
+}> {
+  return startBobRecruitmentImport();
 }
 
 export async function getBobStudent(id: string): Promise<BobStudent> {
@@ -1136,6 +1549,8 @@ export interface CreateBobStudentInput {
   ywStatus?: string | null;
   attendanceStats?: BobStudentAttendanceStats | null;
   milestoneStats?: BobStudentMilestoneStats | null;
+  /** Extra optional fields to write into Airtable ("All Students"). */
+  airtableFields?: Record<string, unknown>;
 }
 
 export async function createBobStudent(
@@ -1163,16 +1578,25 @@ export async function deleteBobStudent(id: string): Promise<{ deleted: true }> {
   });
 }
 
-export async function importBobStudentsFromAirtable(): Promise<{
-  imported: number;
-  message?: string;
+export async function startBobRosterImport(): Promise<{
+  started: boolean;
+  startedAt?: string;
+  pollPath?: string;
 }> {
-  return apiRequest<{ imported: number; message?: string }>(
-    "/api/bob/students/import-airtable",
-    {
-      method: "POST",
-    },
+  return apiRequest("/api/bob/students/import-airtable", { method: "POST" });
+}
+
+export async function getBobRosterImportStatus(): Promise<BobImportJobStatus> {
+  return apiRequest<BobImportJobStatus>(
+    "/api/bob/students/import-airtable/status",
   );
+}
+
+/** @deprecated Use startBobRosterImport + poll getBobRosterImportStatus */
+export async function importBobStudentsFromAirtable(): Promise<{
+  started: boolean;
+}> {
+  return startBobRosterImport();
 }
 
 // ============================================

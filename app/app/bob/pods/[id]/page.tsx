@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -25,6 +25,18 @@ export default function PodDetailPage() {
     const [editCoachId, setEditCoachId] = useState('');
     const [editSiteSupporterId, setEditSiteSupporterId] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+    const [studentQuery, setStudentQuery] = useState('');
+
+    const filteredStudents = useMemo(() => {
+        const q = studentQuery.trim().toLowerCase();
+        if (!q) return allStudents;
+        return allStudents.filter((s) => {
+            const name = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
+            const email = (s.email || '').toLowerCase();
+            const school = (s.school || '').toLowerCase();
+            return name.includes(q) || email.includes(q) || school.includes(q);
+        });
+    }, [allStudents, studentQuery]);
 
     const loadPod = useCallback(async () => {
         if (!id) return;
@@ -216,8 +228,15 @@ export default function PodDetailPage() {
                 <div>
                     <h2 className="text-lg font-semibold text-gray-900 mb-3">Students in this pod</h2>
                     <p className="text-sm text-gray-600 mb-3">Select students to assign to this pod. Changes save below.</p>
+                    <input
+                        type="text"
+                        value={studentQuery}
+                        onChange={(e) => setStudentQuery(e.target.value)}
+                        placeholder="Search students by name, email, school…"
+                        className="mb-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
                     <ul className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-64 overflow-y-auto">
-                        {allStudents.map((s) => (
+                        {filteredStudents.map((s) => (
                             <li key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50">
                                 <input
                                     type="checkbox"
@@ -231,6 +250,9 @@ export default function PodDetailPage() {
                         ))}
                     </ul>
                     {allStudents.length === 0 && <p className="text-sm text-gray-500 py-2">No students in roster yet.</p>}
+                    {allStudents.length > 0 && filteredStudents.length === 0 && (
+                        <p className="text-sm text-gray-500 py-2">No students match your search.</p>
+                    )}
                     {studentsChanged && (
                         <button
                             type="button"
