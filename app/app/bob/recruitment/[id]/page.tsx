@@ -1259,9 +1259,10 @@ export default function RecruitmentDetailPage() {
                   {savingPrograms ? "Saving…" : "Save programs"}
                 </button>
                 <p className="text-xs text-gray-500">
-                  Saves to Youth Apps &amp; Intake
-                  {isTransferred(record) ? " and Students & Alums" : ""}.
-                  Also applied on transfer.
+                  Saves to intake track-choice fields (Top / Second / Other) and, after
+                  transfer, <span className="font-medium">Programs</span> on Students
+                  &amp; Alums. Linking <span className="font-medium">Your Name</span> on
+                  the intake row fills &quot;Programs (from Your Name)&quot; in Airtable.
                 </p>
               </div>
             </div>
