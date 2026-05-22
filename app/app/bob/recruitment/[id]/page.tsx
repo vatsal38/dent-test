@@ -1232,10 +1232,10 @@ export default function RecruitmentDetailPage() {
                   );
                 })}
               </div>
-              {isTransferred(record) ? (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={savingPrograms}
+                  disabled={savingPrograms || selectedProgramIds.length === 0}
                   onClick={async () => {
                     if (!id) return;
                     setSavingPrograms(true);
@@ -1258,11 +1258,12 @@ export default function RecruitmentDetailPage() {
                 >
                   {savingPrograms ? "Saving…" : "Save programs"}
                 </button>
-              ) : (
                 <p className="text-xs text-gray-500">
-                  Selected programs are applied when you transfer to Students & Alums.
+                  Saves to Youth Apps &amp; Intake
+                  {isTransferred(record) ? " and Students & Alums" : ""}.
+                  Also applied on transfer.
                 </p>
-              )}
+              </div>
             </div>
           ) : (
             <p className="text-xs text-gray-500">
