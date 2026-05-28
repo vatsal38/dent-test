@@ -6,6 +6,12 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getAirtableStatus, syncAirtable, AirtableStatus } from "@/lib/api";
+import { BobSyncStatusBadge } from "@/features/bob/sync/BobSyncStatusBadge";
+import { useBobNavItems } from "@/platform/rbac/useBobNavItems";
+import { DentOpsRouteGuard } from "@/platform/rbac/DentOpsRouteGuard";
+import { useDentOpsAccess } from "@/platform/rbac/useDentOpsAccess";
+import { getBobHomeHref } from "@/platform/rbac/routes";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { Skeleton } from "@/components/Skeleton";
 import {
   HiOutlineHome,
@@ -144,6 +150,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  const { canAccessDentOps: showDentOpsNav } = useDentOpsAccess();
+  const { access: bobAccess } = useBobAccess({
+    enabled: isAuthenticated && !isLoading,
+  });
+  const appLogoHref = showDentOpsNav
+    ? "/app"
+    : getBobHomeHref(bobAccess);
+
+  const {
+    primary: bobNavItems,
+    more: bobNavMoreItems,
+    isLoading: bobNavLoading,
+  } = useBobNavItems(
+    {
+      dashboard: <HiOutlineViewGrid className="w-5 h-5 shrink-0" />,
+      roster: <HiOutlineUserGroup className="w-5 h-5 shrink-0" />,
+      intake: <HiOutlineFilter className="w-5 h-5 shrink-0" />,
+      pods: <HiOutlineUserGroup className="w-5 h-5 shrink-0" />,
+      attendance: <HiOutlineClipboardCheck className="w-5 h-5 shrink-0" />,
+      milestones: <HiOutlineClipboardList className="w-5 h-5 shrink-0" />,
+      inbox: <HiOutlineClipboardList className="w-4 h-4 shrink-0" />,
+      myPod: <HiOutlineUser className="w-4 h-4 shrink-0" />,
+      submit: <HiOutlineDocumentText className="w-4 h-4 shrink-0" />,
+      settings: <HiOutlineChartBar className="w-4 h-4 shrink-0" />,
+      staff: <HiOutlineAcademicCap className="w-4 h-4 shrink-0" />,
+    },
+    { enabled: isAuthenticated && !isLoading },
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
@@ -196,93 +231,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  const dentOpsNavItems = [
-    {
-      href: "/app",
-      label: "Home",
-      icon: <HiOutlineHome className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/partnerships",
-      label: "Partnerships",
-      icon: <HiOutlineClipboardList className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/inbox",
-      label: "Email",
-      icon: <HiOutlineMail className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/runs",
-      label: "Runs",
-      icon: <HiOutlineMenuAlt3 className="w-5 h-5 shrink-0" />,
-    },
-  ];
+  const dentOpsNavItems = showDentOpsNav
+    ? [
+        {
+          href: "/app",
+          label: "Home",
+          icon: <HiOutlineHome className="w-5 h-5 shrink-0" />,
+        },
+        {
+          href: "/app/partnerships",
+          label: "Partnerships",
+          icon: <HiOutlineClipboardList className="w-5 h-5 shrink-0" />,
+        },
+        {
+          href: "/app/inbox",
+          label: "Email",
+          icon: <HiOutlineMail className="w-5 h-5 shrink-0" />,
+        },
+        {
+          href: "/app/runs",
+          label: "Runs",
+          icon: <HiOutlineMenuAlt3 className="w-5 h-5 shrink-0" />,
+        },
+      ]
+    : [];
 
-  const bobNavItems = [
-    {
-      href: "/app/bob",
-      label: "Dashboard",
-      icon: <HiOutlineViewGrid className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/bob/roster",
-      label: "Roster",
-      icon: <HiOutlineUserGroup className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/bob/recruitment",
-      label: "Recruitment",
-      icon: <HiOutlineFilter className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/bob/pods",
-      label: "Pods",
-      icon: <HiOutlineUserGroup className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/bob/attendance",
-      label: "Attendance",
-      icon: <HiOutlineClipboardCheck className="w-5 h-5 shrink-0" />,
-    },
-    {
-      href: "/app/bob/milestones",
-      label: "Milestones",
-      icon: <HiOutlineClipboardList className="w-5 h-5 shrink-0" />,
-    },
-  ];
-  const bobNavMoreItems = [
-    {
-      href: "/app/bob/my-pod",
-      label: "My Pod",
-      icon: <HiOutlineUser className="w-4 h-4 shrink-0" />,
-    },
-    {
-      href: "/app/bob/workflow",
-      label: "Workflow",
-      icon: <HiOutlineClipboardList className="w-4 h-4 shrink-0" />,
-    },
-    {
-      href: "/app/bob/submit",
-      label: "Submit",
-      icon: <HiOutlineDocumentText className="w-4 h-4 shrink-0" />,
-    },
-    {
-      href: "/app/bob/reports",
-      label: "Reports",
-      icon: <HiOutlineChartBar className="w-4 h-4 shrink-0" />,
-    },
-    {
-      href: "/app/bob/staff",
-      label: "Staff",
-      icon: <HiOutlineAcademicCap className="w-4 h-4 shrink-0" />,
-    },
-  ];
   const isBobMoreActive =
     pathname?.startsWith("/app/bob/my-pod") ||
-    pathname?.startsWith("/app/bob/workflow") ||
+    pathname?.startsWith("/app/bob/inbox") ||
     pathname?.startsWith("/app/bob/submit") ||
-    pathname?.startsWith("/app/bob/reports") ||
+    pathname?.startsWith("/app/bob/settings") ||
     pathname?.startsWith("/app/bob/staff");
   const bobMoreExpanded = bobMoreOpen || isBobMoreActive;
 
@@ -303,7 +281,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 md:justify-start">
           <Link
-            href="/app"
+            href={appLogoHref}
             className="flex items-center gap-2"
             onClick={() => setSidebarOpen(false)}
           >
@@ -326,35 +304,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation - sections */}
         <div className="flex-1 overflow-y-auto">
-          {/* Dent Ops */}
-          <p className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Dent Ops
-          </p>
-          <nav className="p-3 pt-0 space-y-0.5">
-            {dentOpsNavItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/app" && pathname?.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-[#3b82f6] text-white"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  {item.icon}
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {showDentOpsNav && (
+            <>
+              <p className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Dent Ops
+              </p>
+              <nav className="p-3 pt-0 space-y-0.5">
+                {dentOpsNavItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/app" && pathname?.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                        isActive
+                          ? "bg-[#3b82f6] text-white"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {item.icon}
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </>
+          )}
 
           {/* Baltimore Operations Engine — orange theme */}
-          <div className="px-4 pt-6 pb-1 flex items-center gap-2">
+          <div
+            className={`px-4 pb-1 flex items-center gap-2 ${showDentOpsNav ? "pt-6" : "pt-4"}`}
+          >
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-700">
               Bet on Baltimore
             </span>
@@ -363,7 +346,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <nav className="p-3 pt-0 space-y-0.5">
-            {bobNavItems.map((item) => {
+            {bobNavLoading && (
+              <div className="px-3 py-2 space-y-2" aria-busy="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full rounded-lg" />
+                ))}
+              </div>
+            )}
+            {!bobNavLoading &&
+              bobNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/app/bob" && pathname?.startsWith(item.href));
@@ -382,7 +373,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <span className="font-medium">{item.label}</span>
                 </Link>
               );
-            })}
+              })}
+            {!bobNavLoading && (
             <div className="pt-1">
               <button
                 type="button"
@@ -427,6 +419,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
+            )}
           </nav>
         </div>
 
@@ -434,17 +427,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-3 border-t border-gray-200 space-y-3">
           <div className="w-full min-w-0">
             {pathname?.startsWith("/app/bob") ? (
-              <div className="flex items-center gap-2 px-3 py-1.5">
-                <HiOutlineRefresh className="w-4 h-4 shrink-0 text-gray-400" />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-gray-500">
-                    Sync Status
-                  </p>
-                  <p className="text-xs text-gray-600 truncate">
-                    Last synced 2m ago
-                  </p>
-                </div>
-              </div>
+              <BobSyncStatusBadge />
             ) : (
               <AirtableStatusBadge />
             )}
@@ -473,7 +456,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           <HiOutlineMenu className="w-6 h-6 text-gray-700" />
         </button>
-        <Link href="/app" className="flex items-center gap-2">
+        <Link href={appLogoHref} className="flex items-center gap-2">
           <div className="w-7 h-7 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-xs">
             DO
           </div>
@@ -489,7 +472,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 min-w-0 pt-14 md:pt-0 md:ml-64">
         <div className="min-h-screen md:min-h-0 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 bg-white">
-          {children}
+          <DentOpsRouteGuard>{children}</DentOpsRouteGuard>
         </div>
       </main>
     </div>

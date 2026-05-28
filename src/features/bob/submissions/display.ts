@@ -1,0 +1,106 @@
+import type { BobSubmission, BobSubmissionType } from "@/platform/api/bob/submissions";
+import {
+  SUBMISSION_STATUS_LABELS,
+  SUBMISSION_TYPE_LABELS,
+} from "@/features/bob/submissions/workflow/constants";
+
+export { SUBMISSION_STATUS_LABELS, SUBMISSION_TYPE_LABELS };
+
+export function badgeClassesForType(type: BobSubmissionType) {
+  switch (type) {
+    case "incident":
+      return "bg-red-50 text-red-700 border-red-200";
+    case "wellness_check":
+      return "bg-rose-50 text-rose-800 border-rose-200";
+    case "parent_contact":
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    case "progress_update":
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case "anonymous_feedback":
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    case "blitz_points":
+      return "bg-green-50 text-green-700 border-green-200";
+    default:
+      return "bg-gray-50 text-gray-700 border-gray-200";
+  }
+}
+
+export function severityBadge(severity: string | null | undefined) {
+  if (!severity) return null;
+  const s = severity.toLowerCase();
+  if (s === "high")
+    return "bg-red-100 text-red-800 border-red-200";
+  if (s === "medium")
+    return "bg-amber-100 text-amber-800 border-amber-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+}
+
+export function formatWhen(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function cardTitle(s: BobSubmission) {
+  if (s.type === "incident")
+    return s.incidentType ? `Incident · ${s.incidentType}` : "Incident";
+  if (s.type === "wellness_check")
+    return s.wellnessLevel
+      ? `Wellness · ${s.wellnessLevel}`
+      : "Wellness check";
+  if (s.type === "blitz_points")
+    return s.team ? `Blitz points · ${s.team}` : "Blitz points";
+  if (s.type === "anonymous_feedback")
+    return s.category ? `Feedback · ${s.category}` : "Anonymous feedback";
+  if (s.type === "progress_update")
+    return s.milestone ? `Progress · ${s.milestone}` : "Progress update";
+  if (s.type === "parent_contact")
+    return s.parentName ? `Parent contact · ${s.parentName}` : "Parent contact";
+  return SUBMISSION_TYPE_LABELS[s.type] || s.type;
+}
+
+export function cardSummary(s: BobSubmission) {
+  const parts: string[] = [];
+  if (s.student) parts.push(s.student);
+  if (s.severity) parts.push(`severity: ${s.severity}`);
+  if (s.wellnessLevel) parts.push(`wellness: ${s.wellnessLevel}`);
+  if (s.priority) parts.push(`priority: ${s.priority}`);
+  if (s.assignedToLabel) parts.push(s.assignedToLabel);
+  if (s.points != null) parts.push(`${s.points} pts`);
+  const body = (
+    s.description ||
+    s.concernSummary ||
+    s.feedback ||
+    s.notes ||
+    s.reason ||
+    ""
+  ).trim();
+  if (body) parts.push(body.length > 80 ? `${body.slice(0, 80)}…` : body);
+  return parts.join(" · ");
+}
+
+export function eventTypeLabel(type: string) {
+  switch (type) {
+    case "status_change":
+      return "Status";
+    case "assignment":
+      return "Assignment";
+    case "routing":
+      return "Routing";
+    case "notification":
+      return "Notification";
+    case "attachment":
+      return "Attachment";
+    case "comment":
+      return "Comment";
+    case "created":
+      return "Created";
+    default:
+      return "Update";
+  }
+}

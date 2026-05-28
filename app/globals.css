@@ -15,6 +15,10 @@
   --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
+  /* BoB program accent */
+  --bob-accent: #f97316;
+  --bob-accent-hover: #ea580c;
+  --bob-accent-muted: #fff7ed;
 }
 
 body {

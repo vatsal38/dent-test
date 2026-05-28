@@ -69,33 +69,9 @@ export function normalizeStatusKey(raw: string): string {
     .replace(/\s+/g, " ");
 }
 
-/** App pipeline statuses (Mongo recruitmentStatus). */
-export function recruitmentStatusBadgeClass(status: string | null | undefined): string {
-  const key = normalizeStatusKey(status || "");
-  const base =
-    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap";
-  if (key === "new lead")
-    return `${base} bg-sky-50 text-sky-800 border-sky-200`;
-  if (key === "pending review")
-    return `${base} bg-amber-50 text-amber-800 border-amber-200`;
-  if (key === "ready to transfer")
-    return `${base} bg-violet-50 text-violet-800 border-violet-200`;
-  if (key === "contacted")
-    return `${base} bg-cyan-50 text-cyan-800 border-cyan-200`;
-  if (key === "transferred")
-    return `${base} bg-indigo-50 text-indigo-800 border-indigo-200`;
-  if (key === "approved")
-    return `${base} bg-emerald-50 text-emerald-800 border-emerald-200`;
-  if (key === "rejected" || key.includes("reject"))
-    return `${base} bg-red-50 text-red-700 border-red-200`;
-  if (key === "archived")
-    return `${base} bg-gray-100 text-gray-600 border-gray-300`;
-  if (key === "onboarding")
-    return `${base} bg-violet-50 text-violet-800 border-violet-200`;
-  if (key === "active student" || key.includes("active"))
-    return `${base} bg-green-50 text-green-800 border-green-200`;
-  return `${base} bg-gray-50 text-gray-700 border-gray-200`;
-}
+import { recruitmentStatusBadgeClass } from "@/design-system/tokens/status";
+
+export { recruitmentStatusBadgeClass };
 
 /** Airtable / Youth Works style status values. */
 export function airtableStatusBadgeClass(value: string | null | undefined): string {

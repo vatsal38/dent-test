@@ -53,12 +53,15 @@ export function TransferConfirmationModal({
     >
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-gray-200">
         <div className="p-5 border-b border-gray-100">
-          <h2 id="transfer-modal-title" className="text-lg font-semibold text-gray-900">
+          <h2
+            id="transfer-modal-title"
+            className="text-lg font-semibold text-gray-900"
+          >
             Confirm transfer
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Move this applicant to Students & Alums (master student record). Existing
-            matches are updated — duplicates are not created.
+            Move this applicant to Students & Alums (master student record).
+            Existing matches are updated — duplicates are not created.
           </p>
         </div>
 
@@ -106,12 +109,16 @@ export function TransferConfirmationModal({
 
               {preview.duplicate ? (
                 <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm">
-                  <div className="font-semibold text-violet-900">Matched record</div>
+                  <div className="font-semibold text-violet-900">
+                    Matched record
+                  </div>
                   <p className="text-violet-800 mt-1">
-                    {preview.duplicate.label || preview.duplicate.studentsAlumsAirtableRecordId}
+                    {preview.duplicate.label ||
+                      preview.duplicate.studentsAlumsAirtableRecordId}
                   </p>
                   <p className="text-xs text-violet-700 mt-1">
-                    Match: {preview.duplicate.matchType} ({preview.duplicate.source})
+                    Match: {preview.duplicate.matchType} (
+                    {preview.duplicate.source})
                   </p>
                 </div>
               ) : null}
@@ -137,13 +144,16 @@ export function TransferConfirmationModal({
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500">Intake sync</span>
+                <span className="text-xs font-semibold text-gray-500">
+                  Intake sync
+                </span>
                 <SyncHealthBadge state={preview.intakeSync?.syncState} />
               </div>
 
               {preview.proposedFieldKeys?.length ? (
                 <p className="text-xs text-gray-500">
-                  {preview.proposedFieldKeys.length} field(s) will be written or merged.
+                  {preview.proposedFieldKeys.length} field(s) will be written or
+                  merged.
                 </p>
               ) : null}
             </>

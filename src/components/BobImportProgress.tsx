@@ -11,6 +11,7 @@ type Props = {
   startImport: () => Promise<{ started?: boolean }>;
   onComplete?: () => void;
   className?: string;
+  compact?: boolean;
 };
 
 export function BobImportProgress({
@@ -19,6 +20,7 @@ export function BobImportProgress({
   startImport,
   onComplete,
   className = "",
+  compact = false,
 }: Props) {
   const [status, setStatus] = useState<BobImportJobStatus | null>(null);
   const [starting, setStarting] = useState(false);
@@ -134,7 +136,7 @@ export function BobImportProgress({
 
       {showPanel && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`rounded-xl border ${compact ? "px-3 py-2" : "px-4 py-3"} text-sm ${
             isError
               ? "border-red-200 bg-red-50 text-red-800"
               : isDone
@@ -142,7 +144,7 @@ export function BobImportProgress({
                 : "border-orange-200 bg-orange-50 text-orange-950"
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className={`flex items-start justify-between gap-3 ${compact ? "min-h-0" : ""}`}>
             <div className="font-semibold">
               {running
                 ? `Live import — ${label}`
@@ -160,14 +162,14 @@ export function BobImportProgress({
               </button>
             ) : null}
           </div>
-          <div className="mt-1 text-xs opacity-90">
+          <div className={`${compact ? "mt-0.5" : "mt-1"} text-xs opacity-90`}>
             {p?.message ||
               status?.result?.message ||
               status?.lastError?.message ||
               (running ? "Fetching records from Airtable…" : "")}
           </div>
 
-          {(running || isDone) && (
+          {(running || isDone) && !compact && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
               <div className="rounded-lg bg-white/70 px-2 py-1.5 border border-black/5">
                 <div className="text-gray-500">Scanned</div>
@@ -194,12 +196,12 @@ export function BobImportProgress({
             </div>
           )}
 
-          {skipped > 0 ? (
+          {!compact && skipped > 0 ? (
             <div className="mt-2 text-xs text-gray-600">Skipped (empty): {skipped}</div>
           ) : null}
 
           {running && (
-            <div className="mt-3 h-2 w-full rounded-full bg-white/60 overflow-hidden">
+            <div className={`${compact ? "mt-2" : "mt-3"} h-2 w-full rounded-full bg-white/60 overflow-hidden`}>
               <div className="h-full w-[40%] bg-orange-500 animate-pulse rounded-full" />
             </div>
           )}

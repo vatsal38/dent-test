@@ -1,14 +1,20 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import {
     signInWithPopup,
+    signInWithEmailAndPassword,
     signOut as firebaseSignOut,
     onAuthStateChanged,
     User as FirebaseUser,
 } from 'firebase/auth';
+import { useQueryClient } from '@tanstack/react-query';
 import { auth, googleProvider } from '@/lib/firebase';
 import { bootstrap, BootstrapResponse } from '@/lib/api';
+import {
+    clearBobSessionCache,
+    invalidateBobSession,
+} from '@/platform/query/sessionCache';
 
 interface Organization {
     id: string;
@@ -42,6 +48,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     signInWithGoogle: () => Promise<void>;
+    signInWithEmail: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     getIdToken: () => Promise<string | null>;
 }
@@ -49,6 +56,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+    const queryClient = useQueryClient();
+    const lastBootstrapUid = useRef<string | null>(null);
     const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
     const [appUser, setAppUser] = useState<AppUser | null>(null);
     const [organization, setOrganization] = useState<Organization | null>(null);
@@ -58,6 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const bootstrapUser = useCallback(async (fbUser: FirebaseUser) => {
         try {
             const response: BootstrapResponse = await bootstrap();
+            if (lastBootstrapUid.current !== fbUser.uid) {
+                invalidateBobSession(queryClient);
+                lastBootstrapUid.current = fbUser.uid;
+            }
 
             // User is registered (either admin or has invite)
             const currentOrg = response.orgs.length > 0 ? response.orgs[0] : null;
@@ -94,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setAppUser(null);
             setOrganization(null);
         }
-    }, []);
+    }, [queryClient]);
 
     // Listen to auth state changes
     useEffect(() => {
@@ -105,12 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } else {
                 setAppUser(null);
                 setOrganization(null);
+                lastBootstrapUid.current = null;
+                clearBobSessionCache(queryClient);
             }
             setIsLoading(false);
         });
 
         return () => unsubscribe();
-    }, [bootstrapUser]);
+    }, [bootstrapUser, queryClient]);
 
     const signInWithGoogle = useCallback(async () => {
         try {
@@ -124,16 +139,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, [bootstrapUser]);
 
+    const signInWithEmail = useCallback(
+        async (email: string, password: string) => {
+            try {
+                const result = await signInWithEmailAndPassword(
+                    auth,
+                    email.trim(),
+                    password,
+                );
+                if (result.user) {
+                    await bootstrapUser(result.user);
+                }
+            } catch (error) {
+                throw error;
+            }
+        },
+        [bootstrapUser],
+    );
+
     const logout = useCallback(async () => {
         try {
-            await firebaseSignOut(auth);
+            clearBobSessionCache(queryClient);
             setAppUser(null);
             setOrganization(null);
+            await firebaseSignOut(auth);
         } catch (error) {
             console.error('Sign-out error:', error);
             throw error;
         }
-    }, []);
+    }, [queryClient]);
 
     const getIdToken = useCallback(async () => {
         if (!firebaseUser) return null;
@@ -147,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!firebaseUser && !!appUser,
         isLoading,
         signInWithGoogle,
+        signInWithEmail,
         logout,
         getIdToken,
     };
