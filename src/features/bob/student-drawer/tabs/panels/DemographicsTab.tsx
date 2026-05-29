@@ -1,10 +1,9 @@
 "use client";
 
 import { cellDisplayValue } from "@/lib/bobAirtableDisplay";
-import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
-import { useBobRosterSchema } from "@/platform/query/hooks/useBobStudents";
 import { studentSummaryRows } from "@/features/bob/roster/recordDisplay";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
+import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
 
 const DEMO_GROUPS: { title: string; keys: string[] }[] = [
   {
@@ -35,22 +34,29 @@ const DEMO_GROUPS: { title: string; keys: string[] }[] = [
 
 export function DemographicsTab() {
   const { student } = useStudentDrawerContext();
-  const { data: schemaRes } = useBobRosterSchema();
-  const schema = schemaRes?.fields ?? null;
-
-  const { labelsForField } = useBobLinkedFieldLabels(
-    schema,
-    student ? [student] : [],
-    [],
-  );
+  const { fields, labelsForField, resolveLinked, school, track, coach, site } =
+    useStudentLinkedFieldDisplay(student);
 
   if (!student) return null;
 
-  const fields = (student.airtableFields || {}) as Record<string, unknown>;
-  const coreRows = studentSummaryRows(student);
+  const coreRows = studentSummaryRows(student).map((r) => {
+    if (r.label === "School") return { ...r, value: school };
+    if (r.label === "Track") return { ...r, value: track };
+    if (r.label === "Coach") return { ...r, value: coach };
+    return r;
+  });
+
+  function displayField(key: string, raw: unknown): string {
+    if (raw == null || raw === "") return "";
+    if (key === "School") return school;
+    if (key === "Track") return track;
+    if (key === "Coach") return coach;
+    if (key === "Site") return site;
+    return resolveLinked(key, raw) || cellDisplayValue(raw, labelsForField(key));
+  }
 
   function row(label: string, value: string) {
-    if (!value) return null;
+    if (!value || value === "—") return null;
     return (
       <div
         key={label}
@@ -78,7 +84,7 @@ export function DemographicsTab() {
           .map((key) => {
             const raw = fields[key];
             if (raw == null || raw === "") return null;
-            const value = cellDisplayValue(raw, labelsForField(key));
+            const value = displayField(key, raw);
             if (!value || value === "—") return null;
             return { key, value };
           })

@@ -10,13 +10,11 @@ import { CoachNoteCard } from "../../widgets/CoachNoteCard";
 import { ActivityTimeline } from "../../widgets/ActivityTimeline";
 import { extractCoachNotes } from "../../lib/profileSignals";
 import { useStudentActivityFeed } from "../../hooks/useStudentTabQueries";
-import { useBobRosterSchema } from "@/platform/query/hooks/useBobStudents";
-import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
 import {
-  cellDisplayValue,
   extractAirtableRecordIds,
   isAirtableRecordId,
 } from "@/lib/bobAirtableDisplay";
+import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
 
 export function OverviewTab() {
   const { student, tab, setTab } = useStudentDrawerContext();
@@ -25,46 +23,10 @@ export function OverviewTab() {
     tab,
     student?.podId,
   );
-  const { data: schemaRes } = useBobRosterSchema();
-  const schema = schemaRes?.fields ?? null;
-  const linkedNames = schema
-    ? schema
-        .filter((f) => f?.type === "multipleRecordLinks" && f?.name)
-        .map((f) => f.name)
-    : [];
-
-  const fieldName = (patterns: RegExp[], fallback?: string) => {
-    const hit = linkedNames.find((n) => patterns.some((p) => p.test(n)));
-    return hit || fallback || "";
-  };
-
-  const trackField = fieldName([/^track$/i, /program\s*track/i, /\btrack\b/i], "Track");
-  const schoolField = fieldName([/^school$/i, /\bsite\b/i, /organization/i], "School");
-  const coachField = fieldName([/^coach$/i, /case\s*manager/i], "Coach");
-
-  const { labelsForField, resolving } = useBobLinkedFieldLabels(
-    schema,
-    student ? [student] : [],
-    Array.from(new Set([trackField, schoolField, coachField].filter(Boolean))),
-  );
+  const { coachField, fields, resolving, school, track, coach } =
+    useStudentLinkedFieldDisplay(student);
 
   if (!student) return null;
-
-  const fields = (student.airtableFields || {}) as Record<string, unknown>;
-
-  const resolveLinked = (field: string, value: unknown, fallback?: unknown) => {
-    const labelMap = labelsForField(field);
-    const ids = extractAirtableRecordIds(value ?? fallback);
-    const hasUnresolved = ids.some((id) => !labelMap[id]);
-    if (ids.length > 0 && hasUnresolved && resolving) return "Loading…";
-    const out = cellDisplayValue(value ?? fallback, labelMap);
-    if (out === "…" && ids.length > 0 && resolving) return "Loading…";
-    return out;
-  };
-
-  const track = resolveLinked(trackField, fields[trackField], student.track);
-  const school = resolveLinked(schoolField, fields[schoolField], student.school);
-  const coach = resolveLinked(coachField, fields[coachField], student.coach);
 
   const notes = extractCoachNotes(student).slice(0, 2);
   const rows = studentSummaryRows(student).map((r) => {

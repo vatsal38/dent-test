@@ -6,10 +6,37 @@ import {
   type BobRosterSchemaField,
 } from "@/lib/api";
 
+import { extractAirtableRecordIds } from "@/lib/bobAirtableDisplay";
+
 export type BobAirtableFieldsRow = {
   airtableFields?: Record<string, unknown>;
+  school?: string | null;
+  track?: string | null;
+  coach?: string | null;
+  site?: string | null;
+  ywStatus?: string | null;
 };
-import { extractAirtableRecordIds } from "@/lib/bobAirtableDisplay";
+
+const TOP_LEVEL_FIELD_ALIASES: Record<string, keyof BobAirtableFieldsRow> = {
+  School: "school",
+  Track: "track",
+  Coach: "coach",
+  Site: "site",
+  "YW Status": "ywStatus",
+  "Youth Works Status": "ywStatus",
+};
+
+function mergedAirtableFields(row: BobAirtableFieldsRow): Record<string, unknown> {
+  const fields = { ...(row.airtableFields || {}) };
+  for (const [fieldName, topKey] of Object.entries(TOP_LEVEL_FIELD_ALIASES)) {
+    const val = row[topKey];
+    if (val == null || !String(val).trim()) continue;
+    if (fields[fieldName] == null || fields[fieldName] === "") {
+      fields[fieldName] = val;
+    }
+  }
+  return fields;
+}
 
 type LabelCache = Record<string, Record<string, string>>;
 
@@ -42,26 +69,39 @@ export function useBobLinkedFieldLabels(
     return m;
   }, [schema, overrideLinkedTableIdByFieldName]);
 
-  const linkedFieldNames = useMemo(
-    () =>
+  const linkedFieldNames = useMemo(() => {
+    const names = new Set(
       fieldNames.filter((name) => linkedTableIdByFieldName.has(name)),
-    [fieldNames, linkedTableIdByFieldName],
-  );
+    );
+    for (const f of schema || []) {
+      if (f?.type !== "multipleRecordLinks" || !f?.name) continue;
+      if (!f.linkedTableId) continue;
+      for (const r of records) {
+        const fields = mergedAirtableFields(r);
+        if (extractAirtableRecordIds(fields[f.name]).length) names.add(f.name);
+      }
+    }
+    return Array.from(names);
+  }, [fieldNames, linkedTableIdByFieldName, schema, records]);
 
   useEffect(() => {
     if (!linkedFieldNames.length || !records.length) return;
 
     const byTable = new Map<string, Set<string>>();
     for (const r of records) {
-      const fields = (r.airtableFields || {}) as Record<string, unknown>;
+      const fields = mergedAirtableFields(r);
       for (const fn of linkedFieldNames) {
         const tableId = linkedTableIdByFieldName.get(fn);
         if (!tableId) continue;
         const ids = extractAirtableRecordIds(fields[fn]);
-        if (!ids.length) continue;
+        const topKey = TOP_LEVEL_FIELD_ALIASES[fn];
+        const topIds =
+          topKey && r[topKey] ? extractAirtableRecordIds(r[topKey]) : [];
+        const allIds = [...new Set([...ids, ...topIds])];
+        if (!allIds.length) continue;
         if (!byTable.has(tableId)) byTable.set(tableId, new Set());
         const set = byTable.get(tableId)!;
-        for (const id of ids) set.add(id);
+        for (const id of allIds) set.add(id);
       }
     }
 

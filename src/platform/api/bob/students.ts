@@ -77,6 +77,7 @@ export interface BobStudent {
   podId: string | null;
   school?: string | null;
   track?: string | null;
+  site?: string | null;
   coach?: string | null;
   stage?: string | null;
   ywStatus?: string | null;
