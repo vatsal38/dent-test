@@ -18,7 +18,7 @@ import { PUNCH_LABELS } from "./constants";
 import { PUNCH_TYPES } from "../types";
 import {
   buildStudentDayAttendance,
-  listExpectedEnrollments,
+  isAirtableSourcedAttendance,
   supplementEnrollmentsFromAttendance,
   UNASSIGNED_POD_ID,
 } from "./buildAttendanceIndex";
@@ -215,7 +215,6 @@ export function computeAttendanceWorkspace(
 
   const studentById = new Map(students.map((s) => [s.id, s]));
   const podById = new Map(pods.map((p) => [p.id, p]));
-  const validStudentIds = new Set(students.map((s) => s.id));
   const rangeStart = startDate || focusDate;
   const rangeEnd = endDate || focusDate;
   const dates =
@@ -223,11 +222,12 @@ export function computeAttendanceWorkspace(
       ? [rangeStart]
       : getDaysInRange(rangeStart, rangeEnd);
 
-  let enrollments = listExpectedEnrollments(pods, podFilter, validStudentIds);
-  enrollments = supplementEnrollmentsFromAttendance(
-    records,
+  // Attendance hub shows Airtable-imported rows only (not pod-roster placeholders).
+  const airtableRecords = records.filter(isAirtableSourcedAttendance);
+  const enrollments = supplementEnrollmentsFromAttendance(
+    airtableRecords,
     dates,
-    enrollments,
+    [],
     studentById,
     podFilter,
   );
@@ -245,7 +245,7 @@ export function computeAttendanceWorkspace(
   }
 
   const days = buildStudentDayAttendance(
-    records,
+    airtableRecords,
     enrollments,
     dates,
     studentById,

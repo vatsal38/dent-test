@@ -9,6 +9,7 @@ import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { filterPodsByAccess } from "@/platform/rbac/scopedFilters";
 import { getWeekMonday, getWeekSunday } from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
+import { isAirtableSourcedAttendance } from "../model/buildAttendanceIndex";
 import {
   ATTENDANCE_FETCH_LIMIT,
   STUDENT_IDS_BATCH_MAX,
@@ -38,8 +39,9 @@ export function useAttendanceWorkspace({
   weekMode = false,
   podFilter = "",
 }: UseAttendanceWorkspaceOptions) {
-  const { access, defaultPodId } = useBobAccess();
-  const effectivePod = podFilter || defaultPodId;
+  const { access } = useBobAccess();
+  // Pod filter is explicit only — do not apply defaultPodId (hides unassigned Airtable rows).
+  const effectivePod = podFilter;
 
   const weekMonday = getWeekMonday(new Date(focusDate + "T12:00:00"));
   const startDate = weekMode ? weekMonday : focusDate;
@@ -68,15 +70,19 @@ export function useAttendanceWorkspace({
   );
 
   const attendanceQuery = useBobAttendanceList(attendanceParams);
-  const records = attendanceQuery.data?.attendance ?? [];
+  const records = useMemo(
+    () =>
+      (attendanceQuery.data?.attendance ?? []).filter(isAirtableSourcedAttendance),
+    [attendanceQuery.data?.attendance],
+  );
 
   const studentIdsForFetch = useMemo(() => {
-    const ids = new Set(rosterIds);
+    const ids = new Set<string>();
     for (const r of records) {
       if (r.studentId) ids.add(String(r.studentId));
     }
     return Array.from(ids);
-  }, [rosterIds, records]);
+  }, [records]);
 
   const studentListParams = useMemo(() => {
     if (studentIdsForFetch.length === 0) return { limit: 50 as const };

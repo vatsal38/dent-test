@@ -28,6 +28,7 @@ import {
   getBobAttendanceImportStatus,
   startBobAttendanceImport,
 } from "@/platform/api/bob";
+import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttendance";
 
 export function AttendanceHubPage() {
   const searchParams = useSearchParams();
@@ -51,6 +52,8 @@ export function AttendanceHubPage() {
   const debouncedSearch = useDebouncedValue(search);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [dateAutoAdjusted, setDateAutoAdjusted] = useState(false);
+  const boundsQuery = useBobAttendanceDateBounds();
 
   useEffect(() => {
     // Keep UI state in sync with URL params so alert clicks apply filters.
@@ -75,6 +78,25 @@ export function AttendanceHubPage() {
       weekMode: viewMode === "week",
       podFilter,
     });
+
+  const latestImportedDate = boundsQuery.data?.latestDate ?? null;
+  const boundsTotal = boundsQuery.data?.total ?? 0;
+
+  useEffect(() => {
+    if (dateAutoAdjusted || searchParams?.get("date")) return;
+    if (!latestImportedDate || boundsTotal === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (focusDate !== today) return;
+    if (latestImportedDate >= today) return;
+    setFocusDate(latestImportedDate);
+    setDateAutoAdjusted(true);
+  }, [
+    dateAutoAdjusted,
+    searchParams,
+    latestImportedDate,
+    boundsTotal,
+    focusDate,
+  ]);
 
   useEffect(() => {
     setPage(1);
@@ -329,6 +351,28 @@ export function AttendanceHubPage() {
       />
 
       <AttendanceHealthBar summary={workspace.summary} date={focusDate} />
+
+      {boundsTotal > 0 && latestImportedDate && focusDate > latestImportedDate ? (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          No Airtable attendance on <strong>{focusDate}</strong>. Imported data runs
+          through <strong>{latestImportedDate}</strong> ({boundsTotal.toLocaleString()}{" "}
+          records).{" "}
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={() => setFocusDate(latestImportedDate)}
+          >
+            Jump to latest date
+          </button>
+        </div>
+      ) : null}
+
+      {dateAutoAdjusted && latestImportedDate ? (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Showing latest imported attendance date ({latestImportedDate}). Use the
+          date picker to browse other days.
+        </div>
+      ) : null}
 
       {showPodQueue ? (
         <AttendancePodQueue

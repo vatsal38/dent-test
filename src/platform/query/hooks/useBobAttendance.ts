@@ -9,6 +9,7 @@ import {
 import {
   createBobAttendance,
   getBobAttendance,
+  getBobAttendanceDateBounds,
   updateBobAttendance,
   type BobAttendance,
   type BobAttendanceListParams,
@@ -22,6 +23,14 @@ export function useBobAttendanceList(params: BobAttendanceListParams) {
     queryKey: bobKeys.attendance.list(params),
     queryFn: () => getBobAttendance(params),
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useBobAttendanceDateBounds() {
+  return useQuery({
+    queryKey: bobKeys.attendance.bounds(),
+    queryFn: () => getBobAttendanceDateBounds(),
+    staleTime: 60_000,
   });
 }
 

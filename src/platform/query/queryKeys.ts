@@ -68,6 +68,7 @@ export const bobKeys = {
   },
   attendance: {
     all: () => [...bobKeys.all, "attendance"] as const,
+    bounds: () => [...bobKeys.attendance.all(), "date-bounds"] as const,
     list: (params: import("@/platform/api/bob/attendance").BobAttendanceListParams) =>
       [...bobKeys.attendance.all(), "list", params] as const,
   },

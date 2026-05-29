@@ -44,6 +44,16 @@ export interface BobAttendanceListResponse {
   offset: number;
 }
 
+export interface BobAttendanceDateBounds {
+  earliestDate: string | null;
+  latestDate: string | null;
+  total: number;
+}
+
+export async function getBobAttendanceDateBounds(): Promise<BobAttendanceDateBounds> {
+  return apiRequest<BobAttendanceDateBounds>("/api/bob/attendance/date-bounds");
+}
+
 export async function getBobAttendance(
   params?: BobAttendanceListParams,
 ): Promise<BobAttendanceListResponse> {

@@ -67,6 +67,10 @@ export interface ExpectedEnrollment {
 /** Rows for Airtable-imported students not yet on a pod roster. */
 export const UNASSIGNED_POD_ID = "__unassigned__";
 
+export function isAirtableSourcedAttendance(record: BobAttendance): boolean {
+  return Boolean(record.airtableRecordId && String(record.airtableRecordId).trim());
+}
+
 export function listExpectedEnrollments(
   pods: BobPod[],
   podFilter?: string,
