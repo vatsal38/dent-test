@@ -279,6 +279,7 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
         fetchStatus={getBobRecruitmentImportStatus}
         startImport={startBobRecruitmentImport}
         onComplete={() => refetchList()}
+        compact
       />
 
       <RecruitmentRecordsToolbar
@@ -433,7 +434,7 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
                           }`}
                           onClick={() => openRecord(r.id)}
                         >
-                          <td className="px-4 py-3 sticky left-0 bg-inherit z-[1]">
+                          <td className="px-4 py-3 sticky left-0 bg-inherit z-1">
                             <div className="flex items-center gap-3 min-w-[200px]">
                               <div className="w-9 h-9 rounded-xl bg-linear-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center text-xs font-semibold">
                                 {initialsOf(name)}

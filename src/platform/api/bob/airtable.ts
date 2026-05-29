@@ -28,6 +28,14 @@ export async function syncBobAirtable(): Promise<{
   return apiRequest("/api/bob/airtable/sync", { method: "POST" });
 }
 
+export async function syncBobAttendanceAirtable(): Promise<{
+  started?: boolean;
+  message?: string;
+  [key: string]: unknown;
+}> {
+  return apiRequest("/api/bob/attendance/sync-airtable", { method: "POST" });
+}
+
 export async function resolveBobAirtableRecordLabels(params: {
   tableId: string;
   recordIds: string[];

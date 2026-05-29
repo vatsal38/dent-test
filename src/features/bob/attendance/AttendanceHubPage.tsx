@@ -10,7 +10,6 @@ import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { filterDaysByHealth } from "./model/computeWorkspace";
 import { ATTENDANCE_PAGE_SIZE } from "./model/scale";
-import { AttendanceAlertStrip } from "./components/AttendanceAlertStrip";
 import { AttendanceHealthBar } from "./components/AttendanceHealthBar";
 import { AttendancePodQueue } from "./components/AttendancePodQueue";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
@@ -20,6 +19,15 @@ import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
 import { PunchLegend } from "./components/PunchDots";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
 import type { StudentDayAttendance } from "./types";
+import { parseApiError } from "@/platform/api/errors";
+import { ErrorToast } from "@/components/ErrorToast";
+import { BobActionButton } from "@/features/bob/ui/BobActionButton";
+import { FiAlertTriangle, FiDownload, FiRefreshCw, FiZap } from "react-icons/fi";
+import { BobImportProgress } from "@/components/BobImportProgress";
+import {
+  getBobAttendanceImportStatus,
+  startBobAttendanceImport,
+} from "@/platform/api/bob";
 
 export function AttendanceHubPage() {
   const searchParams = useSearchParams();
@@ -41,6 +49,8 @@ export function AttendanceHubPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   useEffect(() => {
     // Keep UI state in sync with URL params so alert clicks apply filters.
@@ -108,6 +118,11 @@ export function AttendanceHubPage() {
     return keys.size;
   }, [tableDays]);
 
+  const alertCount = useMemo(
+    () => workspace.alerts.reduce((sum, a) => sum + (a.count || 0), 0),
+    [workspace.alerts],
+  );
+
   const exportCsv = useCallback(() => {
     const headers = ["Date", "Pod", "Student", "Health", "Missing punches"];
     const rows = tableDays.map((d) => {
@@ -163,6 +178,11 @@ export function AttendanceHubPage() {
 
   return (
     <div className={`p-4 sm:p-6 lg:p-8 ${isRefreshing ? "opacity-90" : ""}`}>
+      <ErrorToast
+        isOpen={Boolean(syncError)}
+        message={syncError || ""}
+        onClose={() => setSyncError(null)}
+      />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Attendance</h1>
@@ -171,52 +191,143 @@ export function AttendanceHubPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
+          <div className="relative">
+            <BobActionButton
+              label={`Alerts (${alertCount})`}
+              icon={<FiAlertTriangle />}
+              variant={alertCount > 0 ? "warning" : "outline"}
+              onClick={() => setAlertsOpen((v) => !v)}
+              title="View alerts"
+              className="select-none"
+            />
+            {alertsOpen ? (
+              <div
+                className="absolute right-0 mt-2 w-[360px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden"
+                role="menu"
+              >
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                  <div className="text-sm font-semibold text-gray-900">
+                    Alerts
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAlertsOpen(false)}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="max-h-[360px] overflow-auto">
+                  {workspace.alerts.length === 0 ? (
+                    <div className="px-3 py-3 text-sm text-gray-600">
+                      No alerts.
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-gray-100">
+                      {workspace.alerts.map((a) => {
+                        const sev =
+                          a.severity === "critical"
+                            ? "bg-red-50 text-red-800 border-red-200"
+                            : a.severity === "warning"
+                              ? "bg-amber-50 text-amber-900 border-amber-200"
+                              : "bg-gray-50 text-gray-800 border-gray-200";
+                        const row = (
+                          <div className="px-3 py-3 hover:bg-gray-50">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {a.title}
+                                </div>
+                                {a.body ? (
+                                  <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                    {a.body}
+                                  </div>
+                                ) : null}
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded-full border ${sev}`}
+                                >
+                                  {a.count}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                        return (
+                          <li key={a.id} role="menuitem">
+                            {a.href ? (
+                              <Link
+                                href={a.href}
+                                onClick={() => setAlertsOpen(false)}
+                                className="block"
+                              >
+                                {row}
+                              </Link>
+                            ) : (
+                              row
+                            )}
+                          </li>
+                        );
+                      })}
+                      {workspace.scale.alertsTruncated ? (
+                        <li>
+                          <div className="px-3 py-2 text-xs text-gray-600 bg-gray-50">
+                            Showing top alerts (truncated:{" "}
+                            {workspace.scale.alertsTruncated})
+                          </div>
+                        </li>
+                      ) : null}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <BobActionButton
+            label="Refresh"
+            icon={<FiRefreshCw />}
+            variant="outline"
             onClick={() => refetch()}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
-          >
-            Refresh
-          </button>
-          <span className="text-xs text-gray-500">
-            {lastSyncedAt
-              ? `Updated ${Math.max(1, Math.floor((Date.now() - lastSyncedAt.getTime()) / 60000))}m ago`
-              : ""}
-          </span>
-          <button
-            type="button"
-            onClick={exportCsv}
+          />
+          <BobActionButton
+            label="Export"
+            icon={<FiDownload />}
+            variant="outline"
             disabled={!tableDays.length}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 text-sm font-medium"
-          >
-            Export
-          </button>
-          <Link
+            onClick={exportCsv}
+          />
+          <BobActionButton
             href="/app/bob/attendance/discrepancies"
-            className="px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 text-sm font-medium hover:bg-amber-100"
-          >
-            Issues ({workspace.summary.openDiscrepancies})
-          </Link>
+            label={`Issues (${workspace.summary.openDiscrepancies})`}
+            icon={<FiAlertTriangle />}
+            variant={workspace.summary.openDiscrepancies ? "warning" : "outline"}
+          />
           <BobPermissionGuard permission="attendance.mark" silent>
-            <Link
+            <BobActionButton
               href={`/app/bob/attendance/mark?date=${focusDate}${podFilter ? `&pod=${podFilter}` : ""}`}
-              className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 text-sm font-medium"
-            >
-              Scan mode
-            </Link>
+              label="Scan mode"
+              icon={<FiZap />}
+              variant="primary"
+            />
           </BobPermissionGuard>
         </div>
       </div>
+
+      <BobImportProgress
+        className="mb-4"
+        label="attendance"
+        fetchStatus={getBobAttendanceImportStatus}
+        startImport={startBobAttendanceImport}
+        onComplete={() => refetch()}
+        compact
+      />
 
       <AttendanceScaleBanner
         scale={workspace.scale}
         onSelectPod={() => podSelectRef.current?.focus()}
       />
 
-      <AttendanceAlertStrip
-        alerts={workspace.alerts}
-        truncatedCount={workspace.scale.alertsTruncated}
-      />
       <AttendanceHealthBar summary={workspace.summary} date={focusDate} />
 
       {showPodQueue ? (

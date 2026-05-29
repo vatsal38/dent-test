@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/Skeleton";
 import { parseApiError } from "@/platform/api/errors";
 import { useBobStaffList } from "../../../platform/query/hooks/useBobStaff";
 import { resolveStaffLabel } from "./staffDisplay";
+import { BobActionButton } from "@/features/bob/ui/BobActionButton";
+import { FiPlus, FiUsers } from "react-icons/fi";
 
 export function PodsListPage() {
   const { access, can } = useBobAccess();
@@ -52,19 +54,19 @@ export function PodsListPage() {
         description="Create pods in Dent, assign coach and site supporter, then add students."
         actions={
           <>
-            <Link
+            <BobActionButton
               href="/app/bob/my-pod"
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
-            >
-              My Pod
-            </Link>
+              label="My Pod"
+              icon={<FiUsers />}
+              variant="outline"
+            />
             <BobPermissionGuard permission="pods.create" silent>
-              <Link
+              <BobActionButton
                 href="/app/bob/pods/new"
-                className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 text-sm font-medium"
-              >
-                Create pod
-              </Link>
+                label="Create pod"
+                icon={<FiPlus />}
+                variant="primary"
+              />
             </BobPermissionGuard>
           </>
         }

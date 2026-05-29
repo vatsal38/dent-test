@@ -9,6 +9,7 @@ export * from "./recruitment";
 export * from "./pods";
 export * from "./milestones";
 export * from "./attendance";
+export * from "./attendanceImport";
 export * from "./submissions";
 export * from "./staff.ts";
 

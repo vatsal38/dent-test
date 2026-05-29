@@ -38,11 +38,22 @@ export function DailyAttendanceTable({
   const isWeek = weekDates && weekDates.length > 1;
 
   const rowsByStudent = useMemo(() => {
-    const map = new Map<string, { podId: string; studentId: string; byDate: Map<string, StudentDayAttendance> }>();
+    const map = new Map<
+      string,
+      {
+        podId: string;
+        studentId: string;
+        byDate: Map<string, StudentDayAttendance>;
+      }
+    >();
     for (const d of days) {
       const rk = `${d.podId}|${d.studentId}`;
       if (!map.has(rk)) {
-        map.set(rk, { podId: d.podId, studentId: d.studentId, byDate: new Map() });
+        map.set(rk, {
+          podId: d.podId,
+          studentId: d.studentId,
+          byDate: new Map(),
+        });
       }
       map.get(rk)!.byDate.set(d.date, d);
     }
@@ -92,7 +103,9 @@ export function DailyAttendanceTable({
             ) : null}
             {columns.map((d) => {
               const missing = days.filter(
-                (x) => x.date === d && (x.health === "missing" || x.health === "partial"),
+                (x) =>
+                  x.date === d &&
+                  (x.health === "missing" || x.health === "partial"),
               ).length;
               const m = Number(d.slice(5, 7));
               const dayNum = Number(d.slice(8, 10));
@@ -115,16 +128,25 @@ export function DailyAttendanceTable({
         </thead>
         <tbody className="divide-y divide-gray-100">
           {pagedRows.map((row) => {
-            const name = resolveStudentName(row.studentId, workspace.studentById);
+            const name = resolveStudentName(
+              row.studentId,
+              workspace.studentById,
+            );
             const podName = resolvePodName(row.podId, workspace.podById);
             const today = row.byDate.get(focusDate);
             return (
-              <tr key={`${row.podId}-${row.studentId}`} className="hover:bg-orange-50/40">
+              <tr
+                key={`${row.podId}-${row.studentId}`}
+                className="hover:bg-orange-50/40"
+              >
                 {showCheckbox ? (
                   <td className="px-3 py-2">
                     <input
                       type="checkbox"
-                      checked={selectedKeys?.has(`${row.podId}|${row.studentId}`) ?? false}
+                      checked={
+                        selectedKeys?.has(`${row.podId}|${row.studentId}`) ??
+                        false
+                      }
                       onChange={() =>
                         onToggleSelect?.(`${row.podId}|${row.studentId}`)
                       }
@@ -132,7 +154,7 @@ export function DailyAttendanceTable({
                     />
                   </td>
                 ) : null}
-                <td className="px-4 py-2 sticky left-0 bg-white z-[1]">
+                <td className="px-4 py-2 sticky left-0 bg-white z-1">
                   <button
                     type="button"
                     onClick={() => today && onSelectDay(today)}
@@ -142,8 +164,12 @@ export function DailyAttendanceTable({
                       {initialsOf(name)}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-                      <p className="text-xs text-gray-500 truncate">{podName}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {podName}
+                      </p>
                     </div>
                   </button>
                 </td>
@@ -156,7 +182,10 @@ export function DailyAttendanceTable({
                   const cell = row.byDate.get(d);
                   if (!cell) {
                     return (
-                      <td key={d} className="px-2 py-2 text-center text-gray-300 text-xs">
+                      <td
+                        key={d}
+                        className="px-2 py-2 text-center text-gray-300 text-xs"
+                      >
                         —
                       </td>
                     );
