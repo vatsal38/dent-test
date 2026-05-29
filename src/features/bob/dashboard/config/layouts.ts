@@ -20,6 +20,37 @@ export const DASHBOARD_LAYOUTS: Record<
         ],
       },
       {
+        id: "attention",
+        widgets: [
+          {
+            id: "cc-escalation",
+            kind: "attention_summary",
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "operations",
+        title: "Operations",
+        columns: 3,
+        widgets: [
+          {
+            id: "cc-queues",
+            kind: "action_queues",
+            title: "Action queues",
+            colSpan: 8,
+            permissions: ["dashboard.view"],
+          },
+          {
+            id: "cc-onboarding",
+            kind: "onboarding_summary",
+            title: "Onboarding",
+            colSpan: 4,
+            permissions: ["dashboard.view", "roster.view"],
+          },
+        ],
+      },
+      {
         id: "today",
         title: "Today",
         columns: 3,
@@ -160,7 +191,11 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "stu-kpis",
             kind: "kpi_row",
-            metrics: ["checkedInToday", "milestonesThisWeek", "openDiscrepancies"],
+            metrics: [
+              "checkedInToday",
+              "milestonesThisWeek",
+              "openDiscrepancies",
+            ],
             minScope: "student",
           },
         ],
@@ -169,7 +204,11 @@ export const DASHBOARD_LAYOUTS: Record<
         id: "student-alerts",
         widgets: [
           { id: "stu-alerts", kind: "alert_strip" },
-          { id: "stu-onboarding", kind: "onboarding_summary", title: "Onboarding" },
+          {
+            id: "stu-onboarding",
+            kind: "onboarding_summary",
+            title: "Onboarding",
+          },
         ],
       },
     ],

@@ -6,20 +6,16 @@ import { DashboardEmpty } from "../primitives/DashboardEmpty";
 import { DashboardWidgetSkeleton } from "../primitives/DashboardWidgetSkeleton";
 import type { WidgetRenderProps } from "../types";
 
-function scoreFromId(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  const score = 110 + (h % 60); // 110-169
-  const delta = 8 + (h % 16); // 8-23
-  return { score, delta };
-}
-
 function pillTone(name: string) {
   const n = name.toLowerCase();
-  if (n.includes("crimson")) return "bg-red-600 text-white";
+  if (n.includes("orange")) return "bg-orange-600 text-white";
+  if (n.includes("purple")) return "bg-purple-600 text-white";
+  if (n.includes("blue")) return "bg-blue-600 text-white";
+  if (n.includes("black")) return "bg-gray-900 text-white";
+  if (n.includes("crimson") || n.includes("red")) return "bg-red-600 text-white";
   if (n.includes("sapphire")) return "bg-blue-600 text-white";
-  if (n.includes("emerald")) return "bg-emerald-600 text-white";
-  return "bg-gray-900 text-white";
+  if (n.includes("emerald") || n.includes("green")) return "bg-emerald-600 text-white";
+  return "bg-gray-800 text-white";
 }
 
 export function BlitzTeamsWidget({
@@ -28,10 +24,10 @@ export function BlitzTeamsWidget({
   isRefreshing,
   placement,
 }: WidgetRenderProps) {
-  const title = placement.title ?? "Blitz Teams This Week";
+  const title = placement.title ?? "Blitz teams";
   if (loading) return <DashboardWidgetSkeleton variant="list" />;
 
-  const teams = (snapshot?.blitzTeams ?? []).slice(0, 3);
+  const teams = (snapshot?.blitzTeams ?? []).slice(0, 4);
 
   return (
     <DashboardCard
@@ -40,22 +36,24 @@ export function BlitzTeamsWidget({
       className="border-amber-200 bg-amber-50"
       action={
         <Link
-          href="/app/bob/pods"
+          href="/app/bob/roster?queue=bob_cohort"
           className="text-sm font-medium text-gray-600 hover:text-gray-900"
         >
-          View all →
+          Cohort roster →
         </Link>
       }
     >
       {teams.length === 0 ? (
         <DashboardEmpty
           title="No blitz teams"
-          message="Teams will appear here once configured."
+          message="Assign Blitz Squad on Students & Alums to see color teams here."
         />
       ) : (
         <div className="divide-y divide-amber-200/50 rounded-lg overflow-hidden">
           {teams.map((t, idx) => {
-            const { score, delta } = scoreFromId(t.id);
+            const memberCount = t.memberCount ?? 0;
+            const points = t.points ?? 0;
+            const weekPts = t.pointsThisWeek ?? 0;
             return (
               <div
                 key={t.id}
@@ -71,20 +69,28 @@ export function BlitzTeamsWidget({
                     {t.name}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center gap-3 shrink-0 text-right">
                   <div className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {score}
+                    {points > 0 ? points : memberCount}
+                    <span className="text-xs font-normal text-gray-500 ml-1">
+                      {points > 0 ? "pts" : "students"}
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-600 tabular-nums">
-                    +{delta}
-                  </div>
+                  {weekPts > 0 ? (
+                    <div className="text-xs text-emerald-700 font-medium tabular-nums">
+                      +{weekPts} wk
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );
           })}
         </div>
       )}
+      <p className="text-xs text-gray-500 mt-3">
+        Grouped by blitz color from Airtable. Points total Dent One Stop blitz
+        submissions when logged.
+      </p>
     </DashboardCard>
   );
 }
-

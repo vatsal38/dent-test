@@ -6,6 +6,7 @@ import { TruncatedWithTooltip } from "@/components/TruncatedWithTooltip";
 import { extractAirtableAttachments } from "@/lib/bobAirtableDisplay";
 import { initialsOf, studentDisplayName } from "@/features/bob/roster/recordDisplay";
 import { extractAirtableRecordIds } from "@/lib/bobAirtableDisplay";
+import { OnboardingStatusChips } from "@/features/bob/onboarding/OnboardingStatusChips";
 
 function isAirtableRecordId(v: string) {
   return /^rec[a-zA-Z0-9]{8,}$/.test(v);
@@ -118,6 +119,7 @@ export function RosterGridView({
         initials: initialsOf(name),
         attendancePct,
         milestone,
+        onboardingStatus: s.onboardingStatus,
       };
     });
   }, [students, headshot, fieldNames, labelsForField]);
@@ -179,6 +181,10 @@ export function RosterGridView({
               {c.pod ? (
                 <Chip label={c.pod} className="bg-gray-50 text-gray-700 border border-gray-200" />
               ) : null}
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <OnboardingStatusChips status={c.onboardingStatus} compact />
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-gray-600">

@@ -34,6 +34,38 @@ export interface BobStudentMilestoneStats {
   [key: string]: number | undefined;
 }
 
+export type BobOnboardingPhase =
+  | "signed"
+  | "in_progress"
+  | "not_started"
+  | "unknown"
+  | "complete"
+  | "incomplete";
+
+export interface BobOnboardingStatus {
+  contract: {
+    field: string | null;
+    label: string | null;
+    phase: "signed" | "in_progress" | "not_started" | "unknown";
+  };
+  ywRegistration: {
+    field: string | null;
+    label: string | null;
+    phase: "complete" | "incomplete" | "unknown";
+    presentInYwFinal: boolean;
+  };
+  preSurvey: {
+    field: string | null;
+    label: string | null;
+    phase: "complete" | "incomplete" | "unknown";
+    synced: boolean;
+  };
+  readyForProgram: boolean;
+  contractSigned: boolean;
+  ywReady: boolean;
+  preSurveyComplete: boolean;
+}
+
 export interface BobStudent {
   id: string;
   firstName: string;
@@ -50,6 +82,8 @@ export interface BobStudent {
   ywStatus?: string | null;
   attendanceStats?: BobStudentAttendanceStats | null;
   milestoneStats?: BobStudentMilestoneStats | null;
+  /** Contract / YW registration / pre-survey from synced Airtable fields. */
+  onboardingStatus?: BobOnboardingStatus;
   /** Full Airtable row fields from "All Students" (when requested). */
   airtableFields?: Record<string, unknown>;
   createdAt: string;
@@ -73,6 +107,8 @@ export interface BobStudentsFacetsResponse {
     synced: number;
     notSynced: number;
   };
+  bobCohort?: { active: number };
+  onboarding?: { ready: number; incomplete: number; total: number };
 }
 
 export interface BobStudentsListParams {
@@ -80,6 +116,10 @@ export interface BobStudentsListParams {
   ids?: string;
   status?: BobStudentStatus;
   interviewStage?: BobInterviewStage;
+  /** `active` = BoB '25 Final Track cohort (~95 students). */
+  bobCohort?: "active";
+  /** Filter by onboarding gates (active cohort only). */
+  onboardingReady?: "yes" | "no";
   search?: string;
   /** JSON string: { match, conditions } — Airtable-style filter builder */
   filters?: string;
@@ -104,6 +144,8 @@ export async function getBobStudents(
   if (params?.ids) sp.set("ids", params.ids);
   if (params?.status) sp.set("status", params.status);
   if (params?.interviewStage) sp.set("interviewStage", params.interviewStage);
+  if (params?.bobCohort) sp.set("bobCohort", params.bobCohort);
+  if (params?.onboardingReady) sp.set("onboardingReady", params.onboardingReady);
   if (params?.search) sp.set("search", params.search);
   if (params?.filters) sp.set("filters", params.filters);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);

@@ -13,12 +13,17 @@ export function scopeToApiParams(scope: DashboardScope): BobDashboardParams {
 
 /** Default scope from RBAC session — coaches land on pod scope. */
 export function defaultScopeFromAccess(access: BobAccessContext): DashboardScope {
-  if (access.scopeType === "pod" && access.primaryPod?.id) {
-    return {
-      level: "pod",
-      podId: access.primaryPod.id,
-      label: access.primaryPod.name,
-    };
+  if (access.scopeType === "pod") {
+    if (access.podIds.length > 1) {
+      return { level: "organization", label: "My cohort" };
+    }
+    if (access.primaryPod?.id) {
+      return {
+        level: "pod",
+        podId: access.primaryPod.id,
+        label: access.primaryPod.name,
+      };
+    }
   }
   if (access.scopeType === "site" && access.siteNames[0]) {
     return {

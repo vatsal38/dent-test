@@ -18,12 +18,20 @@ export function MilestoneSummaryWidget({
   if (loading) return <DashboardWidgetSkeleton variant="chart" />;
 
   const tracks = snapshot?.milestoneSubmissionByTrack ?? [];
-  const items = tracks.map((t) => ({
+  const trackItems = tracks.map((t) => ({
     id: t.track,
     label: t.trackLabel?.trim() || t.track,
     value: t.submitted,
     total: t.total,
   }));
+  const submittedTotal =
+    snapshot?.cohort?.milestoneSubmittedCount ??
+    trackItems.reduce((sum, i) => sum + i.value, 0);
+  const eligibleTotal =
+    snapshot?.cohort?.milestoneEligibleCount ??
+    trackItems.reduce((sum, i) => sum + i.total, 0);
+  const pct =
+    eligibleTotal > 0 ? Math.round((submittedTotal / eligibleTotal) * 100) : 0;
 
   return (
     <DashboardCard
@@ -38,15 +46,18 @@ export function MilestoneSummaryWidget({
         </Link>
       }
     >
-      <p className="text-sm text-gray-600 -mt-1 mb-3">Week 3 of 5</p>
-      {items.length === 0 ? (
+      <p className="text-sm text-gray-600 -mt-1 mb-3">
+        {submittedTotal} of {eligibleTotal} students with progress logged ({pct}
+        %)
+      </p>
+      {trackItems.length === 0 ? (
         <DashboardEmpty
-          message="No milestone submissions for this scope yet."
+          message="No milestone-eligible tracks in this scope."
           actionLabel="Milestones admin"
           actionHref="/app/bob/milestones"
         />
       ) : (
-        <MetricBarRow items={items} />
+        <MetricBarRow items={trackItems} />
       )}
     </DashboardCard>
   );

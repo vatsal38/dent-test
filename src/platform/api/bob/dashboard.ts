@@ -14,6 +14,8 @@ export interface BobDashboardScope {
   track: string | null;
   studentId: string | null;
   label: string;
+  /** True when KPIs are limited to the signed-in coach's pods/roster. */
+  coachScoped?: boolean;
 }
 
 export interface BobDashboardMetricValue {
@@ -47,16 +49,42 @@ export interface BobDashboardQueueItem {
   priority: "low" | "medium" | "high";
 }
 
+export interface BobDashboardOnboardingSummary {
+  total: number;
+  contractSigned: number;
+  contractInProgress: number;
+  contractNotStarted: number;
+  ywReady: number;
+  ywIncomplete: number;
+  preSurveyComplete: number;
+  preSurveyIncomplete: number;
+  preSurveyNotSynced: number;
+  readyForProgram: number;
+}
+
 export interface BobDashboardSnapshot {
   scope: BobDashboardScope;
   generatedAt: string;
+  /** Active BoB cohort (Final Track) vs all students in scope. */
+  cohort?: {
+    activeCount: number;
+    rosterTotalInScope: number;
+    milestoneEligibleCount?: number;
+    milestoneSubmittedCount?: number;
+  };
+  /** Onboarding rollup for active cohort (Airtable contract + YW fields). */
+  onboarding?: BobDashboardOnboardingSummary;
   kpis: Record<BobDashboardMetricKey, BobDashboardMetricValue>;
   alerts: BobDashboardAlert[];
   queues: BobDashboardQueueItem[];
   attention: {
     blocked: number;
     late: number;
+    openIncidents?: number;
     escalation: number;
+  };
+  incidents?: {
+    openCount: number;
   };
   attendanceBySite: Array<{
     siteId: string;
@@ -74,6 +102,38 @@ export interface BobDashboardSnapshot {
     submitted: number;
     total: number;
   }>;
+  milestoneSubmissionByProjectTeam?: Array<{
+    teamId: string;
+    teamLabel: string;
+    submitted: number;
+    total: number;
+  }>;
+  wellnessDistribution?: {
+    total: number;
+    thriving: number;
+    stable: number;
+    watch: number;
+    concern: number;
+    openWellnessChecks?: number;
+    slices: Array<{
+      key: "thriving" | "stable" | "watch" | "concern";
+      label: string;
+      count: number;
+      color: string;
+    }>;
+  };
+  weeklyMilestoneProgress?: {
+    programStart: string;
+    eligibleCount: number;
+    weeks: Array<{
+      label: string;
+      weekIndex: number;
+      completed: number;
+      pending: number;
+      missing: number;
+      isCurrent?: boolean;
+    }>;
+  };
   atRiskStudents: Array<{
     id: string;
     firstName: string;
@@ -82,7 +142,13 @@ export interface BobDashboardSnapshot {
     podId?: string | null;
     track?: string | null;
   }>;
-  blitzTeams: Array<{ id: string; name: string }>;
+  blitzTeams: Array<{
+    id: string;
+    name: string;
+    memberCount?: number;
+    points?: number;
+    pointsThisWeek?: number;
+  }>;
   cards: {
     studentsEnrolled: number;
     youthWorksSynced: number;

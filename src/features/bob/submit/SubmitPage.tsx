@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { API_BASE } from "@/platform/api/client";
 import type { BobStudent } from "@/platform/api/bob/students";
+import {
+  getBlitzTeamOptions,
+  submitBobOneStop,
+  type BlitzTeamOptionsResponse,
+} from "@/platform/api/bob/submit";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
 
 type SubmissionType = 'incident' | 'wellness_check' | 'blitz_points' | 'anonymous_feedback' | 'progress_update' | 'parent_contact';
@@ -32,6 +36,8 @@ export function SubmitPage() {
     const [studentDropdownOpen, setStudentDropdownOpen] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
     const studentDropdownRef = useRef<HTMLDivElement>(null);
+    const [blitzOptions, setBlitzOptions] = useState<BlitzTeamOptionsResponse | null>(null);
+    const [blitzOptionsLoading, setBlitzOptionsLoading] = useState(false);
 
     const filteredStudents = useMemo(() => {
         if (!studentSearch.trim()) return students.slice(0, 50);
@@ -51,6 +57,25 @@ export function SubmitPage() {
         if (!id) return null;
         return students.find((s) => s.id === id) ?? null;
     }, [form.studentId, students]);
+
+    useEffect(() => {
+        if (submissionType !== 'blitz_points') return;
+        let cancelled = false;
+        setBlitzOptionsLoading(true);
+        getBlitzTeamOptions()
+            .then((data) => {
+                if (!cancelled) setBlitzOptions(data);
+            })
+            .catch(() => {
+                if (!cancelled) setBlitzOptions(null);
+            })
+            .finally(() => {
+                if (!cancelled) setBlitzOptionsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [submissionType]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -120,15 +145,7 @@ export function SubmitPage() {
         setSubmitting(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE}/api/bob/submit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: submissionType, ...form }),
-            });
-            if (!res.ok) {
-                const errBody = await res.json().catch(() => ({}));
-                throw new Error((errBody && errBody.error) || res.statusText || 'Submit failed');
-            }
+            await submitBobOneStop(submissionType, form);
             setSubmitted(true);
             setForm({});
         } catch (err) {
@@ -197,7 +214,41 @@ export function SubmitPage() {
                     )}
                     {submissionType === 'blitz_points' && (
                         <>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Team</label><input type="text" value={form.team ?? ''} onChange={(e) => setForm((f) => ({ ...f, team: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" placeholder="Team name" required /></div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Blitz team</label>
+                                <select
+                                    value={form.team ?? ''}
+                                    onChange={(e) => setForm((f) => ({ ...f, team: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                                    required
+                                    disabled={blitzOptionsLoading}
+                                >
+                                    <option value="">
+                                        {blitzOptionsLoading ? 'Loading teams…' : 'Select color or squad'}
+                                    </option>
+                                    {blitzOptions?.colors?.length ? (
+                                        <optgroup label="Blitz colors">
+                                            {blitzOptions.colors.map((o) => (
+                                                <option key={`c-${o.value}`} value={o.value}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    ) : null}
+                                    {blitzOptions?.squads?.length ? (
+                                        <optgroup label="Squads">
+                                            {blitzOptions.squads.map((o) => (
+                                                <option key={`s-${o.value}`} value={o.value}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    ) : null}
+                                </select>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Prefer a color (Orange, Purple, Blue, Black) so points appear on the command center leaderboard.
+                                </p>
+                            </div>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Points</label><input type="number" value={form.points ?? ''} onChange={(e) => setForm((f) => ({ ...f, points: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" placeholder="Points" required /></div>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Reason</label><input type="text" value={form.reason ?? ''} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" placeholder="Reason" /></div>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Awarded by</label><input type="text" value={form.awardedBy ?? ''} onChange={(e) => setForm((f) => ({ ...f, awardedBy: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" placeholder="Your name" /></div>

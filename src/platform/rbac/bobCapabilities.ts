@@ -41,6 +41,7 @@ export function bobCapabilities(role: BobRole): BobCapabilities {
     coachScope: role === "site_coach",
     coachIdentifiers: [],
     primaryPod: null,
+    assignedPods: [],
     podIds: [],
     siteNames: [],
     user: null,

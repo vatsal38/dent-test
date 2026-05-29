@@ -11,6 +11,7 @@ export * from "./milestones";
 export * from "./attendance";
 export * from "./attendanceImport";
 export * from "./submissions";
+export * from "./submit";
 export * from "./staff.ts";
 
 // Backward compatibility: resolve labels lived on students in api.ts

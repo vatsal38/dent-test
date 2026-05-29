@@ -11,7 +11,7 @@ export interface MetricDefinition {
 export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   studentsEnrolled: {
     key: "studentsEnrolled",
-    label: "Students enrolled",
+    label: "Active BoB students",
     format: (v) => v,
     href: () => "/app/bob/roster",
   },
@@ -19,7 +19,7 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     key: "youthWorksSynced",
     label: "YouthWorks synced",
     format: (v) => `${v}%`,
-    href: () => "/app/bob/recruitment?queue=ready_transfer",
+    href: () => "/app/bob/roster?queue=bob_cohort",
   },
   checkedInToday: {
     key: "checkedInToday",

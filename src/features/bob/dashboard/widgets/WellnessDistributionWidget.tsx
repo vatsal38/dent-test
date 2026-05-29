@@ -13,32 +13,6 @@ type Slice = {
   color: string;
 };
 
-function clampNonNeg(n: number) {
-  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
-}
-
-function deriveWellness(snapshot: WidgetRenderProps["snapshot"]): Slice[] {
-  const total = clampNonNeg(
-    snapshot?.kpis.studentsEnrolled?.value ??
-      snapshot?.cards.studentsEnrolled ??
-      0,
-  );
-  const concern = clampNonNeg(
-    snapshot?.kpis.atRiskCount?.value ?? snapshot?.atRiskStudents?.length ?? 0,
-  );
-  const watch = clampNonNeg(
-    snapshot?.kpis.noShowsToday?.value ?? snapshot?.noShowsToday?.length ?? 0,
-  );
-  const onTrack = clampNonNeg(total - concern - watch);
-
-  return [
-    { key: "thriving" as const, label: "Thriving", value: onTrack, color: "#10B981" },
-    { key: "stable" as const, label: "Stable", value: 0, color: "#3B82F6" },
-    { key: "watch" as const, label: "Watch", value: watch, color: "#F59E0B" },
-    { key: "concern" as const, label: "Concern", value: concern, color: "#EF4444" },
-  ].filter((slice) => slice.value > 0 || slice.key === "thriving");
-}
-
 function Donut({
   slices,
   size = 156,
@@ -50,7 +24,10 @@ function Donut({
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const total = Math.max(1, slices.reduce((acc, s) => acc + s.value, 0));
+  const total = Math.max(
+    1,
+    slices.reduce((acc, s) => acc + s.value, 0),
+  );
   let offset = 0;
 
   return (
@@ -99,8 +76,16 @@ export function WellnessDistributionWidget({
   const title = placement.title ?? "Wellness Distribution";
   if (loading) return <DashboardWidgetSkeleton variant="chart" />;
 
-  const slices = deriveWellness(snapshot);
-  const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+  const dist = snapshot?.wellnessDistribution;
+  const slices: Slice[] = dist
+    ? dist.slices.map((s) => ({
+        key: s.key,
+        label: s.label,
+        value: s.count,
+        color: s.color,
+      }))
+    : [];
+  const total = dist?.total ?? slices.reduce((sum, s) => sum + s.value, 0);
 
   return (
     <DashboardCard
@@ -108,23 +93,30 @@ export function WellnessDistributionWidget({
       refreshing={isRefreshing}
       action={
         <Link
-          href="/app/bob/roster"
+          href="/app/bob/inbox?type=wellness_check"
           className="text-sm font-medium text-gray-600 hover:text-gray-900"
         >
-          View all →
+          Wellness inbox →
         </Link>
       }
     >
       <p className="text-sm text-gray-600 -mt-1 mb-4">
-        Student health status overview
+        Active BoB cohort — attendance today, open wellness checks, roster status
+        {dist?.openWellnessChecks ? (
+          <span className="text-amber-700">
+            {" "}
+            · {dist.openWellnessChecks} open check
+            {dist.openWellnessChecks === 1 ? "" : "s"}
+          </span>
+        ) : null}
       </p>
 
       {total === 0 ? (
-        <DashboardEmpty message="No enrolled students in this scope. Assign students to pods from the Pods page." />
+        <DashboardEmpty message="No active BoB students in this scope." />
       ) : (
         <>
           <div className="flex items-center justify-center">
-            <Donut slices={slices} />
+            <Donut slices={slices.length ? slices : [{ key: "stable", label: "Stable", value: total, color: "#3B82F6" }]} />
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
@@ -145,4 +137,3 @@ export function WellnessDistributionWidget({
     </DashboardCard>
   );
 }
-

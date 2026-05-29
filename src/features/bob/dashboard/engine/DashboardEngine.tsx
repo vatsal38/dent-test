@@ -56,12 +56,29 @@ export function DashboardEngine({
         </div>
       ) : null}
 
-      <DashboardFilters scope={scope} onScopeChange={setScopeOverride} />
+      <DashboardFilters
+        scope={scope}
+        onScopeChange={setScopeOverride}
+        cohortCount={data?.cohort?.activeCount}
+      />
 
       {access.isScoped && (
         <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
           Metrics scoped to{" "}
           <span className="font-semibold">{resolvedLabel}</span>
+          {data?.scope.coachScoped ? (
+            <span className="text-orange-800">
+              {" "}
+              · Active BoB cohort on your pods
+            </span>
+          ) : null}
+          {data?.cohort?.activeCount != null ? (
+            <span className="text-orange-800">
+              {" "}
+              · {data.cohort.activeCount} student
+              {data.cohort.activeCount === 1 ? "" : "s"}
+            </span>
+          ) : null}
           {isRefreshing ? (
             <span className="ml-2 text-orange-700">· Updating…</span>
           ) : null}

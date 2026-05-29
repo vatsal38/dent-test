@@ -6,6 +6,8 @@ import type {
 import type { BobStudentsFacetsResponse } from "@/platform/api/bob/students";
 
 export type RosterQueueId =
+  | "bob_cohort"
+  | "onboarding_pending"
   | "all"
   | "active"
   | "inactive"
@@ -21,9 +23,21 @@ export interface RosterQueueDef {
 
 export const ROSTER_QUEUES: RosterQueueDef[] = [
   {
+    id: "bob_cohort",
+    label: "BoB cohort",
+    description: "FY26 potential list (Final Track assigned)",
+    listParams: { bobCohort: "active" },
+  },
+  {
+    id: "onboarding_pending",
+    label: "Onboarding",
+    description: "Contract, YouthWorks, or pre-survey still incomplete",
+    listParams: { bobCohort: "active", onboardingReady: "no" },
+  },
+  {
     id: "all",
     label: "All students",
-    description: "Full operational roster",
+    description: "Full Students & Alums sync",
     listParams: {},
   },
   {
@@ -63,6 +77,10 @@ export function rosterQueueCount(
   if (!facets) return null;
   const total = facets.pipeline?.total;
   switch (queueId) {
+    case "bob_cohort":
+      return facets.bobCohort?.active ?? null;
+    case "onboarding_pending":
+      return facets.onboarding?.incomplete ?? null;
     case "all":
       return total ?? null;
     case "active":

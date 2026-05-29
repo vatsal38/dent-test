@@ -24,13 +24,37 @@ export interface BobCommandCenterStats {
     submitted: number;
     total: number;
   }>;
+  milestoneSubmissionByProjectTeam?: Array<{
+    teamId: string;
+    teamLabel: string;
+    submitted: number;
+    total: number;
+  }>;
+  weeklyMilestoneProgress?: {
+    programStart: string;
+    eligibleCount: number;
+    weeks: Array<{
+      label: string;
+      weekIndex: number;
+      completed: number;
+      pending: number;
+      missing: number;
+      isCurrent?: boolean;
+    }>;
+  };
   atRiskStudents: Array<{
     id: string;
     firstName: string;
     lastName: string;
     status: string;
   }>;
-  blitzTeams: Array<{ id: string; name: string }>;
+  blitzTeams: Array<{
+    id: string;
+    name: string;
+    memberCount?: number;
+    points?: number;
+    pointsThisWeek?: number;
+  }>;
 }
 
 export async function getBobCommandCenterStats(): Promise<BobCommandCenterStats> {

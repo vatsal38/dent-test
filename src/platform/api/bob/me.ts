@@ -25,6 +25,7 @@ export interface BobMeResponse {
   coachScope: boolean;
   coachIdentifiers: string[];
   primaryPod: { id: string; name: string } | null;
+  assignedPods: { id: string; name: string; site: string | null }[];
 }
 
 export async function getBobMe(): Promise<BobMeResponse> {

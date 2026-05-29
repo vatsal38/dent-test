@@ -36,9 +36,15 @@ import { useStudentDrawerUrl } from "@/features/bob/student-drawer";
 import { curatedRosterListColumns } from "@/features/bob/roster/curatedListColumns";
 import { getRosterQueue, type RosterQueueId } from "@/features/bob/roster/queues";
 import {
+  contractStatusLabel,
+  preSurveyLabel,
+  ywRegistrationLabel,
+} from "@/features/bob/onboarding/statusLabels";
+import {
   initialsOf,
   studentDisplayName,
 } from "@/features/bob/roster/recordDisplay";
+import { OnboardingStatusChips } from "@/features/bob/onboarding/OnboardingStatusChips";
 import {
   useBobRosterSchema,
   useBobStudentsFacets,
@@ -109,7 +115,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const queueId = (searchParams.get("queue") || "all") as RosterQueueId;
+  const queueId = (searchParams.get("queue") || "bob_cohort") as RosterQueueId;
   const queue = getRosterQueue(queueId);
   const { openStudent } = useStudentDrawerUrl();
   const selectedId = searchParams.get("id") ?? searchParams.get("student");
@@ -197,6 +203,10 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
       "track",
       "coach",
       "podId",
+      "contractStatus",
+      "ywRegistration",
+      "preSurvey",
+      "readyForProgram",
       "attendancePresent",
       "attendanceAbsent",
       "milestonesSubmitted",
@@ -213,6 +223,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
       ...rows.map((s) => {
         const a = s.attendanceStats || {};
         const m = s.milestoneStats || {};
+        const ob = s.onboardingStatus;
         const vals = [
           s.id,
           s.firstName,
@@ -225,10 +236,14 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
           s.track ?? "",
           s.coach ?? "",
           s.podId ?? "",
-          (a as any).present ?? "",
-          (a as any).absent ?? "",
-          (m as any).submitted ?? "",
-          (m as any).total ?? "",
+          ob ? contractStatusLabel(ob.contract.phase) : "",
+          ob ? ywRegistrationLabel(ob.ywRegistration) : "",
+          ob ? preSurveyLabel(ob.preSurvey) : "",
+          ob?.readyForProgram ? "yes" : ob ? "no" : "",
+          (a as { present?: number }).present ?? "",
+          (a as { absent?: number }).absent ?? "",
+          (m as { submitted?: number }).submitted ?? "",
+          (m as { total?: number }).total ?? "",
         ];
         return vals.map(esc).join(",");
       }),
@@ -458,6 +473,9 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Stage
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">
+                    Onboarding
+                  </th>
                   {columns.map((f) => (
                     <th
                       key={f.name}
@@ -513,6 +531,12 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
                         <StatusBadge
                           label={STAGE_LABELS[s.interviewStage] || s.interviewStage}
                           variant="airtable"
+                        />
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <OnboardingStatusChips
+                          status={s.onboardingStatus}
+                          compact
                         />
                       </td>
                       {columns.map((f) => (

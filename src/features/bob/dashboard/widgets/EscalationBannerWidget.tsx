@@ -24,6 +24,9 @@ export function EscalationBannerWidget({
         </p>
         <p className="text-xs text-red-800 mt-0.5">
           {att.late} late · {att.blocked} blocked
+          {(att.openIncidents ?? 0) > 0
+            ? ` · ${att.openIncidents} incident${att.openIncidents === 1 ? "" : "s"}`
+            : ""}
         </p>
       </div>
       <Link
