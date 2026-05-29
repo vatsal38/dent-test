@@ -70,6 +70,7 @@ export interface BobDashboardSnapshot {
   noShowsToday: string[];
   milestoneSubmissionByTrack: Array<{
     track: string;
+    trackLabel?: string;
     submitted: number;
     total: number;
   }>;

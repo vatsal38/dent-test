@@ -122,7 +122,7 @@ export function CommandCenterReports({ stats, loading }: Props) {
                     className="px-6 py-4 flex items-center gap-4"
                   >
                     <div className="min-w-[120px] font-medium text-gray-900">
-                      {t.track}
+                      {t.trackLabel?.trim() || t.track}
                     </div>
                     <div className="flex-1 max-w-xs">
                       <div className="h-3 bg-gray-100 rounded-full overflow-hidden">

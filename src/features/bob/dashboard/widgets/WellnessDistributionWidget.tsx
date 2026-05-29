@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { DashboardCard } from "../primitives/DashboardCard";
 import { DashboardWidgetSkeleton } from "../primitives/DashboardWidgetSkeleton";
+import { DashboardEmpty } from "../primitives/DashboardEmpty";
 import type { WidgetRenderProps } from "../types";
 
 type Slice = {
@@ -17,18 +18,25 @@ function clampNonNeg(n: number) {
 }
 
 function deriveWellness(snapshot: WidgetRenderProps["snapshot"]): Slice[] {
-  const total = clampNonNeg(snapshot?.kpis.studentsEnrolled?.value ?? snapshot?.cards.studentsEnrolled ?? 0) || 150;
-  const concern = clampNonNeg(snapshot?.kpis.atRiskCount?.value ?? snapshot?.atRiskStudents?.length ?? 0);
-  const watch = clampNonNeg(snapshot?.kpis.noShowsToday?.value ?? snapshot?.noShowsToday?.length ?? 0);
-  const stable = clampNonNeg(total * 0.35);
-  const thriving = clampNonNeg(total - (concern + watch + stable));
+  const total = clampNonNeg(
+    snapshot?.kpis.studentsEnrolled?.value ??
+      snapshot?.cards.studentsEnrolled ??
+      0,
+  );
+  const concern = clampNonNeg(
+    snapshot?.kpis.atRiskCount?.value ?? snapshot?.atRiskStudents?.length ?? 0,
+  );
+  const watch = clampNonNeg(
+    snapshot?.kpis.noShowsToday?.value ?? snapshot?.noShowsToday?.length ?? 0,
+  );
+  const onTrack = clampNonNeg(total - concern - watch);
 
   return [
-    { key: "thriving", label: "Thriving", value: thriving, color: "#10B981" }, // emerald-500
-    { key: "stable", label: "Stable", value: stable, color: "#3B82F6" }, // blue-500
-    { key: "watch", label: "Watch", value: watch, color: "#F59E0B" }, // amber-500
-    { key: "concern", label: "Concern", value: concern, color: "#EF4444" }, // red-500
-  ];
+    { key: "thriving" as const, label: "Thriving", value: onTrack, color: "#10B981" },
+    { key: "stable" as const, label: "Stable", value: 0, color: "#3B82F6" },
+    { key: "watch" as const, label: "Watch", value: watch, color: "#F59E0B" },
+    { key: "concern" as const, label: "Concern", value: concern, color: "#EF4444" },
+  ].filter((slice) => slice.value > 0 || slice.key === "thriving");
 }
 
 function Donut({
@@ -92,6 +100,7 @@ export function WellnessDistributionWidget({
   if (loading) return <DashboardWidgetSkeleton variant="chart" />;
 
   const slices = deriveWellness(snapshot);
+  const total = slices.reduce((sum, slice) => sum + slice.value, 0);
 
   return (
     <DashboardCard
@@ -110,23 +119,29 @@ export function WellnessDistributionWidget({
         Student health status overview
       </p>
 
-      <div className="flex items-center justify-center">
-        <Donut slices={slices} />
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-        {slices.map((s) => (
-          <div key={s.key} className="flex items-center gap-2">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: s.color }}
-            />
-            <span className="text-gray-700">
-              {s.label} ({s.value})
-            </span>
+      {total === 0 ? (
+        <DashboardEmpty message="No enrolled students in this scope. Assign students to pods from the Pods page." />
+      ) : (
+        <>
+          <div className="flex items-center justify-center">
+            <Donut slices={slices} />
           </div>
-        ))}
-      </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+            {slices.map((s) => (
+              <div key={s.key} className="flex items-center gap-2">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="text-gray-700">
+                  {s.label} ({s.value})
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </DashboardCard>
   );
 }

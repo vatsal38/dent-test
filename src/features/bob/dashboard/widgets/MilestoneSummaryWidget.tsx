@@ -20,7 +20,7 @@ export function MilestoneSummaryWidget({
   const tracks = snapshot?.milestoneSubmissionByTrack ?? [];
   const items = tracks.map((t) => ({
     id: t.track,
-    label: t.track,
+    label: t.trackLabel?.trim() || t.track,
     value: t.submitted,
     total: t.total,
   }));
