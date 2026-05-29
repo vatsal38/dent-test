@@ -46,7 +46,6 @@ const PARTNERSHIP_STAGES = [
 
 function recommendedStageForTypes(types: string[]): string {
     const values = Array.isArray(types) ? types : [];
-    if (values.includes('dentership_host')) return 'need_outreach';
     if (values.includes('space_partner') || values.includes('sponsor')) return 'conversation_active';
     if (values.includes('made_at_dent')) return 'interested';
     if (values.includes('food_for_thought_speaker') || values.includes('aixdt_irc_evaluator')) return 'awaiting_response';

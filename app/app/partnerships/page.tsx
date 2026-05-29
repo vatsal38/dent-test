@@ -77,8 +77,6 @@ function partnershipPanelOrgLine(
 
 /** Stalled if partnership record not updated in this many days (see backend PARTNERSHIP_STALE_RECORD_DAYS). */
 const PARTNERSHIP_STALL_DAYS = 7;
-/** For Need outreach column, hide very old records (before mid-2024). */
-const NEED_OUTREACH_CUTOFF = new Date("2024-07-01T00:00:00.000Z");
 
 function daysSinceLastPartnershipUpdate(p: {
   daysSinceUpdate?: number | null;
@@ -593,19 +591,8 @@ export default function PartnershipsPage() {
                       key={column.stage}
                       className="flex flex-col min-w-[320px] w-[320px]"
                     >
-                      {/** Need outreach only: hide records created before mid-2024. */}
                       {(() => {
-                        const filteredPartnerships =
-                          column.stage === "need_outreach"
-                            ? column.partnerships.filter((p) => {
-                                if (!p.createdAt) return false;
-                                const created = new Date(p.createdAt);
-                                return (
-                                  !isNaN(created.getTime()) &&
-                                  created >= NEED_OUTREACH_CUTOFF
-                                );
-                              })
-                            : column.partnerships;
+                        const columnPartnerships = column.partnerships;
                         return (
                           <>
                             <div className="mb-4 pb-3 border-b border-gray-200">
@@ -613,18 +600,18 @@ export default function PartnershipsPage() {
                                 {column.label}
                               </h3>
                               <p className="text-sm text-gray-500 mt-1">
-                                {filteredPartnerships.length} partnerships
+                                {columnPartnerships.length} partnerships
                               </p>
                             </div>
                             <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
-                              {filteredPartnerships.length === 0 ? (
+                              {columnPartnerships.length === 0 ? (
                                 <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
                                   <p className="text-sm text-gray-500">
                                     No partnerships
                                   </p>
                                 </div>
                               ) : (
-                                filteredPartnerships.map((partnership) => {
+                                columnPartnerships.map((partnership) => {
                                   const daysSinceUpdate =
                                     daysSinceLastPartnershipUpdate(partnership);
                                   const isStuck =
