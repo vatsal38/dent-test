@@ -19,6 +19,8 @@ import { PUNCH_TYPES } from "../types";
 import {
   buildStudentDayAttendance,
   listExpectedEnrollments,
+  supplementEnrollmentsFromAttendance,
+  UNASSIGNED_POD_ID,
 } from "./buildAttendanceIndex";
 import { resolvePodName, resolveSiteName, resolveStudentName } from "./resolveDisplay";
 
@@ -214,14 +216,33 @@ export function computeAttendanceWorkspace(
   const studentById = new Map(students.map((s) => [s.id, s]));
   const podById = new Map(pods.map((p) => [p.id, p]));
   const validStudentIds = new Set(students.map((s) => s.id));
-  const enrollments = listExpectedEnrollments(pods, podFilter, validStudentIds);
-
   const rangeStart = startDate || focusDate;
   const rangeEnd = endDate || focusDate;
   const dates =
     rangeStart === rangeEnd
       ? [rangeStart]
       : getDaysInRange(rangeStart, rangeEnd);
+
+  let enrollments = listExpectedEnrollments(pods, podFilter, validStudentIds);
+  enrollments = supplementEnrollmentsFromAttendance(
+    records,
+    dates,
+    enrollments,
+    studentById,
+    podFilter,
+  );
+
+  if (enrollments.some((e) => e.podId === UNASSIGNED_POD_ID)) {
+    podById.set(UNASSIGNED_POD_ID, {
+      id: UNASSIGNED_POD_ID,
+      name: "No pod assigned",
+      coachId: null,
+      siteSupporterId: null,
+      students: [],
+      createdAt: "",
+      updatedAt: "",
+    });
+  }
 
   const days = buildStudentDayAttendance(
     records,

@@ -58,27 +58,35 @@ export function useAttendanceWorkspace({
     [pods, effectivePod],
   );
 
-  const studentListParams = useMemo(() => {
-    if (rosterIds.length === 0) return { limit: 50 as const };
-    const batch = rosterIds.slice(0, STUDENT_IDS_BATCH_MAX);
-    return { ids: batch.join(","), limit: batch.length };
-  }, [rosterIds]);
-
   const attendanceParams = useMemo(
     () => ({
-      podId: effectivePod || undefined,
       startDate,
       endDate,
       limit: ATTENDANCE_FETCH_LIMIT,
     }),
-    [effectivePod, startDate, endDate],
+    [startDate, endDate],
   );
 
   const attendanceQuery = useBobAttendanceList(attendanceParams);
+  const records = attendanceQuery.data?.attendance ?? [];
+
+  const studentIdsForFetch = useMemo(() => {
+    const ids = new Set(rosterIds);
+    for (const r of records) {
+      if (r.studentId) ids.add(String(r.studentId));
+    }
+    return Array.from(ids);
+  }, [rosterIds, records]);
+
+  const studentListParams = useMemo(() => {
+    if (studentIdsForFetch.length === 0) return { limit: 50 as const };
+    const batch = studentIdsForFetch.slice(0, STUDENT_IDS_BATCH_MAX);
+    return { ids: batch.join(","), limit: batch.length };
+  }, [studentIdsForFetch]);
+
   const studentsQuery = useBobStudentsList(studentListParams);
 
   const students = studentsQuery.data?.students ?? [];
-  const records = attendanceQuery.data?.attendance ?? [];
 
   const workspace = useMemo(
     () =>

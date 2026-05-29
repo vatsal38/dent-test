@@ -64,6 +64,9 @@ export interface ExpectedEnrollment {
   podId: string;
 }
 
+/** Rows for Airtable-imported students not yet on a pod roster. */
+export const UNASSIGNED_POD_ID = "__unassigned__";
+
 export function listExpectedEnrollments(
   pods: BobPod[],
   podFilter?: string,
@@ -82,6 +85,36 @@ export function listExpectedEnrollments(
       out.push({ studentId: sid, podId: pod.id });
     }
   }
+  return out;
+}
+
+/** Include students who have attendance in range but are not on a pod roster. */
+export function supplementEnrollmentsFromAttendance(
+  records: BobAttendance[],
+  dates: string[],
+  enrollments: ExpectedEnrollment[],
+  studentById: Map<string, BobStudent>,
+  podFilter?: string,
+): ExpectedEnrollment[] {
+  const dateSet = new Set(dates);
+  const seen = new Set(enrollments.map((e) => `${e.podId}|${e.studentId}`));
+  const out = [...enrollments];
+
+  for (const r of records) {
+    if (!r.studentId || !r.date || !dateSet.has(r.date)) continue;
+    const studentId = String(r.studentId);
+    const podId =
+      (r.podId && String(r.podId)) ||
+      studentById.get(studentId)?.podId ||
+      UNASSIGNED_POD_ID;
+    if (podFilter && podId !== podFilter) continue;
+
+    const key = `${podId}|${studentId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ studentId, podId });
+  }
+
   return out;
 }
 
@@ -111,10 +144,8 @@ export function buildStudentDayAttendance(
       const podId =
         r.podId ||
         studentById.get(studentId)?.podId ||
-        "";
-      if (podId) {
-        dailyByKey.set(`${podId}|${studentId}|${r.date}`, r);
-      }
+        UNASSIGNED_POD_ID;
+      dailyByKey.set(`${podId}|${studentId}|${r.date}`, r);
     }
   }
 
