@@ -1132,9 +1132,7 @@ export function RecruitmentDetailPage() {
                   setTransferModalOpen(true);
                   setLoadingTransferPreview(true);
                   try {
-                    const preview = await previewBobRecruitmentTransfer(id, {
-                      programRecordIds: selectedProgramIds,
-                    });
+                    const preview = await previewBobRecruitmentTransfer(id);
                     setTransferPreview(preview);
                   } catch (err) {
                     setTransferModalOpen(false);
@@ -1460,9 +1458,7 @@ export function RecruitmentDetailPage() {
           setTransferring(true);
           setError(null);
           try {
-            const result = await transferBobRecruitment(id, {
-              programRecordIds: selectedProgramIds,
-            });
+            const result = await transferBobRecruitment(id);
             setTransferResult(result);
             setTransferModalOpen(false);
             await load();

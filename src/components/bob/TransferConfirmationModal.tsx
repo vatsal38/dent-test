@@ -40,8 +40,6 @@ export function TransferConfirmationModal({
 }) {
   if (!open) return null;
 
-  const programIds = preview?.programRecordIds || [];
-  const programLabels = preview?.programLabels || {};
   const canConfirm = preview?.valid && !loadingPreview && !transferring;
 
   return (
@@ -60,14 +58,14 @@ export function TransferConfirmationModal({
             Confirm transfer
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Move this applicant to Students & Alums (master student record).
-            Existing matches are updated — duplicates are not created.
+            Copy Youth Apps & Intake data into Students & Alums. If a matching
+            record already exists, it will be updated — not duplicated.
           </p>
         </div>
 
         <div className="p-5 space-y-4">
           {loadingPreview ? (
-            <p className="text-sm text-gray-500">Running validations…</p>
+            <p className="text-sm text-gray-500">Preparing transfer…</p>
           ) : null}
 
           {!loadingPreview && preview && !preview.valid ? (
@@ -102,7 +100,7 @@ export function TransferConfirmationModal({
                   {preview.action === "create"
                     ? "Create new Students & Alums record"
                     : preview.alreadyTransferred
-                      ? "Update existing link (programs / fields)"
+                      ? "Update linked Students & Alums record"
                       : "Update existing Students & Alums record (duplicate match)"}
                 </p>
               </div>
@@ -122,26 +120,6 @@ export function TransferConfirmationModal({
                   </p>
                 </div>
               ) : null}
-
-              <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Programs ({programIds.length})
-                </div>
-                {programIds.length === 0 ? (
-                  <p className="text-sm text-gray-500 mt-1">None selected</p>
-                ) : (
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {programIds.map((id) => (
-                      <li
-                        key={id}
-                        className="px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-800 border border-indigo-100"
-                      >
-                        {programLabels[id] || id}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-gray-500">
