@@ -219,6 +219,85 @@ export async function transferBobRecruitment(
   );
 }
 
+export interface BobBulkTransferPreviewSummary {
+  total: number;
+  newStudents: number;
+  existingStudents: number;
+  duplicatesDetected: number;
+  programsToAdd: number;
+  invalid: number;
+  alreadyTransferred: number;
+}
+
+export interface BobBulkTransferPreviewItem {
+  id: string;
+  ok: boolean;
+  label: string | null;
+  preview?: BobRecruitmentTransferPreview;
+  errors?: BobTransferValidationIssue[];
+  warnings?: BobTransferValidationIssue[];
+  error?: string;
+  code?: string;
+}
+
+export interface BobBulkTransferPreviewResponse {
+  summary: BobBulkTransferPreviewSummary;
+  items: BobBulkTransferPreviewItem[];
+  canTransfer: boolean;
+}
+
+export interface BobBulkTransferResultItem {
+  id: string;
+  ok: boolean;
+  label: string | null;
+  action?: string;
+  studentsAlumsAirtableRecordId?: string;
+  programsAdded?: string[];
+  trackPlacementIds?: string[];
+  duplicateResolution?: string | null;
+  warnings?: BobTransferValidationIssue[];
+  error?: string;
+  code?: string;
+}
+
+export interface BobBulkTransferResult {
+  bulkBatchId: string;
+  total: number;
+  success: number;
+  failed: number;
+  results: BobBulkTransferResultItem[];
+  errors: Array<{
+    id: string;
+    label: string | null;
+    error: string;
+    code?: string;
+  }>;
+}
+
+export async function previewBobBulkRecruitmentTransfer(
+  ids: string[],
+): Promise<BobBulkTransferPreviewResponse> {
+  return apiRequest<BobBulkTransferPreviewResponse>(
+    "/api/bob/recruitment/bulk-transfer-preview",
+    {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    },
+  );
+}
+
+export async function bulkTransferBobRecruitment(
+  ids: string[],
+): Promise<BobBulkTransferResult> {
+  return apiRequest<BobBulkTransferResult>(
+    "/api/bob/recruitment/bulk-transfer",
+    {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    },
+  );
+}
+
 export async function updateBobRecruitmentPrograms(
   id: string,
   programRecordIds: string[],

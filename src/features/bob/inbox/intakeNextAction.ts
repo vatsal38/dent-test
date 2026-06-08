@@ -59,8 +59,9 @@ export function getIntakeNextAction(
     if (!isTransferredRecord(record)) {
       return {
         kind: "transfer",
-        label: "Transfer to Students & Alums",
-        description: "Create or update the master student record before approval.",
+        label: "Bulk transfer from inbox",
+        description:
+          "Select students in the intake table (checkboxes) and use Transfer selected — no need to open each record.",
       };
     }
   }

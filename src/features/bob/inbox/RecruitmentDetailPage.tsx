@@ -9,13 +9,9 @@ import {
   approveBobRecruitment,
   getBobRecruitmentRecord,
   getBobRecruitmentSchema,
-  previewBobRecruitmentTransfer,
-  transferBobRecruitment,
   updateBobRecruitment,
   updateBobRecruitmentPrograms,
   type BobRecruitmentRecord,
-  type BobRecruitmentTransferPreview,
-  type BobRecruitmentTransferResult,
 } from "@/platform/api/bob/recruitment";
 import { getBobStudents } from "@/platform/api/bob/students";
 import type {
@@ -29,7 +25,6 @@ import {
   isStatusLikeFieldName,
   pickYouthWorksStatus,
 } from "@/components/bob/RecruitmentUi";
-import { TransferConfirmationModal } from "@/components/bob/TransferConfirmationModal";
 import { Skeleton } from "@/components/Skeleton";
 
 function formatDateTime(value?: string) {
@@ -627,13 +622,6 @@ export function RecruitmentDetailPage() {
   const [recruitmentSchema, setRecruitmentSchema] =
     useState<BobRosterSchemaResponse | null>(null);
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
-  const [transferring, setTransferring] = useState(false);
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [transferPreview, setTransferPreview] =
-    useState<BobRecruitmentTransferPreview | null>(null);
-  const [loadingTransferPreview, setLoadingTransferPreview] = useState(false);
-  const [transferResult, setTransferResult] =
-    useState<BobRecruitmentTransferResult | null>(null);
   const [savingPrograms, setSavingPrograms] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1122,35 +1110,12 @@ export function RecruitmentDetailPage() {
             </button>
 
             {!isTransferred(record) ? (
-              <button
-                type="button"
-                disabled={transferring || loadingTransferPreview}
-                onClick={async () => {
-                  if (!id) return;
-                  setError(null);
-                  setTransferResult(null);
-                  setTransferModalOpen(true);
-                  setLoadingTransferPreview(true);
-                  try {
-                    const preview = await previewBobRecruitmentTransfer(id);
-                    setTransferPreview(preview);
-                  } catch (err) {
-                    setTransferModalOpen(false);
-                    setError(
-                      err instanceof Error
-                        ? err.message
-                        : "Could not load transfer preview",
-                    );
-                  } finally {
-                    setLoadingTransferPreview(false);
-                  }
-                }}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 text-sm font-semibold"
+              <Link
+                href="/app/bob/recruitment?queue=ready_transfer"
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-semibold"
               >
-                {loadingTransferPreview
-                  ? "Checking…"
-                  : "Transfer → Students & Alums"}
-              </button>
+                Bulk transfer from inbox
+              </Link>
             ) : null}
 
             {isTransferred(record) &&
@@ -1444,61 +1409,6 @@ export function RecruitmentDetailPage() {
           </div>
         </div>
       </div>
-
-      <TransferConfirmationModal
-        open={transferModalOpen}
-        preview={transferPreview}
-        loadingPreview={loadingTransferPreview}
-        transferring={transferring}
-        onCancel={() => {
-          if (!transferring) setTransferModalOpen(false);
-        }}
-        onConfirm={async () => {
-          if (!id || !transferPreview?.valid) return;
-          setTransferring(true);
-          setError(null);
-          try {
-            const result = await transferBobRecruitment(id);
-            setTransferResult(result);
-            setTransferModalOpen(false);
-            await load();
-          } catch (err) {
-            const e = err as Error & {
-              details?: { errors?: { message: string }[] };
-            };
-            const detailMsg = e.details?.errors?.[0]?.message;
-            setError(
-              detailMsg ||
-                (err instanceof Error ? err.message : "Transfer failed"),
-            );
-          } finally {
-            setTransferring(false);
-          }
-        }}
-      />
-
-      {transferResult ? (
-        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          <p className="font-semibold">
-            {transferResult.action === "create"
-              ? "Created new Students & Alums record"
-              : "Updated existing Students & Alums record"}
-          </p>
-          {transferResult.duplicateResolution ? (
-            <p className="mt-1 text-emerald-800">
-              Duplicate resolution:{" "}
-              {transferResult.duplicateResolution.replace(/_/g, " ")}
-            </p>
-          ) : null}
-          {transferResult.warnings?.length ? (
-            <ul className="mt-2 list-disc pl-5 text-amber-900">
-              {transferResult.warnings.map((w) => (
-                <li key={w.code}>{w.message}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

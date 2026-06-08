@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Drawer } from "@/components/Drawer";
-import { TransferConfirmationModal } from "@/components/bob/TransferConfirmationModal";
 import {
   StatusBadge,
   TransferredBadge,
@@ -20,12 +19,6 @@ import {
   useBobRecruitmentDetail,
   useBobRecruitmentSchema,
 } from "@/platform/query/hooks/useBobRecruitmentList";
-import {
-  previewBobRecruitmentTransfer,
-  transferBobRecruitment,
-  type BobRecruitmentTransferPreview,
-  type BobRecruitmentTransferResult,
-} from "@/platform/api/bob/recruitment";
 import { pickSummaryFields } from "@/features/bob/inbox/recordDisplay";
 import { parseApiError } from "@/platform/api/errors";
 
@@ -49,54 +42,9 @@ export function IntakeDetailDrawer({
   const { data: schema } = useBobRecruitmentSchema();
   const approveMutation = useApproveBobRecruitment();
 
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [transferPreview, setTransferPreview] =
-    useState<BobRecruitmentTransferPreview | null>(null);
-  const [loadingTransferPreview, setLoadingTransferPreview] = useState(false);
-  const [transferring, setTransferring] = useState(false);
-  const [transferResult, setTransferResult] =
-    useState<BobRecruitmentTransferResult | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const programIds = record?.programRecordIds ?? [];
-
-  const openTransferPreview = useCallback(async () => {
-    if (!recordId) return;
-    setActionError(null);
-    setTransferResult(null);
-    setTransferModalOpen(true);
-    setLoadingTransferPreview(true);
-    try {
-      const preview = await previewBobRecruitmentTransfer(recordId, {
-        programRecordIds: programIds,
-      });
-      setTransferPreview(preview);
-    } catch (err) {
-      setTransferModalOpen(false);
-      setActionError(parseApiError(err));
-    } finally {
-      setLoadingTransferPreview(false);
-    }
-  }, [recordId, programIds]);
-
-  async function confirmTransfer() {
-    if (!recordId) return;
-    setTransferring(true);
-    setActionError(null);
-    try {
-      const result = await transferBobRecruitment(recordId, {
-        programRecordIds: programIds,
-      });
-      setTransferResult(result);
-      setTransferModalOpen(false);
-      await refetch();
-      onRecordUpdated?.();
-    } catch (err) {
-      setActionError(parseApiError(err));
-    } finally {
-      setTransferring(false);
-    }
-  }
 
   async function handleApprove() {
     if (!recordId) return;
@@ -191,14 +139,11 @@ export function IntakeDetailDrawer({
               <div className="mt-4 flex flex-wrap gap-2">
                 {nextAction?.kind === "transfer" &&
                 !isTransferredRecord(record) ? (
-                  <button
-                    type="button"
-                    disabled={loadingTransferPreview || transferring}
-                    onClick={() => void openTransferPreview()}
-                    className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60"
-                  >
-                    Transfer
-                  </button>
+                  <p className="w-full text-xs text-indigo-800 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                    Use the checkbox on this row in the inbox table, then click{" "}
+                    <span className="font-semibold">Transfer selected</span> in
+                    the bulk action bar.
+                  </p>
                 ) : null}
                 {nextAction?.kind === "approve" &&
                 isTransferredRecord(record) &&
@@ -230,11 +175,6 @@ export function IntakeDetailDrawer({
 
               {actionError ? (
                 <p className="mt-3 text-sm text-red-700">{actionError}</p>
-              ) : null}
-              {transferResult ? (
-                <p className="mt-2 text-xs text-emerald-700">
-                  Transfer completed — Students & Alums updated.
-                </p>
               ) : null}
             </div>
 
@@ -331,19 +271,6 @@ export function IntakeDetailDrawer({
         ) : null}
       </Drawer>
 
-      <TransferConfirmationModal
-        open={transferModalOpen}
-        preview={transferPreview}
-        loadingPreview={loadingTransferPreview}
-        transferring={transferring}
-        onConfirm={() => void confirmTransfer()}
-        onCancel={() => {
-          if (!transferring) {
-            setTransferModalOpen(false);
-            setTransferPreview(null);
-          }
-        }}
-      />
     </>
   );
 }

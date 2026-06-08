@@ -33,7 +33,15 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { BobImportProgress } from "@/components/BobImportProgress";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { IntakeQueueTabs } from "@/features/bob/inbox/IntakeQueueTabs";
+import { BulkTransferModal } from "@/components/bob/BulkTransferModal";
+import { IntakeBulkTransferBar } from "@/features/bob/inbox/IntakeBulkTransferBar";
 import { IntakeDetailDrawer } from "@/features/bob/inbox/IntakeDetailDrawer";
+import {
+  bulkTransferBobRecruitment,
+  previewBobBulkRecruitmentTransfer,
+  type BobBulkTransferPreviewResponse,
+  type BobBulkTransferResult,
+} from "@/platform/api/bob/recruitment";
 import { curatedInboxListColumns } from "@/features/bob/inbox/curatedListColumns";
 import {
   getIntakeQueue,
@@ -117,6 +125,17 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     label: string;
   } | null>(null);
   const deleteMutation = useDeleteBobRecruitment();
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkPhase, setBulkPhase] = useState<"preview" | "result">("preview");
+  const [bulkPreview, setBulkPreview] =
+    useState<BobBulkTransferPreviewResponse | null>(null);
+  const [bulkResult, setBulkResult] = useState<BobBulkTransferResult | null>(
+    null,
+  );
+  const [bulkLoadingPreview, setBulkLoadingPreview] = useState(false);
+  const [bulkTransferring, setBulkTransferring] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedFilters(filters), 300);
@@ -208,8 +227,85 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     });
   }
 
+  function toggleRowSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) {
+        for (const id of transferableRowIds) next.delete(id);
+      } else {
+        for (const id of transferableRowIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function runBulkPreview() {
+    const ids = Array.from(selectedIds);
+    setBulkLoadingPreview(true);
+    setBulkPreview(null);
+    setBulkResult(null);
+    setBulkPhase("preview");
+    try {
+      const preview = await previewBobBulkRecruitmentTransfer(ids);
+      setBulkPreview(preview);
+    } catch {
+      setBulkModalOpen(false);
+    } finally {
+      setBulkLoadingPreview(false);
+    }
+  }
+
+  function openBulkTransferModal() {
+    setBulkModalOpen(true);
+    setBulkPreview(null);
+    setBulkResult(null);
+    setBulkPhase("preview");
+    void runBulkPreview();
+  }
+
+  async function confirmBulkTransfer() {
+    const ids = Array.from(selectedIds);
+    setBulkTransferring(true);
+    try {
+      const result = await bulkTransferBobRecruitment(ids);
+      setBulkResult(result);
+      setBulkPhase("result");
+      setSelectedIds(new Set());
+      await refetchList();
+    } finally {
+      setBulkTransferring(false);
+    }
+  }
+
+  function closeBulkModal() {
+    if (bulkTransferring) return;
+    setBulkModalOpen(false);
+    setBulkPreview(null);
+    setBulkResult(null);
+    setBulkPhase("preview");
+  }
+
   const totalRecords = listData?.total ?? 0;
   const rows = listData?.records ?? [];
+  const transferableRowIds = useMemo(
+    () =>
+      rows
+        .filter((r) => !r.studentsAlumsAirtableRecordId)
+        .map((r) => r.id),
+    [rows],
+  );
+  const allOnPageSelected =
+    transferableRowIds.length > 0 &&
+    transferableRowIds.every((id) => selectedIds.has(id));
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const pageItems = buildPageItems(totalPages, currentPage);
@@ -240,7 +336,7 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
           title="Applications & pipeline"
           description={
             intakeTableMeta
-              ? `${intakeTableMeta.name} — review, transfer, and approve youth applications`
+              ? `${intakeTableMeta.name} — bulk transfer, review, and approve youth applications`
               : "Youth Apps & Intake — sync from Airtable to begin"
           }
           actions={
@@ -374,7 +470,17 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left sticky left-0 bg-gray-50 z-10 min-w-[200px] text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-3 py-3 text-left w-10 sticky left-0 bg-gray-50 z-20">
+                        <input
+                          type="checkbox"
+                          checked={allOnPageSelected}
+                          disabled={transferableRowIds.length === 0}
+                          onChange={toggleSelectAllOnPage}
+                          aria-label="Select all on page for bulk transfer"
+                          className="rounded border-gray-300"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left sticky left-10 bg-gray-50 z-10 min-w-[200px] text-xs font-medium text-gray-500 uppercase">
                         Name
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
@@ -423,18 +529,35 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
                       const programCount = Array.isArray(r.programRecordIds)
                         ? r.programRecordIds.length
                         : 0;
+                      const alreadyTransferred = Boolean(
+                        r.studentsAlumsAirtableRecordId,
+                      );
+                      const bulkSelected = selectedIds.has(r.id);
 
                       return (
                         <tr
                           key={r.id}
                           className={`cursor-pointer transition-colors ${
-                            selected
+                            selected || bulkSelected
                               ? "bg-orange-50"
                               : "hover:bg-orange-50/50"
                           }`}
                           onClick={() => openRecord(r.id)}
                         >
-                          <td className="px-4 py-3 sticky left-0 bg-inherit z-1">
+                          <td
+                            className="px-3 py-3 sticky left-0 bg-inherit z-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={bulkSelected}
+                              disabled={alreadyTransferred}
+                              onChange={() => toggleRowSelected(r.id)}
+                              aria-label={`Select ${name} for bulk transfer`}
+                              className="rounded border-gray-300 disabled:opacity-40"
+                            />
+                          </td>
+                          <td className="px-4 py-3 sticky left-10 bg-inherit z-1">
                             <div className="flex items-center gap-3 min-w-[200px]">
                               <div className="w-9 h-9 rounded-xl bg-linear-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center text-xs font-semibold">
                                 {initialsOf(name)}
@@ -550,6 +673,29 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
           </div>
         </>
       )}
+
+      <IntakeBulkTransferBar
+        selectedCount={selectedIds.size}
+        pageCount={transferableRowIds.length}
+        allOnPageSelected={allOnPageSelected}
+        onSelectAllPage={toggleSelectAllOnPage}
+        onClear={() => setSelectedIds(new Set())}
+        onPreviewTransfer={openBulkTransferModal}
+        busy={bulkLoadingPreview || bulkTransferring}
+      />
+
+      <BulkTransferModal
+        open={bulkModalOpen}
+        phase={bulkPhase}
+        selectedCount={selectedIds.size}
+        preview={bulkPreview}
+        result={bulkResult}
+        loadingPreview={bulkLoadingPreview}
+        transferring={bulkTransferring}
+        onPreview={() => void runBulkPreview()}
+        onConfirm={() => void confirmBulkTransfer()}
+        onClose={closeBulkModal}
+      />
 
       <IntakeDetailDrawer
         recordId={selectedId}
