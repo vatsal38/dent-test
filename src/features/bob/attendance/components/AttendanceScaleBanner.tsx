@@ -4,11 +4,11 @@ import type { AttendanceScaleMeta } from "../types";
 
 export function AttendanceScaleBanner({
   scale,
-  onSelectPod,
+  onSelectTrack,
   inline = false,
 }: {
   scale: AttendanceScaleMeta;
-  onSelectPod?: () => void;
+  onSelectTrack?: () => void;
   inline?: boolean;
 }) {
   if (!scale.requiresPodScope && !scale.recommendPodScope && !scale.weekViewHeavy) {
@@ -17,20 +17,20 @@ export function AttendanceScaleBanner({
 
   if (inline) {
     const message = scale.requiresPodScope
-      ? `${scale.enrollmentCount} students — select a pod for best performance`
-      : `${scale.enrollmentCount} in scope${scale.recommendPodScope ? " · filter by pod" : ""}`;
+      ? `${scale.enrollmentCount} students — select a track for best performance`
+      : `${scale.enrollmentCount} in scope${scale.recommendPodScope ? " · filter by track" : ""}`;
     return (
       <p className="text-[11px] text-gray-500 shrink-0">
         {message}
-        {scale.requiresPodScope && onSelectPod ? (
+        {scale.requiresPodScope && onSelectTrack ? (
           <>
             {" · "}
             <button
               type="button"
-              onClick={onSelectPod}
+              onClick={onSelectTrack}
               className="text-orange-600 hover:underline font-medium"
             >
-              Pick pod
+              Pick track
             </button>
           </>
         ) : null}
@@ -42,14 +42,14 @@ export function AttendanceScaleBanner({
     return (
       <div className="mb-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-950">
         <span className="font-medium">{scale.enrollmentCount} students</span>
-        {" — select a pod for faster loading. "}
-        {onSelectPod ? (
+        {" — select a track for faster loading. "}
+        {onSelectTrack ? (
           <button
             type="button"
-            onClick={onSelectPod}
+            onClick={onSelectTrack}
             className="font-medium text-orange-800 underline"
           >
-            Open pod picker
+            Open track picker
           </button>
         ) : null}
       </div>
@@ -59,8 +59,8 @@ export function AttendanceScaleBanner({
   return (
     <div className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-950">
       {scale.enrollmentCount} students in scope
-      {scale.recommendPodScope ? " — filter by pod for faster scanning." : ""}
-      {scale.weekViewHeavy ? " Week view works best per pod." : ""}
+      {scale.recommendPodScope ? " — filter by track for faster scanning." : ""}
+      {scale.weekViewHeavy ? " Week view works best with a track selected." : ""}
     </div>
   );
 }

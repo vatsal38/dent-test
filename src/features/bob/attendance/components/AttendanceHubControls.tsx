@@ -1,8 +1,10 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { Ref } from "react";
 import type { AttendanceIssueSummary, AttendanceWorkspaceData, IssueFilter } from "../types";
 import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
+import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect";
+import type { RosterTrackOption } from "@/lib/bobRosterTrackOptions";
 
 const PRIMARY_FILTERS: Array<{ id: IssueFilter; label: string }> = [
   { id: "missing", label: "Gaps" },
@@ -97,11 +99,11 @@ function MetricPill({
 export function AttendanceHubControls({
   focusDate,
   onFocusDateChange,
-  podFilter,
-  onPodFilterChange,
-  podSelectRef,
-  pods,
-  requiresPodScope,
+  trackFilter,
+  onTrackFilterChange,
+  trackOptions,
+  tracksLoading,
+  requiresScope,
   viewMode,
   onViewModeChange,
   weekViewDisabled,
@@ -115,14 +117,15 @@ export function AttendanceHubControls({
   totalRows,
   onPageChange,
   pageSize = ATTENDANCE_PAGE_SIZE,
+  trackSelectRef,
 }: {
   focusDate: string;
   onFocusDateChange: (date: string) => void;
-  podFilter: string;
-  onPodFilterChange: (podId: string) => void;
-  podSelectRef?: RefObject<HTMLSelectElement | null>;
-  pods: Array<{ id: string; name: string }>;
-  requiresPodScope: boolean;
+  trackFilter: string;
+  onTrackFilterChange: (track: string) => void;
+  trackOptions: RosterTrackOption[];
+  tracksLoading?: boolean;
+  requiresScope: boolean;
   viewMode: "day" | "week";
   onViewModeChange: (mode: "day" | "week") => void;
   weekViewDisabled: boolean;
@@ -136,6 +139,7 @@ export function AttendanceHubControls({
   totalRows: number;
   onPageChange: (page: number) => void;
   pageSize?: number;
+  trackSelectRef?: Ref<HTMLSelectElement>;
 }) {
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const start = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -152,21 +156,15 @@ export function AttendanceHubControls({
           onChange={(e) => onFocusDateChange(e.target.value)}
           className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
         />
-        <select
-          ref={podSelectRef}
-          value={podFilter}
-          onChange={(e) => onPodFilterChange(e.target.value)}
-          className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 min-w-[120px] max-w-[180px]"
-        >
-          <option value="">
-            {requiresPodScope ? "Select pod…" : "All pods"}
-          </option>
-          {pods.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        <RosterTrackScopeSelect
+          ref={trackSelectRef}
+          value={trackFilter}
+          onChange={onTrackFilterChange}
+          options={trackOptions}
+          loading={tracksLoading}
+          emptyLabel={requiresScope ? "Select track…" : "All tracks"}
+          className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500 min-w-[140px] max-w-[220px]"
+        />
 
         <Segmented
           value={viewMode}

@@ -103,6 +103,8 @@ export interface BobStudentsFacetsResponse {
   grades: BobStudentsFacetOption[];
   tracks: BobStudentsFacetOption[];
   coaches: BobStudentsFacetOption[];
+  ywStatuses?: BobStudentsFacetOption[];
+  bob26TrackSites?: BobStudentsFacetOption[];
   pipeline: {
     total: number;
     synced: number;
@@ -122,6 +124,8 @@ export interface BobStudentsListParams {
   /** Filter by onboarding gates (active cohort only). */
   onboardingReady?: "yes" | "no";
   search?: string;
+  /** Roster track / program label (from facets — partial match). */
+  track?: string;
   /** JSON string: { match, conditions } — Airtable-style filter builder */
   filters?: string;
   sortBy?: "name" | "label";
@@ -148,6 +152,7 @@ export async function getBobStudents(
   if (params?.bobCohort) sp.set("bobCohort", params.bobCohort);
   if (params?.onboardingReady) sp.set("onboardingReady", params.onboardingReady);
   if (params?.search) sp.set("search", params.search);
+  if (params?.track) sp.set("track", params.track);
   if (params?.filters) sp.set("filters", params.filters);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);
   if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);

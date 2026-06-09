@@ -11,7 +11,6 @@ import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { filterDaysByHealth } from "./model/computeWorkspace";
 import { ATTENDANCE_PAGE_SIZE } from "./model/scale";
 import { AttendanceHubControls } from "./components/AttendanceHubControls";
-import { AttendancePodQueue } from "./components/AttendancePodQueue";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
 import { DailyAttendanceTable } from "./components/DailyAttendanceTable";
 import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
@@ -32,17 +31,19 @@ import {
   startBobAttendanceImport,
 } from "@/platform/api/bob";
 import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttendance";
+import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
+import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 
 export function AttendanceHubPage() {
   const searchParams = useSearchParams();
-  const podSelectRef = useRef<HTMLSelectElement>(null);
+  const trackSelectRef = useRef<HTMLSelectElement>(null);
   const initialDate =
     searchParams?.get("date") || new Date().toISOString().slice(0, 10);
-  const initialPod = searchParams?.get("pod") || "";
+  const initialTrack = searchParams?.get("track") || "";
   const initialFilter = (searchParams?.get("filter") || "all") as IssueFilter;
 
   const [focusDate, setFocusDate] = useState(initialDate);
-  const [podFilter, setPodFilter] = useState(initialPod);
+  const [trackFilter, setTrackFilter] = useState(initialTrack);
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [healthFilter, setHealthFilter] = useState<IssueFilter>(initialFilter);
   const [selectedDay, setSelectedDay] = useState<StudentDayAttendance | null>(
@@ -60,7 +61,7 @@ export function AttendanceHubPage() {
     // Keep UI state in sync with URL params so alert clicks apply filters.
     const nextDate =
       searchParams?.get("date") || new Date().toISOString().slice(0, 10);
-    const nextPod = searchParams?.get("pod") || "";
+    const nextTrack = searchParams?.get("track") || "";
     const rawFilter = (searchParams?.get("filter") || "all") as string;
     const allowed: IssueFilter[] = [
       "all",
@@ -79,13 +80,12 @@ export function AttendanceHubPage() {
       : "all";
 
     setFocusDate((cur) => (cur === nextDate ? cur : nextDate));
-    setPodFilter((cur) => (cur === nextPod ? cur : nextPod));
+    setTrackFilter((cur) => (cur === nextTrack ? cur : nextTrack));
     setHealthFilter((cur) => (cur === nextFilter ? cur : nextFilter));
   }, [searchParams]);
 
   const {
     workspace,
-    pods,
     loading,
     error,
     isRefreshing,
@@ -94,8 +94,15 @@ export function AttendanceHubPage() {
   } = useAttendanceWorkspace({
     focusDate,
     weekMode: viewMode === "week",
-    podFilter,
+    trackFilter,
   });
+
+  const { data: rosterFacets, isLoading: rosterFacetsLoading } =
+    useBobStudentsFacets();
+  const trackOptions = useMemo(
+    () => rosterTrackFilterOptions(rosterFacets ?? null),
+    [rosterFacets],
+  );
 
   const latestImportedDate = boundsQuery.data?.latestDate ?? null;
   const boundsTotal = boundsQuery.data?.total ?? 0;
@@ -118,24 +125,13 @@ export function AttendanceHubPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, podFilter, healthFilter, focusDate, viewMode]);
+  }, [debouncedSearch, trackFilter, healthFilter, focusDate, viewMode]);
 
   useEffect(() => {
-    if (workspace.scale.weekViewHeavy && viewMode === "week" && !podFilter) {
+    if (workspace.scale.weekViewHeavy && viewMode === "week" && !trackFilter) {
       setViewMode("day");
     }
-  }, [workspace.scale.weekViewHeavy, viewMode, podFilter]);
-
-  useEffect(() => {
-    // For very large rosters, org-wide queries are capped. Auto-pick a pod to keep
-    // health indicators and alerts accurate, without forcing extra clicks.
-    if (workspace.scale.requiresPodScope && !podFilter && pods.length > 0) {
-      setPodFilter(pods[0].id);
-      setViewMode("day");
-      setSelectedDay(null);
-      setPage(1);
-    }
-  }, [workspace.scale.requiresPodScope, podFilter, pods]);
+  }, [workspace.scale.weekViewHeavy, viewMode, trackFilter]);
 
   const weekDates = useMemo(() => {
     if (viewMode !== "week") return [focusDate];
@@ -215,8 +211,6 @@ export function AttendanceHubPage() {
       </div>
     );
   }
-
-  const showPodQueue = !podFilter && pods.length > 1;
 
   return (
     <div className={`p-4 sm:p-5 lg:p-6 ${isRefreshing ? "opacity-90" : ""}`}>
@@ -344,7 +338,7 @@ export function AttendanceHubPage() {
           />
           <BobPermissionGuard permission="attendance.mark" silent>
             <BobActionButton
-              href={`/app/bob/attendance/mark?date=${focusDate}${podFilter ? `&pod=${podFilter}` : ""}`}
+              href={`/app/bob/attendance/mark?date=${focusDate}${trackFilter ? `&track=${encodeURIComponent(trackFilter)}` : ""}`}
               label="Issue triage"
               icon={<FiZap />}
               variant="primary"
@@ -364,7 +358,7 @@ export function AttendanceHubPage() {
         />
         <AttendanceScaleBanner
           scale={workspace.scale}
-          onSelectPod={() => podSelectRef.current?.focus()}
+          onSelectTrack={() => trackSelectRef.current?.focus()}
           inline
         />
       </div>
@@ -393,26 +387,17 @@ export function AttendanceHubPage() {
         </div>
       ) : null}
 
-      {showPodQueue ? (
-        <AttendancePodQueue
-          podStats={workspace.podStats}
-          focusDate={focusDate}
-          selectedPodId={podFilter}
-          onSelectPod={setPodFilter}
-        />
-      ) : null}
-
       <AttendanceHubControls
         focusDate={focusDate}
         onFocusDateChange={setFocusDate}
-        podFilter={podFilter}
-        onPodFilterChange={setPodFilter}
-        podSelectRef={podSelectRef}
-        pods={pods}
-        requiresPodScope={workspace.scale.requiresPodScope}
+        trackFilter={trackFilter}
+        onTrackFilterChange={setTrackFilter}
+        trackOptions={trackOptions}
+        tracksLoading={rosterFacetsLoading}
+        requiresScope={workspace.scale.requiresPodScope}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        weekViewDisabled={workspace.scale.weekViewHeavy && !podFilter}
+        weekViewDisabled={workspace.scale.weekViewHeavy && !trackFilter}
         healthFilter={healthFilter}
         onHealthFilterChange={setHealthFilter}
         summary={workspace.summary}
@@ -422,9 +407,10 @@ export function AttendanceHubPage() {
         page={page}
         totalRows={rowCount}
         onPageChange={setPage}
+        trackSelectRef={trackSelectRef}
       />
 
-      {!workspace.scale.requiresPodScope || podFilter ? (
+      {!workspace.scale.requiresPodScope || trackFilter ? (
         <>
           <DailyAttendanceTable
             days={tableDays}
@@ -438,12 +424,11 @@ export function AttendanceHubPage() {
         </>
       ) : (
         <div className="p-8 text-center bg-white border border-gray-200 rounded-lg text-sm text-gray-600">
-          Choose a pod above to load the student grid, or use the pod queue to
-          jump to pods with open gaps.
+          Choose a track above to load the student grid for large rosters.
         </div>
       )}
 
-      {podFilter || !workspace.scale.recommendPodScope ? (
+      {trackFilter || !workspace.scale.recommendPodScope ? (
         <section className="mt-8">
           <h2 className="text-sm font-semibold text-gray-900 mb-3">
             Pod analytics

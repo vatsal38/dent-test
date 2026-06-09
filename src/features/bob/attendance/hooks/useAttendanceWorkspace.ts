@@ -20,6 +20,7 @@ export interface UseAttendanceWorkspaceOptions {
   focusDate: string;
   weekMode?: boolean;
   podFilter?: string;
+  trackFilter?: string;
 }
 
 function enrollmentIdsFromPods(
@@ -38,10 +39,11 @@ export function useAttendanceWorkspace({
   focusDate,
   weekMode = false,
   podFilter = "",
+  trackFilter = "",
 }: UseAttendanceWorkspaceOptions) {
   const { access } = useBobAccess();
-  // Pod filter is explicit only — do not apply defaultPodId (hides unassigned Airtable rows).
   const effectivePod = podFilter;
+  const effectiveTrack = trackFilter;
 
   const weekMonday = getWeekMonday(new Date(focusDate + "T12:00:00"));
   const startDate = weekMode ? weekMonday : focusDate;
@@ -101,6 +103,7 @@ export function useAttendanceWorkspace({
         startDate: weekMode ? startDate : undefined,
         endDate: weekMode ? endDate : undefined,
         podFilter: effectivePod || undefined,
+        trackFilter: effectiveTrack || undefined,
         pods,
         students,
         records,
@@ -113,6 +116,7 @@ export function useAttendanceWorkspace({
       startDate,
       endDate,
       effectivePod,
+      effectiveTrack,
       pods,
       students,
       records,

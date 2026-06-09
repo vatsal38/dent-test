@@ -6,33 +6,30 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/Skeleton';
 
-const DEFAULT_DEV_PASSWORD = 'BobTest2026!';
+const BOB_TEST_PASSWORD = 'BobTest2026!';
 
-const DEV_TEST_ACCOUNTS =
-  process.env.NODE_ENV === 'development'
-    ? [
-        {
-          role: 'Admin',
-          email: 'bob.admin@dent.test',
-          password: DEFAULT_DEV_PASSWORD,
-        },
-        {
-          role: 'Program Manager',
-          email: 'bob.pm@dent.test',
-          password: DEFAULT_DEV_PASSWORD,
-        },
-        {
-          role: 'Site Supporter',
-          email: 'bob.site@dent.test',
-          password: DEFAULT_DEV_PASSWORD,
-        },
-        {
-          role: 'Coach',
-          email: 'bob.coach@dent.test',
-          password: DEFAULT_DEV_PASSWORD,
-        },
-      ]
-    : [];
+const BOB_TEST_ACCOUNTS = [
+  {
+    role: 'Admin',
+    email: 'bob.admin@dent.test',
+    password: BOB_TEST_PASSWORD,
+  },
+  {
+    role: 'Program Manager',
+    email: 'bob.pm@dent.test',
+    password: BOB_TEST_PASSWORD,
+  },
+  {
+    role: 'Site Supporter',
+    email: 'bob.site@dent.test',
+    password: BOB_TEST_PASSWORD,
+  },
+  {
+    role: 'Coach',
+    email: 'bob.coach@dent.test',
+    password: BOB_TEST_PASSWORD,
+  },
+];
 
 function firebaseAuthErrorMessage(error: unknown): string {
   const code =
@@ -64,7 +61,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [showDevAccounts, setShowDevAccounts] = useState(false);
+  const [showTestAccounts, setShowTestAccounts] = useState(false);
 
   const fromParam = searchParams.get('from');
   const defaultHome = user?.isAdmin ? '/app' : '/app/bob';
@@ -108,7 +105,7 @@ function LoginForm() {
     }
   };
 
-  const fillDevAccount = (accountEmail: string, accountPassword: string) => {
+  const fillTestAccount = (accountEmail: string, accountPassword: string) => {
     setEmail(accountEmail);
     setPassword(accountPassword);
     setError(null);
@@ -239,52 +236,46 @@ function LoginForm() {
             Continue with Google
           </button>
 
-          {DEV_TEST_ACCOUNTS.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setShowDevAccounts(!showDevAccounts)}
-                className="text-sm font-medium text-orange-600 hover:text-orange-700"
-              >
-                {showDevAccounts ? 'Hide' : 'Show'} BoB test accounts
-              </button>
-              {showDevAccounts && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-gray-500">
-                    Run{' '}
-                    <code className="bg-gray-100 px-1 rounded">
-                      npm run seed:bob-rbac:auth
-                    </code>{' '}
-                    in dent-be first. Password:{' '}
-                    <code className="bg-gray-100 px-1 rounded">
-                      {DEFAULT_DEV_PASSWORD}
-                    </code>
-                  </p>
-                  <ul className="space-y-1">
-                    {DEV_TEST_ACCOUNTS.map((a) => (
-                      <li key={a.email}>
-                        <button
-                          type="button"
-                          onClick={() => fillDevAccount(a.email, a.password)}
-                          className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-orange-50 text-gray-700"
-                        >
-                          <span className="font-medium text-gray-900">
-                            {a.role}
-                          </span>
-                          <span className="text-gray-500 block truncate">
-                            {a.email}
-                          </span>
-                          <span className="text-gray-400 text-xs">
-                            password: {a.password}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setShowTestAccounts(!showTestAccounts)}
+              className="text-sm font-medium text-orange-600 hover:text-orange-700"
+            >
+              {showTestAccounts ? 'Hide' : 'Show'} BoB test accounts
+            </button>
+            {showTestAccounts && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-gray-500">
+                  Demo logins for BoB role testing. Password for all accounts:{' '}
+                  <code className="bg-gray-100 px-1 rounded">
+                    {BOB_TEST_PASSWORD}
+                  </code>
+                </p>
+                <ul className="space-y-1">
+                  {BOB_TEST_ACCOUNTS.map((a) => (
+                    <li key={a.email}>
+                      <button
+                        type="button"
+                        onClick={() => fillTestAccount(a.email, a.password)}
+                        className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-orange-50 text-gray-700"
+                      >
+                        <span className="font-medium text-gray-900">
+                          {a.role}
+                        </span>
+                        <span className="text-gray-500 block truncate">
+                          {a.email}
+                        </span>
+                        <span className="text-gray-400 text-xs">
+                          password: {a.password}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

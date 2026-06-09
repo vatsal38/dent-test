@@ -1,6 +1,13 @@
 import type { BobRosterSchemaField, BobStudentsFacetsResponse } from "@/lib/api";
 import { importantRosterTableColumns } from "@/lib/bobIntakeColumns";
 import {
+  isSystemFilterRosterField,
+  isYouthWorksStatusField,
+  isTrackSiteField,
+  isBob26TrackField,
+  ROSTER_TRACK_PLACEMENT_2026_FIELD,
+} from "@/lib/bobRosterFieldConstants";
+import {
   FILTER_OPERATORS,
   conditionIsComplete,
   formatBooleanValue,
@@ -100,10 +107,31 @@ export function buildFilterFieldCatalog(
     },
     {
       id: "sys:track",
-      label: "Track",
+      label: "Track site",
       group: "Program",
       kind: "select",
       path: "track",
+    },
+    {
+      id: "sys:bob26Track",
+      label: "BoB '26 track",
+      group: "Program",
+      kind: "select",
+      path: "bob26Track",
+    },
+    {
+      id: "sys:trackPlacement2026",
+      label: "2026 Track Placement",
+      group: "Program",
+      kind: "select",
+      path: "trackPlacement2026",
+    },
+    {
+      id: "sys:ywStatus",
+      label: "Youth Works status",
+      group: "Program",
+      kind: "select",
+      path: "ywStatus",
     },
     {
       id: "sys:coach",
@@ -114,7 +142,9 @@ export function buildFilterFieldCatalog(
     },
   ];
 
-  const airtable = importantRosterTableColumns(schema).map((f) => ({
+  const airtable = importantRosterTableColumns(schema)
+    .filter((f) => !isSystemFilterRosterField(f.name))
+    .map((f) => ({
     id: `airtable:${f.name}`,
     label: f.name,
     group: "Airtable fields",
@@ -179,26 +209,55 @@ export function facetOptionsForField(
       return ["yes", "no"];
     case "sys:track":
       return facets.tracks.map((x) => x.value);
+    case "sys:bob26Track":
+      return (facets.bob26TrackSites ?? []).map((x) => x.value);
+    case "sys:trackPlacement2026":
+      return facets.tracks
+        .map((x) => x.value)
+        .filter((v) => /2026|bet on baltimore/i.test(v));
+    case "sys:ywStatus":
+      return (facets.ywStatuses ?? []).map((x) => x.value);
     case "sys:coach":
       return facets.coaches.map((x) => x.value);
     case "sys:school":
       return facets.schools.map((x) => x.value);
     default:
       if (fieldId.startsWith("airtable:")) {
-        const name = fieldId.slice("airtable:".length);
-        if (/school|organization/i.test(name)) {
-          return facets.schools.map((x) => x.value);
-        }
-        if (/grade/i.test(name)) {
-          return facets.grades.map((x) => x.value);
-        }
-        if (/track/i.test(name)) {
-          return facets.tracks.map((x) => x.value);
-        }
-        if (/coach/i.test(name)) {
-          return facets.coaches.map((x) => x.value);
-        }
+        return facetOptionsForAirtableFieldName(
+          fieldId.slice("airtable:".length),
+          facets,
+        );
       }
       return [];
   }
+}
+
+function facetOptionsForAirtableFieldName(
+  name: string,
+  facets: BobStudentsFacetsResponse,
+): string[] {
+  if (/school|organization/i.test(name)) {
+    return facets.schools.map((x) => x.value);
+  }
+  if (/grade/i.test(name)) {
+    return facets.grades.map((x) => x.value);
+  }
+  if (isTrackSiteField(name) || /^track$/i.test(name)) {
+    return facets.tracks.map((x) => x.value);
+  }
+  if (isBob26TrackField(name)) {
+    return (facets.bob26TrackSites ?? []).map((x) => x.value);
+  }
+  if (name === ROSTER_TRACK_PLACEMENT_2026_FIELD) {
+    return facets.tracks
+      .map((x) => x.value)
+      .filter((v) => /2026|bet on baltimore/i.test(v));
+  }
+  if (/coach/i.test(name)) {
+    return facets.coaches.map((x) => x.value);
+  }
+  if (isYouthWorksStatusField(name)) {
+    return (facets.ywStatuses ?? []).map((x) => x.value);
+  }
+  return [];
 }

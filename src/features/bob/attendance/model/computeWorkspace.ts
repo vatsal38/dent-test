@@ -25,6 +25,7 @@ import {
   UNASSIGNED_POD_ID,
 } from "./buildAttendanceIndex";
 import { resolvePodName, resolveSiteName, resolveStudentName } from "./resolveDisplay";
+import { studentMatchesRosterTrack } from "@/lib/bobRosterTrackOptions";
 
 function buildDiscrepancies(
   days: ReturnType<typeof buildStudentDayAttendance>,
@@ -162,6 +163,7 @@ function buildAlerts(
   summary: AttendanceWorkspaceData["summary"],
   openDiscrepancies: number,
   podFilter?: string,
+  scoped?: boolean,
 ): { alerts: AttendanceAlert[]; truncated: number } {
   const alerts: AttendanceAlert[] = [];
 
@@ -181,7 +183,7 @@ function buildAlerts(
         severity: "critical",
         title: `${gaps} gap${gaps === 1 ? "" : "s"} in ${p.podName}`,
         body: `${focusDate} — ${p.complete}/${p.expected} complete`,
-        href: `/app/bob/attendance?pod=${p.podId}&date=${focusDate}&filter=missing`,
+        href: `/app/bob/attendance?date=${focusDate}&filter=missing`,
         count: gaps,
       });
     } else if (p.late > 0) {
@@ -189,7 +191,7 @@ function buildAlerts(
         id: `pod-late-${p.podId}`,
         severity: "warning",
         title: `${p.late} late in ${p.podName}`,
-        href: `/app/bob/attendance?pod=${p.podId}&date=${focusDate}&filter=late`,
+        href: `/app/bob/attendance?date=${focusDate}&filter=late`,
         count: p.late,
       });
     }
@@ -206,7 +208,7 @@ function buildAlerts(
     });
   }
 
-  if (summary.late > 0 && !podFilter) {
+  if (summary.late > 0 && !scoped) {
     alerts.push({
       id: "late-today",
       severity: "warning",
@@ -240,6 +242,7 @@ export interface ComputeWorkspaceInput {
   startDate?: string;
   endDate?: string;
   podFilter?: string;
+  trackFilter?: string;
   pods: BobPod[];
   students: BobStudent[];
   records: BobAttendance[];
@@ -255,6 +258,7 @@ export function computeAttendanceWorkspace(
     startDate,
     endDate,
     podFilter,
+    trackFilter,
     pods,
     students,
     records,
@@ -293,12 +297,20 @@ export function computeAttendanceWorkspace(
     });
   }
 
-  const days = buildStudentDayAttendance(
+  let days = buildStudentDayAttendance(
     airtableRecords,
     enrollments,
     dates,
     studentById,
   );
+
+  const trackTerm = String(trackFilter || "").trim();
+  if (trackTerm) {
+    days = days.filter((d) => {
+      const student = studentById.get(d.studentId);
+      return student && studentMatchesRosterTrack(student, trackTerm);
+    });
+  }
 
   const discrepancies = buildDiscrepancies(days, studentById, podById);
   const openDiscrepancies = discrepancies.filter((d) => d.status === "open").length;
@@ -329,12 +341,16 @@ export function computeAttendanceWorkspace(
   };
 
   const podStats = buildPodStats(days, pods, podById, focusDate);
+  const scoped = Boolean(
+    String(podFilter || "").trim() || String(trackFilter || "").trim(),
+  );
   const { alerts, truncated } = buildAlerts(
     focusDate,
     podStats,
     summary,
     openDiscrepancies,
     podFilter,
+    scoped,
   );
 
   return {
@@ -352,11 +368,17 @@ export function computeAttendanceWorkspace(
     scale: {
       enrollmentCount,
       requiresPodScope:
-        enrollmentCount > POD_SCOPE_ENROLLMENT_THRESHOLD && !podFilter,
+        enrollmentCount > POD_SCOPE_ENROLLMENT_THRESHOLD &&
+        !podFilter &&
+        !trackTerm,
       recommendPodScope:
-        enrollmentCount > POD_SCOPE_ENROLLMENT_THRESHOLD / 2 && !podFilter,
+        enrollmentCount > POD_SCOPE_ENROLLMENT_THRESHOLD / 2 &&
+        !podFilter &&
+        !trackTerm,
       weekViewHeavy:
-        enrollmentCount > WEEK_VIEW_ENROLLMENT_THRESHOLD && !podFilter,
+        enrollmentCount > WEEK_VIEW_ENROLLMENT_THRESHOLD &&
+        !podFilter &&
+        !trackTerm,
       studentsLoaded: students.length,
       studentsRequested,
       attendanceRecordsLoaded: records.length,

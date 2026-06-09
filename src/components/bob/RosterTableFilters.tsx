@@ -18,6 +18,8 @@ import {
   type RosterFilterCondition,
   type RosterTableFilterState,
 } from "@/lib/bobRosterFilters";
+import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect";
+import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 
 export type { RosterTableFilterState } from "@/lib/bobRosterFilters";
 export {
@@ -266,6 +268,8 @@ export function RosterRecordsToolbar({
   facets,
   facetsLoading,
   schema,
+  trackFilter = "",
+  onTrackFilterChange,
   drawerOpen,
   onDrawerOpenChange,
   onSearchChange,
@@ -276,6 +280,8 @@ export function RosterRecordsToolbar({
   facets: BobStudentsFacetsResponse | null;
   facetsLoading?: boolean;
   schema: BobRosterSchemaField[] | null;
+  trackFilter?: string;
+  onTrackFilterChange?: (track: string) => void;
   drawerOpen: boolean;
   onDrawerOpenChange: (open: boolean) => void;
   onSearchChange: (search: string) => void;
@@ -285,6 +291,10 @@ export function RosterRecordsToolbar({
   const [draft, setDraft] = useState(filters);
   const drawerActive = countDrawerRosterFilters(filters);
   const fieldCatalog = useMemo(() => buildFilterFieldCatalog(schema), [schema]);
+  const trackOptions = useMemo(
+    () => rosterTrackFilterOptions(facets),
+    [facets],
+  );
 
   useEffect(() => {
     if (drawerOpen) {
@@ -348,6 +358,14 @@ export function RosterRecordsToolbar({
             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         </div>
+        {onTrackFilterChange ? (
+          <RosterTrackScopeSelect
+            value={trackFilter}
+            onChange={onTrackFilterChange}
+            options={trackOptions}
+            loading={facetsLoading}
+          />
+        ) : null}
         <button
           type="button"
           onClick={() => onDrawerOpenChange(true)}

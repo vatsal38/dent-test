@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/Skeleton";
+import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect";
+import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
+import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { getWeekMonday, getWeekSunday } from "./weekDates";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { DiscrepancyList } from "./components/DiscrepancyList";
@@ -12,19 +15,26 @@ import type { AttendanceDiscrepancy, StudentDayAttendance } from "./types";
 
 export function AttendanceDiscrepanciesPage() {
   const searchParams = useSearchParams();
-  const initialPod = searchParams?.get("pod") || "";
+  const initialTrack = searchParams?.get("track") || "";
   const initialDate = searchParams?.get("date") || new Date().toISOString().slice(0, 10);
 
   const [weekOf, setWeekOf] = useState(() => getWeekMonday(new Date(initialDate + "T12:00:00")));
-  const [podFilter, setPodFilter] = useState(initialPod);
+  const [trackFilter, setTrackFilter] = useState(initialTrack);
   const [detailDay, setDetailDay] = useState<StudentDayAttendance | null>(null);
 
   const focusDate = weekOf;
-  const { workspace, pods, loading, error } = useAttendanceWorkspace({
+  const { workspace, loading, error } = useAttendanceWorkspace({
     focusDate,
     weekMode: true,
-    podFilter,
+    trackFilter,
   });
+
+  const { data: rosterFacets, isLoading: rosterFacetsLoading } =
+    useBobStudentsFacets();
+  const trackOptions = useMemo(
+    () => rosterTrackFilterOptions(rosterFacets ?? null),
+    [rosterFacets],
+  );
 
   const openItems = useMemo(
     () => workspace.discrepancies.filter((d) => d.status === "open"),
@@ -90,18 +100,14 @@ export function AttendanceDiscrepanciesPage() {
             onChange={(e) => setWeekOf(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
           />
-          <select
-            value={podFilter}
-            onChange={(e) => setPodFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-          >
-            <option value="">All pods</option>
-            {pods.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <RosterTrackScopeSelect
+            value={trackFilter}
+            onChange={setTrackFilter}
+            options={trackOptions}
+            loading={rosterFacetsLoading}
+            emptyLabel="All tracks"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[10rem] max-w-[16rem]"
+          />
         </div>
       </div>
 

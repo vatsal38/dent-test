@@ -54,6 +54,7 @@ export interface BobRecruitmentListParams {
   trackPlacement2026?: string;
   returner?: string;
   topTrackProgram?: string;
+  bob26Cohort?: BobRecruitmentTriState;
   sortBy?: "label" | "name";
   sortOrder?: "asc" | "desc";
   limit?: number;
@@ -83,6 +84,7 @@ export interface BobRecruitmentFacetsResponse {
     withoutPrograms: number;
     synced: number;
     notSynced: number;
+    bob26NotTransferred?: number;
   };
 }
 
@@ -125,6 +127,7 @@ export async function getBobRecruitmentList(
   }
   if (params?.returner) sp.set("returner", params.returner);
   if (params?.topTrackProgram) sp.set("topTrackProgram", params.topTrackProgram);
+  if (params?.bob26Cohort) sp.set("bob26Cohort", params.bob26Cohort);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);
   if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
   if (params?.limit != null) sp.set("limit", String(params.limit));
@@ -161,6 +164,7 @@ export async function getBobRecruitmentTransferableIds(
   }
   if (params?.returner) sp.set("returner", params.returner);
   if (params?.topTrackProgram) sp.set("topTrackProgram", params.topTrackProgram);
+  if (params?.bob26Cohort) sp.set("bob26Cohort", params.bob26Cohort);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);
   if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
   const qs = sp.toString();

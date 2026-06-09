@@ -5,11 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { BobStudentsListParams } from "@/platform/api/bob/students";
 import {
-  getBobPod,
   getBobRosterImportStatus,
   startBobRosterImport,
 } from "@/platform/api/bob";
-import { useQuery } from "@tanstack/react-query";
 import {
   HeadshotCell,
   IntakeTableCell,
@@ -73,6 +71,7 @@ function listParams(
   queueParams: Partial<BobStudentsListParams>,
   page: number,
   pageSize: number,
+  trackFilter?: string | null,
 ): BobStudentsListParams {
   const params: BobStudentsListParams = {
     ...queueParams,
@@ -82,6 +81,8 @@ function listParams(
   };
   const q = f.search.trim();
   if (q) params.search = q;
+  const track = trackFilter?.trim();
+  if (track) params.track = track;
   const filtersJson = serializeFiltersForApi(f);
   if (filtersJson) params.filters = filtersJson;
   return params;
@@ -119,7 +120,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
   const queue = getRosterQueue(queueId);
   const { openStudent } = useStudentDrawerUrl();
   const selectedId = searchParams.get("id") ?? searchParams.get("student");
-  const podFilter = searchParams.get("pod");
+  const trackFilter = searchParams.get("track") ?? "";
   const view = (searchParams.get("view") || "grid") as "grid" | "table";
 
   const [filters, setFilters] = useState<RosterTableFilterState>(EMPTY_ROSTER_FILTERS);
@@ -140,18 +141,13 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedFilters, queueId, podFilter]);
+  }, [debouncedFilters, queueId, trackFilter]);
 
   const listParamsMemo = useMemo(
-    () => listParams(debouncedFilters, queue.listParams, page, pageSize),
-    [debouncedFilters, queue.listParams, page, pageSize],
+    () =>
+      listParams(debouncedFilters, queue.listParams, page, pageSize, trackFilter),
+    [debouncedFilters, queue.listParams, page, pageSize, trackFilter],
   );
-
-  const { data: podForFilter } = useQuery({
-    queryKey: ["bob", "pod", podFilter],
-    queryFn: () => getBobPod(podFilter!),
-    enabled: Boolean(podFilter),
-  });
 
   const {
     data: listData,
@@ -260,16 +256,8 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
     URL.revokeObjectURL(url);
   };
 
-  const rowsRaw = listData?.students ?? [];
-  const podStudentIds = podForFilter?.students
-    ? new Set(podForFilter.students)
-    : null;
-  const rows = podStudentIds
-    ? rowsRaw.filter((s) => podStudentIds.has(s.id))
-    : rowsRaw;
-  // `total` is used for the "x of y" text only; it may be approximate when `pod` is
-  // selected because pod filtering currently happens client-side.
-  const total = podStudentIds ? rows.length : (listData?.total ?? 0);
+  const rows = listData?.students ?? [];
+  const total = listData?.total ?? 0;
   const totalForPagination = listData?.total ?? 0;
   const loading = isLoading || isFetching;
   const totalPages = Math.max(1, Math.ceil(totalForPagination / pageSize));
@@ -321,19 +309,19 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         />
       ) : null}
 
-      {podFilter && podForFilter ? (
+      {trackFilter ? (
         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 flex items-center justify-between gap-2">
-          <span>Pod: {podForFilter.name}</span>
+          <span>Track: {trackFilter}</span>
           <button
             type="button"
             onClick={() =>
               updateUrl((sp) => {
-                sp.delete("pod");
+                sp.delete("track");
               })
             }
             className="text-orange-700 font-medium hover:underline"
           >
-            Clear pod filter
+            Clear track filter
           </button>
         </div>
       ) : null}
@@ -368,6 +356,13 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         facets={facets ?? null}
         facetsLoading={facetsLoading}
         schema={schema}
+        trackFilter={trackFilter}
+        onTrackFilterChange={(track) =>
+          updateUrl((sp) => {
+            if (track) sp.set("track", track);
+            else sp.delete("track");
+          })
+        }
         drawerOpen={filterDrawerOpen}
         onDrawerOpenChange={setFilterDrawerOpen}
         onSearchChange={(search) => setFilters((f) => ({ ...f, search }))}

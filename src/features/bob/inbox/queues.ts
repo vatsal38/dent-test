@@ -48,8 +48,8 @@ export const INTAKE_QUEUES: IntakeQueueDef[] = [
     id: "bob26_transfer",
     label: "BoB '26 bulk transfer",
     description:
-      "Not yet in Students & Alums — with programs / track (matches BoB '26 Applications)",
-    listParams: { transferred: "no", hasPrograms: "yes" },
+      "Not yet in Students & Alums — BoB '26 track, YW status, or programs linked",
+    listParams: { transferred: "no", bob26Cohort: "yes" },
   },
   {
     id: "awaiting_approval",
@@ -91,7 +91,7 @@ export function intakeQueueCount(
     case "ready_transfer":
       return facetCount(facets.appStatuses, "Ready To Transfer");
     case "bob26_transfer":
-      return Math.max(0, p.withPrograms - p.transferred);
+      return p.bob26NotTransferred ?? Math.max(0, p.withPrograms - p.transferred);
     case "awaiting_approval":
       return Math.max(0, p.transferred - p.onRoster);
     case "transferred":
