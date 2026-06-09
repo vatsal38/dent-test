@@ -3,18 +3,38 @@ import type { BobPod } from "@/platform/api/bob/pods";
 import type { BobStudent } from "@/platform/api/bob/students";
 import {
   PUNCH_TYPES,
+  type AttendanceSession,
+  type AttendanceState,
   type DayHealth,
   type PunchSlot,
   type PunchType,
   type PunchVisualState,
   type StudentDayAttendance,
 } from "../types";
-import { isPunchEventRecord, normalizeSignType } from "./normalizeSignType";
+import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
+import {
+  mapAttendanceStateFromRecord,
+  sessionStatusLabel,
+} from "./mapAttendanceState";
+import {
+  isDailyAttendanceRecord,
+  isPunchEventRecord,
+  normalizeSignType,
+} from "./normalizeSignType";
 
 function emptyPunches(): Record<PunchType, PunchSlot> {
   return Object.fromEntries(
     PUNCH_TYPES.map((t) => [t, { type: t, state: "missing" as PunchVisualState }]),
   ) as Record<PunchType, PunchSlot>;
+}
+
+function punchStateFromAttendanceState(state: AttendanceState): PunchVisualState {
+  if (state === "present") return "recorded";
+  if (state === "late") return "late";
+  if (state === "excused") return "excused";
+  if (state === "absent") return "absent";
+  if (state === "auto_filled") return "auto_filled";
+  return "missing";
 }
 
 function applyStatusToPunches(
@@ -37,25 +57,146 @@ function applyStatusToPunches(
   return next;
 }
 
+function setPunchTime(
+  punches: Record<PunchType, PunchSlot>,
+  pt: PunchType,
+  opts: {
+    display?: string;
+    original?: string;
+    adjusted?: string;
+    eventId?: string;
+    state?: PunchVisualState;
+    reason?: string;
+    source?: string;
+  },
+) {
+  punches[pt] = {
+    type: pt,
+    state: opts.state ?? "recorded",
+    eventId: opts.eventId,
+    timeLabel: opts.display,
+    originalTimeLabel: opts.original,
+    adjustedTimeLabel: opts.adjusted,
+    adjustmentReason: opts.reason,
+    adjustmentSource: opts.source,
+  };
+}
+
+function populateDailyRecordPunches(
+  punches: Record<PunchType, PunchSlot>,
+  daily: BobAttendance,
+  attendanceState: AttendanceState,
+) {
+  const amInDisplay = formatAttendanceTime(daily.adjustedSignIn || daily.signInTime);
+  const amInOriginal = formatAttendanceTime(daily.rawSignInTime);
+  const amInAdjusted = formatAttendanceTime(daily.adjustedSignIn);
+  const pmOutDisplay = formatAttendanceTime(daily.adjustedSignOut || daily.signOutTime);
+  const pmOutOriginal = formatAttendanceTime(daily.rawSignOutTime);
+  const pmOutAdjusted = formatAttendanceTime(daily.adjustedSignOut);
+
+  const manualStart = formatAttendanceTime(daily.manualStartTime);
+  const manualEnd = formatAttendanceTime(daily.manualEndTime);
+  const staffIn = formatAttendanceTime(daily.staffCorrectionSignIn);
+  const staffOut = formatAttendanceTime(daily.staffCorrectionSignOut);
+
+  const punchState = punchStateFromAttendanceState(attendanceState);
+  const correctionSource = daily.manualOverride ? "Manual override" : "Coach correction";
+
+  if (amInDisplay || amInOriginal) {
+    setPunchTime(punches, "am_in", {
+      display: amInDisplay || amInOriginal,
+      original: amInOriginal,
+      adjusted: amInAdjusted,
+      eventId: daily.id,
+      state: punchState === "missing" ? "recorded" : punchState,
+      reason: amInAdjusted && amInOriginal !== amInAdjusted ? correctionSource : undefined,
+      source: amInAdjusted ? correctionSource : undefined,
+    });
+  }
+
+  if (staffOut || manualEnd) {
+    setPunchTime(punches, "am_out", {
+      display: staffOut || manualEnd,
+      original: manualEnd,
+      adjusted: staffOut,
+      state: punchState,
+      reason: staffOut ? correctionSource : undefined,
+      source: staffOut ? correctionSource : undefined,
+    });
+  }
+
+  if (manualStart || staffIn) {
+    setPunchTime(punches, "pm_in", {
+      display: staffIn || manualStart,
+      original: manualStart,
+      adjusted: staffIn,
+      state: punchState,
+      reason: staffIn ? correctionSource : undefined,
+      source: staffIn ? correctionSource : undefined,
+    });
+  }
+
+  if (pmOutDisplay || pmOutOriginal) {
+    setPunchTime(punches, "pm_out", {
+      display: pmOutDisplay || pmOutOriginal,
+      original: pmOutOriginal,
+      adjusted: pmOutAdjusted,
+      eventId: daily.id,
+      state: punchState === "missing" ? "recorded" : punchState,
+      reason: pmOutAdjusted && pmOutOriginal !== pmOutAdjusted ? correctionSource : undefined,
+      source: pmOutAdjusted ? correctionSource : undefined,
+    });
+  }
+}
+
+function buildSession(
+  punches: Record<PunchType, PunchSlot>,
+  inType: PunchType,
+  outType: PunchType,
+  hoursLabel?: string,
+  attendanceState?: AttendanceState,
+): AttendanceSession {
+  const missingLabels: string[] = [];
+  if (punches[inType].state === "missing") missingLabels.push("In");
+  if (punches[outType].state === "missing") missingLabels.push("Out");
+  return {
+    in: punches[inType],
+    out: punches[outType],
+    hoursLabel,
+    statusLabel: sessionStatusLabel(
+      attendanceState ?? "missing_punch",
+      missingLabels.map((l) => `${inType.includes("am") ? "AM" : "PM"} ${l}`),
+    ),
+  };
+}
+
 function deriveHealth(
   punches: Record<PunchType, PunchSlot>,
+  attendanceState: AttendanceState,
   dailyStatus?: BobAttendanceStatus,
 ): { health: DayHealth; missingPunchCount: number; isLate: boolean } {
   const states = PUNCH_TYPES.map((t) => punches[t].state);
   const missingPunchCount = states.filter((s) => s === "missing").length;
-  const isLate =
-    dailyStatus === "late" || states.some((s) => s === "late");
+  const isLate = attendanceState === "late" || dailyStatus === "late";
 
-  if (dailyStatus === "absent" || states.every((s) => s === "absent"))
+  if (attendanceState === "absent" || dailyStatus === "absent")
     return { health: "absent", missingPunchCount, isLate };
-  if (dailyStatus === "excused" || states.every((s) => s === "excused"))
+  if (attendanceState === "excused" || dailyStatus === "excused")
     return { health: "excused", missingPunchCount, isLate };
+  if (attendanceState === "auto_filled")
+    return { health: "auto_filled", missingPunchCount, isLate };
   if (isLate && missingPunchCount === 0)
     return { health: "late", missingPunchCount, isLate };
-  if (missingPunchCount === 0 && states.every((s) => s === "recorded" || s === "late"))
+  if (attendanceState === "present" && missingPunchCount === 0)
     return { health: "complete", missingPunchCount, isLate };
-  if (missingPunchCount === PUNCH_TYPES.length)
-    return { health: "missing", missingPunchCount, isLate };
+  if (attendanceState === "missing_punch" || missingPunchCount > 0)
+    return {
+      health: missingPunchCount === PUNCH_TYPES.length ? "missing" : "partial",
+      missingPunchCount,
+      isLate,
+    };
+  if (missingPunchCount === 0)
+    return { health: "complete", missingPunchCount, isLate };
   return { health: "partial", missingPunchCount, isLate };
 }
 
@@ -64,7 +205,6 @@ export interface ExpectedEnrollment {
   podId: string;
 }
 
-/** Rows for Airtable-imported students not yet on a pod roster. */
 export const UNASSIGNED_POD_ID = "__unassigned__";
 
 export function isAirtableSourcedAttendance(record: BobAttendance): boolean {
@@ -92,7 +232,6 @@ export function listExpectedEnrollments(
   return out;
 }
 
-/** Include students who have attendance in range but are not on a pod roster. */
 export function supplementEnrollmentsFromAttendance(
   records: BobAttendance[],
   dates: string[],
@@ -122,10 +261,6 @@ export function supplementEnrollmentsFromAttendance(
   return out;
 }
 
-/**
- * Merge punch events + daily rollup records into per-student-day attendance.
- * Preserves Airtable event rows and manual status records from existing APIs.
- */
 export function buildStudentDayAttendance(
   records: BobAttendance[],
   enrollments: ExpectedEnrollment[],
@@ -144,12 +279,11 @@ export function buildStudentDayAttendance(
       punchEvents.push(r);
       continue;
     }
-    if (r.status) {
-      const podId =
-        r.podId ||
-        studentById.get(studentId)?.podId ||
-        UNASSIGNED_POD_ID;
-      dailyByKey.set(`${podId}|${studentId}|${r.date}`, r);
+    const podId =
+      r.podId || studentById.get(studentId)?.podId || UNASSIGNED_POD_ID;
+    const dayKey = `${podId}|${studentId}|${r.date}`;
+    if (isDailyAttendanceRecord(r) || r.status) {
+      dailyByKey.set(dayKey, r);
     }
   }
 
@@ -167,7 +301,7 @@ export function buildStudentDayAttendance(
         if (evPod !== podId) continue;
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
-        const timeLabel = ev.signInTime || ev.signOutTime || undefined;
+        const timeLabel = formatAttendanceTime(ev.signInTime || ev.signOutTime);
         punches[pt] = {
           type: pt,
           state: "recorded",
@@ -177,14 +311,38 @@ export function buildStudentDayAttendance(
       }
 
       const daily = dailyByKey.get(key);
+      const attendanceState = mapAttendanceStateFromRecord(daily);
+
+      if (daily) {
+        populateDailyRecordPunches(punches, daily, attendanceState);
+      }
+
       if (daily?.status) {
         punches = applyStatusToPunches(punches, daily.status);
       }
 
       const { health, missingPunchCount, isLate } = deriveHealth(
         punches,
+        attendanceState,
         daily?.status,
       );
+
+      const morning = buildSession(
+        punches,
+        "am_in",
+        "am_out",
+        formatHoursLabel(daily?.amHours),
+        attendanceState,
+      );
+      const afternoon = buildSession(
+        punches,
+        "pm_in",
+        "pm_out",
+        formatHoursLabel(daily?.pmHours),
+        attendanceState,
+      );
+
+      const student = studentById.get(studentId);
 
       days.push({
         key,
@@ -192,11 +350,33 @@ export function buildStudentDayAttendance(
         podId,
         date,
         punches,
+        morning,
+        afternoon,
+        attendanceState,
         dailyStatus: daily?.status,
         dailyRecordId: daily?.id,
+        airtableRecordId: daily?.airtableRecordId ?? undefined,
         health,
         missingPunchCount,
         isLate,
+        totalHoursLabel:
+          formatHoursLabel(daily?.hoursPresent) ||
+          formatHoursLabel(daily?.totalHours),
+        expectedHoursLabel: formatHoursLabel(daily?.maxHours),
+        program: daily?.program ?? undefined,
+        site: daily?.branch ?? student?.site ?? undefined,
+        branch: daily?.branch ?? undefined,
+        track: daily?.track ?? student?.track ?? undefined,
+        manualOverride: daily?.manualOverride ?? undefined,
+        staffCorrectionSignIn: daily?.staffCorrectionSignIn ?? undefined,
+        staffCorrectionSignOut: daily?.staffCorrectionSignOut ?? undefined,
+        notes: daily?.notes ?? undefined,
+        hasManualCorrection: Boolean(
+          daily?.manualOverride ||
+            daily?.staffCorrectionSignIn ||
+            daily?.staffCorrectionSignOut,
+        ),
+        hasAutoFill: attendanceState === "auto_filled",
       });
     }
   }

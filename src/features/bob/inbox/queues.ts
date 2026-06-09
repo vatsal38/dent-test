@@ -5,6 +5,7 @@ export type IntakeQueueId =
   | "all"
   | "new"
   | "review"
+  | "bob26_transfer"
   | "ready_transfer"
   | "awaiting_approval"
   | "transferred"
@@ -42,6 +43,13 @@ export const INTAKE_QUEUES: IntakeQueueDef[] = [
     label: "Ready to transfer",
     description: "Reviewed and ready for Students & Alums",
     listParams: { status: "Ready To Transfer", transferred: "no" },
+  },
+  {
+    id: "bob26_transfer",
+    label: "BoB '26 bulk transfer",
+    description:
+      "Not yet in Students & Alums — with programs / track (matches BoB '26 Applications)",
+    listParams: { transferred: "no", hasPrograms: "yes" },
   },
   {
     id: "awaiting_approval",
@@ -82,6 +90,8 @@ export function intakeQueueCount(
       return facetCount(facets.appStatuses, "Pending Review");
     case "ready_transfer":
       return facetCount(facets.appStatuses, "Ready To Transfer");
+    case "bob26_transfer":
+      return Math.max(0, p.withPrograms - p.transferred);
     case "awaiting_approval":
       return Math.max(0, p.transferred - p.onRoster);
     case "transferred":

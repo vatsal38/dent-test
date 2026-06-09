@@ -1,22 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  BOB_ATTENDANCE_STATUSES,
-  type BobAttendanceStatus,
-} from "@/platform/api/bob/attendance";
 import { Skeleton } from "@/components/Skeleton";
 import { useBobPodsList } from "@/platform/query/hooks/useBobPods";
-import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
-import { useUpsertBobAttendanceDay } from "@/platform/query/hooks/useBobAttendance";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { resolveStudentName } from "./model/resolveDisplay";
-import { STATUS_LABELS } from "./model/constants";
-import { PunchDots } from "./components/PunchDots";
-import { BulkActionBar } from "./components/BulkActionBar";
+import { SessionSummary } from "./components/SessionSummary";
 import { AttendanceStatusBadge } from "./components/AttendanceStatusBadge";
+import { StudentDayDrawer } from "./components/StudentDayDrawer";
+import type { StudentDayAttendance } from "./types";
 
 export function AttendanceScanPage() {
   const router = useRouter();
@@ -25,14 +19,9 @@ export function AttendanceScanPage() {
   const [date, setDate] = useState(
     () => searchParams?.get("date") || new Date().toISOString().slice(0, 10),
   );
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [localStatus, setLocalStatus] = useState<Map<string, BobAttendanceStatus>>(
-    new Map(),
-  );
+  const [selectedDay, setSelectedDay] = useState<StudentDayAttendance | null>(null);
 
   const podsQuery = useBobPodsList({ limit: 100 });
-  const studentsQuery = useBobStudentsList({ limit: 500 });
-  const upsert = useUpsertBobAttendanceDay();
 
   const { workspace, loading, error } = useAttendanceWorkspace({
     focusDate: date,
@@ -50,52 +39,29 @@ export function AttendanceScanPage() {
     [workspace.days, date, podId],
   );
 
-  useEffect(() => {
-    const m = new Map<string, BobAttendanceStatus>();
-    for (const row of todayRows) {
-      m.set(row.studentId, row.dailyStatus ?? "present");
-    }
-    setLocalStatus(m);
+  const issueRows = useMemo(() => {
+    const priority = (row: StudentDayAttendance) => {
+      if (row.attendanceState === "missing_punch" || row.health === "partial") return 0;
+      if (row.attendanceState === "late") return 1;
+      if (row.hasManualCorrection) return 2;
+      if (row.attendanceState === "auto_filled") return 3;
+      if (row.health === "missing") return 4;
+      return 5;
+    };
+    return [...todayRows].sort((a, b) => priority(a) - priority(b));
   }, [todayRows]);
 
-  const toggleSelect = useCallback((studentId: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(studentId)) next.delete(studentId);
-      else next.add(studentId);
-      return next;
-    });
-  }, []);
-
-  const setOne = useCallback((studentId: string, status: BobAttendanceStatus) => {
-    setLocalStatus((prev) => {
-      const next = new Map(prev);
-      next.set(studentId, status);
-      return next;
-    });
-    if (!podId) return;
-    upsert.mutate({ studentId, podId, date, status });
-  }, [podId, date, upsert]);
-
-  const applyBulk = useCallback(
-    async (status: BobAttendanceStatus) => {
-      if (!podId) return;
-      const ids = selected.size
-        ? Array.from(selected)
-        : todayRows.map((r) => r.studentId);
-      setLocalStatus((prev) => {
-        const next = new Map(prev);
-        for (const id of ids) next.set(id, status);
-        return next;
-      });
-      await Promise.all(
-        ids.map((studentId) =>
-          upsert.mutateAsync({ studentId, podId, date, status }),
-        ),
-      );
-      setSelected(new Set());
-    },
-    [podId, date, selected, todayRows, upsert],
+  const issueCounts = useMemo(
+    () => ({
+      missing: todayRows.filter(
+        (r) => r.attendanceState === "missing_punch" || r.health === "partial",
+      ).length,
+      late: todayRows.filter((r) => r.attendanceState === "late" || r.isLate).length,
+      manualOverrides: todayRows.filter((r) => r.hasManualCorrection).length,
+      autoFilled: todayRows.filter((r) => r.attendanceState === "auto_filled").length,
+      gaps: todayRows.filter((r) => r.health === "missing").length,
+    }),
+    [todayRows],
   );
 
   if (loading && !todayRows.length) {
@@ -113,17 +79,37 @@ export function AttendanceScanPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto pb-24">
+    <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto pb-12">
       <Link
         href="/app/bob/attendance"
         className="text-sm text-orange-600 hover:underline"
       >
         ← Attendance dashboard
       </Link>
-      <h1 className="text-2xl font-bold text-gray-900 mt-4 mb-1">Scan mode</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mt-4 mb-1">Issue triage</h1>
       <p className="text-gray-600 text-sm mb-6">
-        Rapid daily marking with optimistic updates. Tap a status or bulk-select rows.
+        Review operational issues for this pod and date. Attendance changes happen in Airtable.
       </p>
+
+      {podId && todayRows.length > 0 ? (
+        <div className="mb-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {[
+            { label: "Missing punches", count: issueCounts.missing },
+            { label: "Late", count: issueCounts.late },
+            { label: "Manual overrides", count: issueCounts.manualOverrides },
+            { label: "Auto filled", count: issueCounts.autoFilled },
+            { label: "Gaps", count: issueCounts.gaps },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-center"
+            >
+              <p className="text-lg font-bold text-gray-900">{item.count}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
@@ -159,80 +145,59 @@ export function AttendanceScanPage() {
       </div>
 
       {!podId ? (
-        <p className="text-sm text-gray-500">Select a pod to begin scanning.</p>
+        <p className="text-sm text-gray-500">Select a pod to begin.</p>
       ) : todayRows.length === 0 ? (
-        <p className="text-sm text-gray-500">No students assigned to this pod.</p>
+        <p className="text-sm text-gray-500">No attendance records for this pod on this date.</p>
       ) : (
         <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 bg-white">
-          {todayRows.map((row) => {
+          {issueRows.map((row) => {
             const name = resolveStudentName(row.studentId, workspace.studentById);
-            const status = localStatus.get(row.studentId) ?? "present";
+            const isIssue =
+              row.attendanceState === "missing_punch" ||
+              row.isLate ||
+              row.hasManualCorrection ||
+              row.attendanceState === "auto_filled";
             return (
-              <li
-                key={row.studentId}
-                className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-3 hover:bg-orange-50/30"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(row.studentId)}
-                    onChange={() => toggleSelect(row.studentId)}
-                    className="rounded border-gray-300 text-orange-600"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <PunchDots punches={row.punches} />
-                      <AttendanceStatusBadge health={row.health} />
-                    </div>
+              <li key={row.studentId}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay(row)}
+                  className={`w-full text-left flex flex-col gap-2 px-3 py-3 ${
+                    isIssue ? "bg-orange-50/40" : "hover:bg-orange-50/20"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-gray-900">{name}</p>
+                    <AttendanceStatusBadge
+                      health={row.health}
+                      attendanceState={row.attendanceState}
+                    />
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1 sm:justify-end">
-                  {BOB_ATTENDANCE_STATUSES.map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setOne(row.studentId, st)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
-                        status === st
-                          ? "border-orange-500 bg-orange-50 text-orange-800"
-                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {STATUS_LABELS[st]}
-                    </button>
-                  ))}
-                </div>
+                  <SessionSummary day={row} compact />
+                </button>
               </li>
             );
           })}
         </ul>
       )}
 
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6">
         <button
           type="button"
           onClick={() => router.push("/app/bob/attendance")}
           className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
         >
-          Done
-        </button>
-        <button
-          type="button"
-          onClick={() => applyBulk("present")}
-          disabled={!podId || upsert.isPending}
-          className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          Mark all present
+          Back to dashboard
         </button>
       </div>
 
-      <BulkActionBar
-        selectedCount={selected.size}
-        onApply={applyBulk}
-        onClear={() => setSelected(new Set())}
-        disabled={upsert.isPending}
-      />
+      {selectedDay ? (
+        <StudentDayDrawer
+          day={selectedDay}
+          workspace={workspace}
+          onClose={() => setSelectedDay(null)}
+        />
+      ) : null}
     </div>
   );
 }

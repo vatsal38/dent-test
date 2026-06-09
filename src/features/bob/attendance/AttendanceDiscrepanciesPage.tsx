@@ -17,7 +17,7 @@ export function AttendanceDiscrepanciesPage() {
 
   const [weekOf, setWeekOf] = useState(() => getWeekMonday(new Date(initialDate + "T12:00:00")));
   const [podFilter, setPodFilter] = useState(initialPod);
-  const [resolveDay, setResolveDay] = useState<StudentDayAttendance | null>(null);
+  const [detailDay, setDetailDay] = useState<StudentDayAttendance | null>(null);
 
   const focusDate = weekOf;
   const { workspace, pods, loading, error } = useAttendanceWorkspace({
@@ -33,14 +33,14 @@ export function AttendanceDiscrepanciesPage() {
 
   const resolvedCount = workspace.discrepancies.length - openItems.length;
 
-  function handleResolve(item: AttendanceDiscrepancy) {
+  function handleViewDetails(item: AttendanceDiscrepancy) {
     const day = workspace.days.find(
       (d) =>
         d.studentId === item.studentId &&
         d.podId === item.podId &&
         d.date === item.date,
     );
-    if (day) setResolveDay(day);
+    if (day) setDetailDay(day);
   }
 
   if (loading) {
@@ -79,7 +79,7 @@ export function AttendanceDiscrepanciesPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Discrepancies</h1>
           <p className="text-gray-600 text-sm mt-1">
-            Missing punches, late arrivals, and unresolved day records — resolve in one click.
+            Missing punches, late arrivals, and flags from Airtable — view only until correction workflow is defined.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -125,14 +125,14 @@ export function AttendanceDiscrepanciesPage() {
       <DiscrepancyList
         items={openItems}
         workspace={workspace}
-        onResolve={handleResolve}
+        onViewDetails={handleViewDetails}
       />
 
-      {resolveDay ? (
+      {detailDay ? (
         <StudentDayDrawer
-          day={resolveDay}
+          day={detailDay}
           workspace={workspace}
-          onClose={() => setResolveDay(null)}
+          onClose={() => setDetailDay(null)}
         />
       ) : null}
     </div>

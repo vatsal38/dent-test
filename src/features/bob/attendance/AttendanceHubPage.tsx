@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -10,19 +10,22 @@ import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { filterDaysByHealth } from "./model/computeWorkspace";
 import { ATTENDANCE_PAGE_SIZE } from "./model/scale";
-import { AttendanceHealthBar } from "./components/AttendanceHealthBar";
+import { AttendanceHubControls } from "./components/AttendanceHubControls";
 import { AttendancePodQueue } from "./components/AttendancePodQueue";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
-import { AttendanceTableToolbar } from "./components/AttendanceTableToolbar";
 import { DailyAttendanceTable } from "./components/DailyAttendanceTable";
 import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
-import { PunchLegend } from "./components/PunchDots";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
-import type { StudentDayAttendance } from "./types";
+import type { IssueFilter, StudentDayAttendance } from "./types";
 import { parseApiError } from "@/platform/api/errors";
 import { ErrorToast } from "@/components/ErrorToast";
 import { BobActionButton } from "@/features/bob/ui/BobActionButton";
-import { FiAlertTriangle, FiDownload, FiRefreshCw, FiZap } from "react-icons/fi";
+import {
+  FiAlertTriangle,
+  FiDownload,
+  FiRefreshCw,
+  FiZap,
+} from "react-icons/fi";
 import { BobImportProgress } from "@/components/BobImportProgress";
 import {
   getBobAttendanceImportStatus,
@@ -36,17 +39,15 @@ export function AttendanceHubPage() {
   const initialDate =
     searchParams?.get("date") || new Date().toISOString().slice(0, 10);
   const initialPod = searchParams?.get("pod") || "";
-  const initialFilter = (searchParams?.get("filter") || "all") as
-    | "all"
-    | "missing"
-    | "late"
-    | "complete";
+  const initialFilter = (searchParams?.get("filter") || "all") as IssueFilter;
 
   const [focusDate, setFocusDate] = useState(initialDate);
   const [podFilter, setPodFilter] = useState(initialPod);
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
-  const [healthFilter, setHealthFilter] = useState(initialFilter);
-  const [selectedDay, setSelectedDay] = useState<StudentDayAttendance | null>(null);
+  const [healthFilter, setHealthFilter] = useState<IssueFilter>(initialFilter);
+  const [selectedDay, setSelectedDay] = useState<StudentDayAttendance | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search);
@@ -61,10 +62,20 @@ export function AttendanceHubPage() {
       searchParams?.get("date") || new Date().toISOString().slice(0, 10);
     const nextPod = searchParams?.get("pod") || "";
     const rawFilter = (searchParams?.get("filter") || "all") as string;
-    const nextFilter = (["all", "missing", "late", "complete"] as const).includes(
-      rawFilter as any,
-    )
-      ? (rawFilter as "all" | "missing" | "late" | "complete")
+    const allowed: IssueFilter[] = [
+      "all",
+      "missing",
+      "late",
+      "complete",
+      "excused",
+      "absent",
+      "auto_filled",
+      "corrections",
+      "correction_requests",
+      "conflicts",
+    ];
+    const nextFilter = allowed.includes(rawFilter as IssueFilter)
+      ? (rawFilter as IssueFilter)
       : "all";
 
     setFocusDate((cur) => (cur === nextDate ? cur : nextDate));
@@ -72,12 +83,19 @@ export function AttendanceHubPage() {
     setHealthFilter((cur) => (cur === nextFilter ? cur : nextFilter));
   }, [searchParams]);
 
-  const { workspace, pods, loading, error, isRefreshing, refetch, lastSyncedAt } =
-    useAttendanceWorkspace({
-      focusDate,
-      weekMode: viewMode === "week",
-      podFilter,
-    });
+  const {
+    workspace,
+    pods,
+    loading,
+    error,
+    isRefreshing,
+    refetch,
+    lastSyncedAt,
+  } = useAttendanceWorkspace({
+    focusDate,
+    weekMode: viewMode === "week",
+    podFilter,
+  });
 
   const latestImportedDate = boundsQuery.data?.latestDate ?? null;
   const boundsTotal = boundsQuery.data?.total ?? 0;
@@ -191,7 +209,9 @@ export function AttendanceHubPage() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{error}</div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          {error}
+        </div>
       </div>
     );
   }
@@ -199,20 +219,15 @@ export function AttendanceHubPage() {
   const showPodQueue = !podFilter && pods.length > 1;
 
   return (
-    <div className={`p-4 sm:p-6 lg:p-8 ${isRefreshing ? "opacity-90" : ""}`}>
+    <div className={`p-4 sm:p-5 lg:p-6 ${isRefreshing ? "opacity-90" : ""}`}>
       <ErrorToast
         isOpen={Boolean(syncError)}
         message={syncError || ""}
         onClose={() => setSyncError(null)}
       />
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Attendance</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Summary-first ops — filter by pod, resolve gaps in scan mode.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+        <h1 className="text-lg font-bold text-gray-900">Attendance</h1>
+        <div className="flex flex-wrap items-center gap-1.5">
           <div className="relative">
             <BobActionButton
               label={`Alerts (${alertCount})`}
@@ -323,12 +338,14 @@ export function AttendanceHubPage() {
             href="/app/bob/attendance/discrepancies"
             label={`Issues (${workspace.summary.openDiscrepancies})`}
             icon={<FiAlertTriangle />}
-            variant={workspace.summary.openDiscrepancies ? "warning" : "outline"}
+            variant={
+              workspace.summary.openDiscrepancies ? "warning" : "outline"
+            }
           />
           <BobPermissionGuard permission="attendance.mark" silent>
             <BobActionButton
               href={`/app/bob/attendance/mark?date=${focusDate}${podFilter ? `&pod=${podFilter}` : ""}`}
-              label="Scan mode"
+              label="Issue triage"
               icon={<FiZap />}
               variant="primary"
             />
@@ -336,27 +353,29 @@ export function AttendanceHubPage() {
         </div>
       </div>
 
-      <BobImportProgress
-        className="mb-4"
-        label="attendance"
-        fetchStatus={getBobAttendanceImportStatus}
-        startImport={startBobAttendanceImport}
-        onComplete={() => refetch()}
-        compact
-      />
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <BobImportProgress
+          className="flex-1 min-w-[200px] [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md"
+          label="attendance"
+          fetchStatus={getBobAttendanceImportStatus}
+          startImport={startBobAttendanceImport}
+          onComplete={() => refetch()}
+          compact
+        />
+        <AttendanceScaleBanner
+          scale={workspace.scale}
+          onSelectPod={() => podSelectRef.current?.focus()}
+          inline
+        />
+      </div>
 
-      <AttendanceScaleBanner
-        scale={workspace.scale}
-        onSelectPod={() => podSelectRef.current?.focus()}
-      />
-
-      <AttendanceHealthBar summary={workspace.summary} date={focusDate} />
-
-      {boundsTotal > 0 && latestImportedDate && focusDate > latestImportedDate ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          No Airtable attendance on <strong>{focusDate}</strong>. Imported data runs
-          through <strong>{latestImportedDate}</strong> ({boundsTotal.toLocaleString()}{" "}
-          records).{" "}
+      {boundsTotal > 0 &&
+      latestImportedDate &&
+      focusDate > latestImportedDate ? (
+        <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          No Airtable attendance on <strong>{focusDate}</strong>. Imported data
+          runs through <strong>{latestImportedDate}</strong> (
+          {boundsTotal.toLocaleString()} records).{" "}
           <button
             type="button"
             className="font-semibold underline"
@@ -368,9 +387,9 @@ export function AttendanceHubPage() {
       ) : null}
 
       {dateAutoAdjusted && latestImportedDate ? (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          Showing latest imported attendance date ({latestImportedDate}). Use the
-          date picker to browse other days.
+        <div className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+          Showing latest imported attendance date ({latestImportedDate}). Use
+          the date picker to browse other days.
         </div>
       ) : null}
 
@@ -383,91 +402,30 @@ export function AttendanceHubPage() {
         />
       ) : null}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-        <input
-          type="date"
-          value={focusDate}
-          onChange={(e) => setFocusDate(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
-        />
-        <select
-          ref={podSelectRef}
-          value={podFilter}
-          onChange={(e) => setPodFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 min-w-[140px]"
-        >
-          <option value="">
-            {workspace.scale.requiresPodScope
-              ? "Select a pod…"
-              : "All pods"}
-          </option>
-          {pods.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
-          {(["day", "week"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              disabled={m === "week" && workspace.scale.weekViewHeavy && !podFilter}
-              title={
-                m === "week" && workspace.scale.weekViewHeavy && !podFilter
-                  ? "Select a pod for week view at this size"
-                  : undefined
-              }
-              onClick={() => setViewMode(m)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md capitalize disabled:opacity-40 ${
-                viewMode === m ? "bg-white shadow text-orange-700" : "text-gray-600"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-        <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
-          {(
-            [
-              ["missing", "Gaps"],
-              ["late", "Late"],
-              ["complete", "Complete"],
-              ["all", "All"],
-            ] as const
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setHealthFilter(k)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-                healthFilter === k ? "bg-white shadow text-orange-700" : "text-gray-600"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-3">
-        <PunchLegend />
-      </div>
+      <AttendanceHubControls
+        focusDate={focusDate}
+        onFocusDateChange={setFocusDate}
+        podFilter={podFilter}
+        onPodFilterChange={setPodFilter}
+        podSelectRef={podSelectRef}
+        pods={pods}
+        requiresPodScope={workspace.scale.requiresPodScope}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        weekViewDisabled={workspace.scale.weekViewHeavy && !podFilter}
+        healthFilter={healthFilter}
+        onHealthFilterChange={setHealthFilter}
+        summary={workspace.summary}
+        issues={workspace.issues}
+        search={search}
+        onSearchChange={setSearch}
+        page={page}
+        totalRows={rowCount}
+        onPageChange={setPage}
+      />
 
       {!workspace.scale.requiresPodScope || podFilter ? (
         <>
-          <AttendanceTableToolbar
-            search={search}
-            onSearchChange={setSearch}
-            page={page}
-            totalRows={rowCount}
-            onPageChange={setPage}
-            showingLabel={
-              workspace.scale.enrollmentCount > ATTENDANCE_PAGE_SIZE
-                ? `Page ${page} · ${rowCount} student${rowCount === 1 ? "" : "s"} in view`
-                : undefined
-            }
-          />
           <DailyAttendanceTable
             days={tableDays}
             workspace={workspace}
@@ -480,14 +438,16 @@ export function AttendanceHubPage() {
         </>
       ) : (
         <div className="p-8 text-center bg-white border border-gray-200 rounded-lg text-sm text-gray-600">
-          Choose a pod above to load the student grid, or use the pod queue to jump
-          to pods with open gaps.
+          Choose a pod above to load the student grid, or use the pod queue to
+          jump to pods with open gaps.
         </div>
       )}
 
       {podFilter || !workspace.scale.recommendPodScope ? (
         <section className="mt-8">
-          <h2 className="text-sm font-semibold text-gray-900 mb-3">Pod analytics</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">
+            Pod analytics
+          </h2>
           <PodSiteAnalytics podStats={workspace.podStats} />
         </section>
       ) : null}

@@ -30,7 +30,7 @@ export function AttendanceTableToolbar({
           type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search students…"
+          placeholder="Search name, student ID, DEC ID, program, pod, site, track…"
           className="w-full sm:max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
         />
         <span className="text-xs text-gray-500 whitespace-nowrap">

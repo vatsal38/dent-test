@@ -51,6 +51,9 @@ export interface BobRecruitmentListParams {
   school?: string;
   grade?: string;
   assignedTo?: string;
+  trackPlacement2026?: string;
+  returner?: string;
+  topTrackProgram?: string;
   sortBy?: "label" | "name";
   sortOrder?: "asc" | "desc";
   limit?: number;
@@ -68,6 +71,8 @@ export interface BobRecruitmentFacetsResponse {
   schools: BobRecruitmentFacetOption[];
   grades: BobRecruitmentFacetOption[];
   assignedTo: BobRecruitmentFacetOption[];
+  trackPlacements2026?: BobRecruitmentFacetOption[];
+  returners?: BobRecruitmentFacetOption[];
   pipeline: {
     total: number;
     transferred: number;
@@ -86,6 +91,14 @@ export interface BobRecruitmentListResponse {
   total: number;
   limit: number;
   offset: number;
+}
+
+export interface BobRecruitmentTransferableIdsResponse {
+  ids: string[];
+  total: number;
+  transferable: number;
+  capped: boolean;
+  max: number;
 }
 
 export async function getBobRecruitmentSchema(): Promise<BobRosterSchemaResponse> {
@@ -107,6 +120,11 @@ export async function getBobRecruitmentList(
   if (params?.school) sp.set("school", params.school);
   if (params?.grade) sp.set("grade", params.grade);
   if (params?.assignedTo) sp.set("assignedTo", params.assignedTo);
+  if (params?.trackPlacement2026) {
+    sp.set("trackPlacement2026", params.trackPlacement2026);
+  }
+  if (params?.returner) sp.set("returner", params.returner);
+  if (params?.topTrackProgram) sp.set("topTrackProgram", params.topTrackProgram);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);
   if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
   if (params?.limit != null) sp.set("limit", String(params.limit));
@@ -120,6 +138,34 @@ export async function getBobRecruitmentList(
 export async function getBobRecruitmentFacets(): Promise<BobRecruitmentFacetsResponse> {
   return apiRequest<BobRecruitmentFacetsResponse>(
     "/api/bob/recruitment/facets",
+  );
+}
+
+export async function getBobRecruitmentTransferableIds(
+  params?: BobRecruitmentListParams,
+): Promise<BobRecruitmentTransferableIdsResponse> {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.filters) sp.set("filters", params.filters);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.ywStatus) sp.set("ywStatus", params.ywStatus);
+  if (params?.transferred) sp.set("transferred", params.transferred);
+  if (params?.onRoster) sp.set("onRoster", params.onRoster);
+  if (params?.hasPrograms) sp.set("hasPrograms", params.hasPrograms);
+  if (params?.synced) sp.set("synced", params.synced);
+  if (params?.school) sp.set("school", params.school);
+  if (params?.grade) sp.set("grade", params.grade);
+  if (params?.assignedTo) sp.set("assignedTo", params.assignedTo);
+  if (params?.trackPlacement2026) {
+    sp.set("trackPlacement2026", params.trackPlacement2026);
+  }
+  if (params?.returner) sp.set("returner", params.returner);
+  if (params?.topTrackProgram) sp.set("topTrackProgram", params.topTrackProgram);
+  if (params?.sortBy) sp.set("sortBy", params.sortBy);
+  if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
+  const qs = sp.toString();
+  return apiRequest<BobRecruitmentTransferableIdsResponse>(
+    `/api/bob/recruitment/transferable-ids${qs ? `?${qs}` : ""}`,
   );
 }
 

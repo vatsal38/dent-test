@@ -1,18 +1,18 @@
 import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
-import type { PunchType, PunchVisualState } from "../types";
+import type { AttendanceState, PunchType, PunchVisualState } from "../types";
 
 export const PUNCH_LABELS: Record<PunchType, string> = {
   am_in: "AM In",
-  lunch_out: "Lunch Out",
-  lunch_in: "Lunch In",
+  am_out: "AM Out",
+  pm_in: "PM In",
   pm_out: "PM Out",
 };
 
 export const PUNCH_SHORT: Record<PunchType, string> = {
-  am_in: "AM",
-  lunch_out: "LO",
-  lunch_in: "LI",
-  pm_out: "PM",
+  am_in: "AM In",
+  am_out: "AM Out",
+  pm_in: "PM In",
+  pm_out: "PM Out",
 };
 
 export const STATUS_LABELS: Record<BobAttendanceStatus, string> = {
@@ -20,6 +20,27 @@ export const STATUS_LABELS: Record<BobAttendanceStatus, string> = {
   absent: "Absent",
   excused: "Excused",
   late: "Late",
+};
+
+export const ATTENDANCE_STATE_LABELS: Record<AttendanceState, string> = {
+  present: "Present",
+  missing_punch: "Missing punch",
+  late: "Late",
+  absent: "Absent",
+  excused: "Excused",
+  auto_filled: "Auto filled",
+};
+
+export const ATTENDANCE_STATE_STYLES: Record<
+  AttendanceState,
+  { badge: string; dot: string }
+> = {
+  present: { badge: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
+  missing_punch: { badge: "bg-orange-100 text-orange-800", dot: "bg-orange-500" },
+  late: { badge: "bg-amber-100 text-amber-900", dot: "bg-amber-400" },
+  absent: { badge: "bg-red-100 text-red-800", dot: "bg-red-500" },
+  excused: { badge: "bg-gray-100 text-gray-700", dot: "bg-slate-400" },
+  auto_filled: { badge: "bg-blue-100 text-blue-800", dot: "bg-blue-500" },
 };
 
 export const PUNCH_STATE_COLORS: Record<
@@ -51,6 +72,11 @@ export const PUNCH_STATE_COLORS: Record<
     ring: "ring-rose-200",
     text: "text-rose-800",
   },
+  auto_filled: {
+    dot: "bg-blue-500",
+    ring: "ring-blue-200",
+    text: "text-blue-800",
+  },
   na: {
     dot: "bg-gray-200",
     ring: "ring-gray-100",
@@ -63,9 +89,10 @@ export const DAY_HEALTH_STYLES: Record<
   { badge: string; label: string }
 > = {
   complete: { badge: "bg-emerald-100 text-emerald-800", label: "Complete" },
-  partial: { badge: "bg-amber-100 text-amber-800", label: "Partial" },
+  partial: { badge: "bg-orange-100 text-orange-800", label: "Missing punch" },
   missing: { badge: "bg-red-100 text-red-800", label: "Missing" },
   late: { badge: "bg-amber-100 text-amber-900", label: "Late" },
-  excused: { badge: "bg-slate-100 text-slate-700", label: "Excused" },
-  absent: { badge: "bg-rose-100 text-rose-800", label: "Absent" },
+  excused: { badge: "bg-gray-100 text-gray-700", label: "Excused" },
+  absent: { badge: "bg-red-100 text-red-800", label: "Absent" },
+  auto_filled: { badge: "bg-blue-100 text-blue-800", label: "Auto filled" },
 };

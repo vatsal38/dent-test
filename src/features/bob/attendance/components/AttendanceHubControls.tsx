@@ -1,0 +1,282 @@
+"use client";
+
+import type { RefObject } from "react";
+import type { AttendanceIssueSummary, AttendanceWorkspaceData, IssueFilter } from "../types";
+import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
+
+const PRIMARY_FILTERS: Array<{ id: IssueFilter; label: string }> = [
+  { id: "missing", label: "Gaps" },
+  { id: "late", label: "Late" },
+  { id: "complete", label: "Present" },
+  { id: "all", label: "All" },
+];
+
+const ISSUE_FILTERS: Array<{
+  id: IssueFilter;
+  label: string;
+  key: keyof AttendanceIssueSummary;
+}> = [
+  { id: "corrections", label: "Overrides", key: "manualOverrides" },
+  { id: "auto_filled", label: "Auto filled", key: "autoFilled" },
+  { id: "correction_requests", label: "Requests", key: "correctionRequests" },
+];
+
+function Segmented({
+  value,
+  options,
+  onChange,
+  disabledKeys,
+}: {
+  value: string;
+  options: Array<{ id: string; label: string }>;
+  onChange: (id: string) => void;
+  disabledKeys?: Set<string>;
+}) {
+  return (
+    <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5">
+      {options.map((opt) => {
+        const disabled = disabledKeys?.has(opt.id);
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(opt.id)}
+            className={`px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-40 ${
+              value === opt.id
+                ? "bg-white text-orange-700 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MetricPill({
+  label,
+  value,
+  active,
+  tone,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  active?: boolean;
+  tone?: "good" | "warn" | "bad";
+  onClick?: () => void;
+}) {
+  const toneClass =
+    tone === "good"
+      ? "text-emerald-700"
+      : tone === "warn"
+        ? "text-amber-700"
+        : tone === "bad"
+          ? "text-red-700"
+          : "text-gray-700";
+  const Tag = onClick ? "button" : "span";
+  return (
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] tabular-nums ${
+        active
+          ? "bg-orange-100 text-orange-800 ring-1 ring-orange-200"
+          : "bg-white text-gray-600 ring-1 ring-gray-200"
+      } ${onClick ? "hover:bg-orange-50" : ""}`}
+    >
+      <span className={active ? undefined : toneClass}>{value}</span>
+      <span className="text-gray-500">{label}</span>
+    </Tag>
+  );
+}
+
+export function AttendanceHubControls({
+  focusDate,
+  onFocusDateChange,
+  podFilter,
+  onPodFilterChange,
+  podSelectRef,
+  pods,
+  requiresPodScope,
+  viewMode,
+  onViewModeChange,
+  weekViewDisabled,
+  healthFilter,
+  onHealthFilterChange,
+  summary,
+  issues,
+  search,
+  onSearchChange,
+  page,
+  totalRows,
+  onPageChange,
+  pageSize = ATTENDANCE_PAGE_SIZE,
+}: {
+  focusDate: string;
+  onFocusDateChange: (date: string) => void;
+  podFilter: string;
+  onPodFilterChange: (podId: string) => void;
+  podSelectRef?: RefObject<HTMLSelectElement | null>;
+  pods: Array<{ id: string; name: string }>;
+  requiresPodScope: boolean;
+  viewMode: "day" | "week";
+  onViewModeChange: (mode: "day" | "week") => void;
+  weekViewDisabled: boolean;
+  healthFilter: IssueFilter;
+  onHealthFilterChange: (filter: IssueFilter) => void;
+  summary: AttendanceWorkspaceData["summary"];
+  issues: AttendanceIssueSummary;
+  search: string;
+  onSearchChange: (v: string) => void;
+  page: number;
+  totalRows: number;
+  onPageChange: (page: number) => void;
+  pageSize?: number;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const start = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, totalRows);
+
+  const extraIssueFilters = ISSUE_FILTERS.filter((f) => issues[f.key] > 0);
+
+  return (
+    <div className="mb-3 rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+        <input
+          type="date"
+          value={focusDate}
+          onChange={(e) => onFocusDateChange(e.target.value)}
+          className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+        />
+        <select
+          ref={podSelectRef}
+          value={podFilter}
+          onChange={(e) => onPodFilterChange(e.target.value)}
+          className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 min-w-[120px] max-w-[180px]"
+        >
+          <option value="">
+            {requiresPodScope ? "Select pod…" : "All pods"}
+          </option>
+          {pods.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+
+        <Segmented
+          value={viewMode}
+          options={[
+            { id: "day", label: "Day" },
+            { id: "week", label: "Week" },
+          ]}
+          onChange={(id) => onViewModeChange(id as "day" | "week")}
+          disabledKeys={weekViewDisabled ? new Set(["week"]) : undefined}
+        />
+
+        <div className="hidden sm:block h-5 w-px bg-gray-200" />
+
+        <Segmented
+          value={healthFilter}
+          options={PRIMARY_FILTERS}
+          onChange={(id) => onHealthFilterChange(id as IssueFilter)}
+        />
+
+        <div className="flex-1 min-w-[140px]" />
+
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search students…"
+          className="h-8 w-full sm:w-44 lg:w-52 px-2.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500"
+        />
+
+        {totalPages > 1 ? (
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => onPageChange(page - 1)}
+              className="h-8 px-2 text-xs rounded-md border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+            >
+              ‹
+            </button>
+            <span className="text-[11px] text-gray-500 tabular-nums px-1">
+              {page}/{totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className="h-8 px-2 text-xs rounded-md border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+            >
+              ›
+            </button>
+          </div>
+        ) : (
+          <span className="text-[11px] text-gray-500 tabular-nums shrink-0">
+            {start}–{end} of {totalRows}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+        <MetricPill label="expected" value={summary.expected} />
+        <MetricPill
+          label="present"
+          value={summary.present}
+          tone="good"
+          active={healthFilter === "complete"}
+          onClick={() => onHealthFilterChange("complete")}
+        />
+        <MetricPill
+          label="missing"
+          value={summary.missingPunches}
+          tone="bad"
+          active={healthFilter === "missing"}
+          onClick={() => onHealthFilterChange("missing")}
+        />
+        <MetricPill
+          label="late"
+          value={summary.late}
+          tone="warn"
+          active={healthFilter === "late"}
+          onClick={() => onHealthFilterChange("late")}
+        />
+        {issues.total > 0 ? (
+          <MetricPill label="issues" value={issues.total} tone="warn" />
+        ) : null}
+
+        {extraIssueFilters.length > 0 ? (
+          <>
+            <span className="text-gray-300 mx-0.5">|</span>
+            {extraIssueFilters.map((f) => (
+              <MetricPill
+                key={f.id}
+                label={f.label}
+                value={issues[f.key]}
+                active={healthFilter === f.id}
+                onClick={() => onHealthFilterChange(f.id)}
+              />
+            ))}
+          </>
+        ) : null}
+
+        {healthFilter !== "all" ? (
+          <button
+            type="button"
+            onClick={() => onHealthFilterChange("all")}
+            className="ml-auto text-[11px] text-gray-500 hover:text-orange-600 underline-offset-2 hover:underline"
+          >
+            Clear filter
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}

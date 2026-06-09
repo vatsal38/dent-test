@@ -5,7 +5,9 @@ import { getDaysInRange } from "../weekDates";
 import type {
   AttendanceAlert,
   AttendanceDiscrepancy,
+  AttendanceIssueSummary,
   AttendanceWorkspaceData,
+  IssueFilter,
   PodAttendanceStats,
   PunchType,
 } from "../types";
@@ -60,6 +62,42 @@ function buildDiscrepancies(
       });
     }
 
+    if (day.hasManualCorrection) {
+      list.push({
+        id: `${day.key}|manual_override`,
+        kind: "manual_override",
+        studentId: day.studentId,
+        podId: day.podId,
+        date: day.date,
+        label: `${studentName} — manual correction on ${day.date}`,
+        status: "open",
+      });
+    }
+
+    if (day.hasAutoFill) {
+      list.push({
+        id: `${day.key}|auto_filled`,
+        kind: "auto_filled",
+        studentId: day.studentId,
+        podId: day.podId,
+        date: day.date,
+        label: `${studentName} — auto-filled on ${day.date}`,
+        status: "open",
+      });
+    }
+
+    if (day.notes && /correction|request/i.test(day.notes)) {
+      list.push({
+        id: `${day.key}|correction_request`,
+        kind: "correction_request",
+        studentId: day.studentId,
+        podId: day.podId,
+        date: day.date,
+        label: `${studentName} — correction request on ${day.date}`,
+        status: "open",
+      });
+    }
+
     for (const pt of PUNCH_TYPES) {
       if (day.punches[pt].state !== "missing") continue;
       if (day.health === "excused" || day.health === "absent") continue;
@@ -92,17 +130,28 @@ function buildPodStats(
   const todayDays = days.filter((d) => d.date === focusDate);
   return pods.map((pod) => {
     const podDays = todayDays.filter((d) => d.podId === pod.id);
+    const hoursSum = podDays.reduce((sum, d) => {
+      const raw = d.totalHoursLabel?.replace(/[^\d.]/g, "") ?? "";
+      const n = Number(raw);
+      return sum + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const withHours = podDays.filter((d) => d.totalHoursLabel).length;
     return {
       podId: pod.id,
       podName: pod.name,
       siteName: resolveSiteName(pod.id, podById),
       expected: podDays.length,
-      complete: podDays.filter((d) => d.health === "complete" || d.health === "late").length,
+      complete: podDays.filter(
+        (d) => d.attendanceState === "present" || d.health === "complete",
+      ).length,
       partial: podDays.filter((d) => d.health === "partial").length,
       missing: podDays.filter((d) => d.health === "missing").length,
-      late: podDays.filter((d) => d.isLate).length,
-      excused: podDays.filter((d) => d.health === "excused").length,
-      absent: podDays.filter((d) => d.health === "absent").length,
+      late: podDays.filter((d) => d.isLate || d.attendanceState === "late").length,
+      excused: podDays.filter((d) => d.attendanceState === "excused").length,
+      absent: podDays.filter((d) => d.attendanceState === "absent").length,
+      autoFilled: podDays.filter((d) => d.attendanceState === "auto_filled").length,
+      missingPunches: podDays.reduce((n, d) => n + d.missingPunchCount, 0),
+      averageHours: withHours > 0 ? Math.round((hoursSum / withHours) * 10) / 10 : 0,
     };
   });
 }
@@ -172,7 +221,7 @@ function buildAlerts(
       id: "open-discrepancies",
       severity: "warning",
       title: `${openDiscrepancies} open issue${openDiscrepancies === 1 ? "" : "s"} to resolve`,
-      body: "Payroll-safe corrections in the discrepancy queue.",
+      body: "Review in the issues queue or issue triage.",
       href: "/app/bob/attendance/discrepancies",
       count: openDiscrepancies,
     });
@@ -258,11 +307,25 @@ export function computeAttendanceWorkspace(
   const summary = {
     expected: todayDays.length,
     complete: todayDays.filter(
-      (d) => d.health === "complete" || d.health === "late",
+      (d) => d.attendanceState === "present" || d.health === "complete",
     ).length,
     missingPunches: todayDays.reduce((n, d) => n + d.missingPunchCount, 0),
-    late: todayDays.filter((d) => d.isLate).length,
+    late: todayDays.filter((d) => d.isLate || d.attendanceState === "late").length,
     openDiscrepancies,
+    excused: todayDays.filter((d) => d.attendanceState === "excused").length,
+    absent: todayDays.filter((d) => d.attendanceState === "absent").length,
+    autoFilled: todayDays.filter((d) => d.attendanceState === "auto_filled").length,
+    present: todayDays.filter((d) => d.attendanceState === "present").length,
+  };
+
+  const issues: AttendanceIssueSummary = {
+    missingPunches: summary.missingPunches,
+    late: summary.late,
+    correctionRequests: discrepancies.filter((d) => d.kind === "correction_request").length,
+    manualOverrides: discrepancies.filter((d) => d.kind === "manual_override").length,
+    autoFilled: discrepancies.filter((d) => d.kind === "auto_filled").length,
+    conflicts: discrepancies.filter((d) => d.kind === "conflict").length,
+    total: openDiscrepancies,
   };
 
   const podStats = buildPodStats(days, pods, podById, focusDate);
@@ -285,6 +348,7 @@ export function computeAttendanceWorkspace(
     alerts,
     podStats,
     summary,
+    issues,
     scale: {
       enrollmentCount,
       requiresPodScope:
@@ -303,19 +367,57 @@ export function computeAttendanceWorkspace(
 
 export function filterDaysByHealth(
   days: AttendanceWorkspaceData["days"],
-  filter: "all" | "missing" | "late" | "complete",
+  filter: IssueFilter,
 ): AttendanceWorkspaceData["days"] {
   if (filter === "all") return days;
-  if (filter === "missing")
-    return days.filter((d) => d.health === "missing" || d.health === "partial");
-  if (filter === "late") return days.filter((d) => d.isLate);
-  return days.filter((d) => d.health === "complete");
+  if (filter === "missing") {
+    return days.filter(
+      (d) =>
+        d.health === "missing" ||
+        d.health === "partial" ||
+        d.attendanceState === "missing_punch",
+    );
+  }
+  if (filter === "late") {
+    return days.filter((d) => d.isLate || d.attendanceState === "late");
+  }
+  if (filter === "excused") {
+    return days.filter((d) => d.attendanceState === "excused");
+  }
+  if (filter === "absent") {
+    return days.filter((d) => d.attendanceState === "absent");
+  }
+  if (filter === "auto_filled") {
+    return days.filter((d) => d.attendanceState === "auto_filled");
+  }
+  if (filter === "corrections") {
+    return days.filter((d) => d.hasManualCorrection);
+  }
+  if (filter === "correction_requests") {
+    return days.filter((d) => Boolean(d.notes && /correction|request/i.test(d.notes)));
+  }
+  if (filter === "conflicts") {
+    return days.filter((d) => d.missingPunchCount > 0 && d.hasManualCorrection);
+  }
+  return days.filter(
+    (d) => d.attendanceState === "present" || d.health === "complete",
+  );
 }
 
 export function siteRollup(podStats: PodAttendanceStats[]) {
   const bySite = new Map<
     string,
-    { siteName: string; expected: number; complete: number; missing: number }
+    {
+      siteName: string;
+      expected: number;
+      complete: number;
+      missing: number;
+      late: number;
+      excused: number;
+      absent: number;
+      missingPunches: number;
+      averageHours: number;
+    }
   >();
   for (const p of podStats) {
     const site = p.siteName || "Unassigned site";
@@ -324,10 +426,20 @@ export function siteRollup(podStats: PodAttendanceStats[]) {
       expected: 0,
       complete: 0,
       missing: 0,
+      late: 0,
+      excused: 0,
+      absent: 0,
+      missingPunches: 0,
+      averageHours: 0,
     };
     cur.expected += p.expected;
     cur.complete += p.complete;
     cur.missing += p.missing + p.partial;
+    cur.late += p.late;
+    cur.excused += p.excused;
+    cur.absent += p.absent;
+    cur.missingPunches += p.missingPunches;
+    cur.averageHours += p.averageHours;
     bySite.set(site, cur);
   }
   return Array.from(bySite.values()).sort((a, b) =>

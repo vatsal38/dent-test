@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BobRecruitmentListParams } from "@/platform/api/bob/recruitment";
 import type { BobRosterSchemaField } from "@/platform/api/bob/shared";
@@ -55,22 +56,18 @@ import {
   useBobRecruitmentFacets,
   useBobRecruitmentList,
   useBobRecruitmentSchema,
+  useBobRecruitmentTransferableIds,
   useDeleteBobRecruitment,
 } from "@/platform/query/hooks/useBobRecruitmentList";
+import { bobKeys } from "@/platform/query/queryKeys";
 type NameSortOrder = "asc" | "desc";
 
-function listParamsFromFilters(
+function baseParamsFromFilters(
   f: RecruitmentTableFilterState,
   queueParams: Partial<BobRecruitmentListParams>,
-  page: number,
-  pageSize: number,
   nameSort: NameSortOrder | null,
 ): BobRecruitmentListParams {
-  const params: BobRecruitmentListParams = {
-    ...queueParams,
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
-  };
+  const params: BobRecruitmentListParams = { ...queueParams };
   const q = f.search.trim();
   if (q) params.search = q;
   const filtersJson = serializeFiltersForApi(f);
@@ -80,6 +77,20 @@ function listParamsFromFilters(
     params.sortOrder = nameSort;
   }
   return params;
+}
+
+function listParamsFromFilters(
+  f: RecruitmentTableFilterState,
+  queueParams: Partial<BobRecruitmentListParams>,
+  page: number,
+  pageSize: number,
+  nameSort: NameSortOrder | null,
+): BobRecruitmentListParams {
+  return {
+    ...baseParamsFromFilters(f, queueParams, nameSort),
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
 }
 
 function buildPageItems(total: number, current: number): (number | "…")[] {
@@ -103,6 +114,7 @@ function buildPageItems(total: number, current: number): (number | "…")[] {
 }
 
 export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -146,6 +158,10 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     setPage(1);
   }, [debouncedFilters, nameSort, queueId]);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [debouncedFilters, queueId]);
+
   const listParams = useMemo(
     () =>
       listParamsFromFilters(
@@ -158,6 +174,12 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     [debouncedFilters, queue.listParams, page, pageSize, nameSort],
   );
 
+  const transferableParams = useMemo(
+    () =>
+      baseParamsFromFilters(debouncedFilters, queue.listParams, nameSort),
+    [debouncedFilters, queue.listParams, nameSort],
+  );
+
   const {
     data: listData,
     isLoading: listLoading,
@@ -165,6 +187,11 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     error: listError,
     refetch: refetchList,
   } = useBobRecruitmentList(listParams);
+
+  const {
+    data: transferableData,
+    isFetching: transferableFetching,
+  } = useBobRecruitmentTransferableIds(transferableParams);
 
   const { data: facets, isLoading: facetsLoading } = useBobRecruitmentFacets();
   const { data: recruitmentSchema } = useBobRecruitmentSchema();
@@ -248,8 +275,28 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     });
   }
 
-  async function runBulkPreview() {
-    const ids = Array.from(selectedIds);
+  const matchingIds = transferableData?.ids ?? [];
+  const matchingCount = transferableData?.total ?? 0;
+  const matchingCapped = transferableData?.capped ?? false;
+  const matchingMax = transferableData?.max ?? 500;
+  const allMatchingSelected =
+    matchingIds.length > 0 &&
+    matchingIds.every((id) => selectedIds.has(id));
+
+  function toggleSelectAllMatching() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allMatchingSelected) {
+        for (const id of matchingIds) next.delete(id);
+      } else {
+        for (const id of matchingIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function runBulkPreview(idsOverride?: string[]) {
+    const ids = idsOverride ?? Array.from(selectedIds);
     setBulkLoadingPreview(true);
     setBulkPreview(null);
     setBulkResult(null);
@@ -264,12 +311,20 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
-  function openBulkTransferModal() {
+  function openBulkTransferModal(idsOverride?: string[]) {
+    if (idsOverride?.length) {
+      setSelectedIds(new Set(idsOverride));
+    }
     setBulkModalOpen(true);
     setBulkPreview(null);
     setBulkResult(null);
     setBulkPhase("preview");
-    void runBulkPreview();
+    void runBulkPreview(idsOverride);
+  }
+
+  function transferAllMatching() {
+    if (matchingIds.length === 0) return;
+    openBulkTransferModal(matchingIds);
   }
 
   async function confirmBulkTransfer() {
@@ -280,6 +335,7 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
       setBulkResult(result);
       setBulkPhase("result");
       setSelectedIds(new Set());
+      await queryClient.invalidateQueries({ queryKey: bobKeys.recruitment.all() });
       await refetchList();
     } finally {
       setBulkTransferring(false);
@@ -383,6 +439,7 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
         facets={facets ?? null}
         facetsLoading={facetsLoading}
         schema={schema}
+        programOptions={recruitmentSchema?.programOptions}
         drawerOpen={filterDrawerOpen}
         onDrawerOpenChange={setFilterDrawerOpen}
         onSearchChange={(search) => setFilters((f) => ({ ...f, search }))}
@@ -403,17 +460,29 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
         </div>
       ) : null}
 
-      <div className="mb-4 text-xs text-gray-500">
-        {tableLoading ? (
-          <span className="text-gray-400">Updating…</span>
-        ) : (
-          <>
-            Showing{" "}
-            <span className="font-medium text-gray-800">{rows.length}</span> of{" "}
-            <span className="font-medium text-gray-800">{totalRecords}</span> in
-            this queue
-          </>
-        )}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-gray-500">
+          {tableLoading ? (
+            <span className="text-gray-400">Updating…</span>
+          ) : (
+            <>
+              Showing{" "}
+              <span className="font-medium text-gray-800">{rows.length}</span> of{" "}
+              <span className="font-medium text-gray-800">{totalRecords}</span> in
+              this queue
+            </>
+          )}
+        </p>
+        {matchingCount > 0 ? (
+          <p className="text-xs text-indigo-700">
+            <span className="font-semibold">{matchingCount}</span> not yet in
+            Students &amp; Alums match current filters
+            {matchingCapped ? ` (bulk transfer capped at ${matchingMax})` : ""}
+            {transferableFetching ? (
+              <span className="text-indigo-500"> · updating…</span>
+            ) : null}
+          </p>
+        ) : null}
       </div>
 
       {isCatalogEmpty ? (
@@ -677,10 +746,17 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
       <IntakeBulkTransferBar
         selectedCount={selectedIds.size}
         pageCount={transferableRowIds.length}
+        matchingCount={matchingCount}
+        matchingCapped={matchingCapped}
+        matchingMax={matchingMax}
         allOnPageSelected={allOnPageSelected}
+        allMatchingSelected={allMatchingSelected}
+        loadingMatching={transferableFetching && !transferableData}
         onSelectAllPage={toggleSelectAllOnPage}
+        onSelectAllMatching={toggleSelectAllMatching}
+        onTransferAllMatching={transferAllMatching}
         onClear={() => setSelectedIds(new Set())}
-        onPreviewTransfer={openBulkTransferModal}
+        onPreviewTransfer={() => openBulkTransferModal()}
         busy={bulkLoadingPreview || bulkTransferring}
       />
 

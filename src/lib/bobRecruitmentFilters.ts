@@ -89,6 +89,27 @@ export function buildFilterFieldCatalog(
       path: "ywStatus",
     },
     {
+      id: "sys:trackPlacement2026",
+      label: "2026 Track Placement",
+      group: "BoB '26",
+      kind: "select",
+      path: "trackPlacement2026",
+    },
+    {
+      id: "sys:returner",
+      label: "Returner",
+      group: "BoB '26",
+      kind: "select",
+      path: "returner",
+    },
+    {
+      id: "sys:topTrackProgram",
+      label: "Top track (program)",
+      group: "BoB '26",
+      kind: "select",
+      path: "topTrackProgram",
+    },
+    {
       id: "sys:transferred",
       label: "In Students & Alums",
       group: "Pipeline",
@@ -189,9 +210,21 @@ export function countActiveRecruitmentFilters(
   return (f.search.trim() ? 1 : 0) + countDrawerRecruitmentFilters(f);
 }
 
+export function formatFilterValueLabel(
+  fieldId: string,
+  value: string,
+  programOptions?: Array<{ id: string; label: string }>,
+): string {
+  if (fieldId === "sys:topTrackProgram" && programOptions?.length) {
+    return programOptions.find((p) => p.id === value)?.label ?? value;
+  }
+  return value;
+}
+
 export function formatConditionChip(
   c: RecruitmentFilterCondition,
   fieldCatalog: RecruitmentFilterFieldDef[],
+  programOptions?: Array<{ id: string; label: string }>,
 ): string {
   const def = fieldCatalog.find((x) => x.id === c.field);
   const label = def?.label || c.field;
@@ -199,7 +232,11 @@ export function formatConditionChip(
   if (!FILTER_OPERATORS.find((o) => o.id === c.operator)?.needsValue) {
     return `${label} ${op}`;
   }
-  return `${label} ${op} “${c.value}”`;
+  const valueLabel =
+    def?.kind === "boolean"
+      ? formatBooleanValue(c.value)
+      : formatFilterValueLabel(c.field, c.value, programOptions);
+  return `${label} ${op} “${valueLabel}”`;
 }
 
 /** Payload for GET /api/bob/recruitment?filters=... */
@@ -217,6 +254,7 @@ export function serializeFiltersForApi(
 export function facetOptionsForField(
   fieldId: string,
   facets: BobRecruitmentFacetsResponse | null,
+  programOptions?: Array<{ id: string; label: string }>,
 ): string[] {
   if (!facets) return [];
   switch (fieldId) {
@@ -224,6 +262,14 @@ export function facetOptionsForField(
       return facets.appStatuses.map((x) => x.value);
     case "sys:ywStatus":
       return facets.ywStatuses.map((x) => x.value);
+    case "sys:trackPlacement2026":
+      return (facets.trackPlacements2026 ?? []).map((x) => x.value);
+    case "sys:returner":
+      return (facets.returners ?? []).map((x) => x.value);
+    case "sys:topTrackProgram":
+      return (programOptions ?? [])
+        .filter((p) => /2026|bet on baltimore.*2026/i.test(p.label))
+        .map((p) => p.id);
     case "sys:transferred":
       return ["yes", "no"];
     case "sys:onRoster":

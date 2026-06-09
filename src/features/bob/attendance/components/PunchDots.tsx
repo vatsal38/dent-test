@@ -1,33 +1,24 @@
 "use client";
 
-import type { PunchSlot } from "../types";
+import type { PunchType, PunchVisualState } from "../types";
 import { PUNCH_TYPES } from "../types";
-import { PUNCH_LABELS, PUNCH_SHORT, PUNCH_STATE_COLORS } from "../model/constants";
+import { PUNCH_SHORT, PUNCH_STATE_COLORS } from "../model/constants";
 
 export function PunchDots({
   punches,
-  size = "sm",
-  showTooltip = true,
 }: {
-  punches: Record<string, PunchSlot>;
-  size?: "sm" | "md";
-  showTooltip?: boolean;
+  punches: Record<PunchType, { state: PunchVisualState; timeLabel?: string }>;
 }) {
-  const dot = size === "md" ? "w-2.5 h-2.5" : "w-2 h-2";
   return (
-    <div className="inline-flex items-center gap-0.5" role="img" aria-label="Punch status">
+    <div className="inline-flex items-center gap-1" title="Session punches">
       {PUNCH_TYPES.map((pt) => {
         const slot = punches[pt];
-        const colors = PUNCH_STATE_COLORS[slot?.state ?? "na"];
-        const title = showTooltip
-          ? `${PUNCH_LABELS[pt]}: ${slot?.state ?? "na"}${slot?.timeLabel ? ` · ${slot.timeLabel}` : ""}`
-          : undefined;
+        const colors = PUNCH_STATE_COLORS[slot.state];
         return (
           <span
             key={pt}
-            title={title}
-            className={`inline-block rounded-full ring-2 ${dot} ${colors.dot} ${colors.ring}`}
-            aria-label={title}
+            title={`${PUNCH_SHORT[pt]}${slot.timeLabel ? `: ${slot.timeLabel}` : ""}`}
+            className={`h-2.5 w-2.5 rounded-full ring-2 ring-white ${colors.dot}`}
           />
         );
       })}
@@ -35,15 +26,11 @@ export function PunchDots({
   );
 }
 
+/** @deprecated Use SessionLegend from SessionSummary */
 export function PunchLegend() {
   return (
-    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-      {PUNCH_TYPES.map((pt) => (
-        <span key={pt} className="inline-flex items-center gap-1">
-          <span className="font-medium text-gray-600">{PUNCH_SHORT[pt]}</span>
-          <span>{PUNCH_LABELS[pt]}</span>
-        </span>
-      ))}
+    <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+      <span>AM In · AM Out · PM In · PM Out</span>
     </div>
   );
 }

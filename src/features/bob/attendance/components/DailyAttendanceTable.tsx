@@ -6,7 +6,7 @@ import { DAY_NAMES } from "../weekDates";
 import { resolvePodName, resolveStudentName } from "../model/resolveDisplay";
 import { initialsOf } from "@/features/bob/roster/recordDisplay";
 import { AttendanceStatusBadge } from "./AttendanceStatusBadge";
-import { PunchDots } from "./PunchDots";
+import { SessionSummary } from "./SessionSummary";
 import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
 import { studentMatchesSearch } from "../model/filterRows";
 
@@ -58,15 +58,22 @@ export function DailyAttendanceTable({
       map.get(rk)!.byDate.set(d.date, d);
     }
     return Array.from(map.values())
-      .filter((row) =>
-        studentMatchesSearch(row.studentId, workspace.studentById, search),
-      )
+      .filter((row) => {
+        const today = row.byDate.get(focusDate);
+        return studentMatchesSearch(
+          row.studentId,
+          workspace.studentById,
+          workspace.podById,
+          today,
+          search,
+        );
+      })
       .sort((a, b) =>
         resolveStudentName(a.studentId, workspace.studentById).localeCompare(
           resolveStudentName(b.studentId, workspace.studentById),
         ),
       );
-  }, [days, workspace.studentById, search]);
+  }, [days, workspace.studentById, workspace.podById, search, focusDate]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -97,9 +104,14 @@ export function DailyAttendanceTable({
               Student
             </th>
             {!isWeek ? (
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Status
-              </th>
+              <>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[280px]">
+                  Sessions
+                </th>
+              </>
             ) : null}
             {columns.map((d) => {
               const missing = days.filter(
@@ -174,9 +186,23 @@ export function DailyAttendanceTable({
                   </button>
                 </td>
                 {!isWeek && today ? (
-                  <td className="px-4 py-2">
-                    <AttendanceStatusBadge health={today.health} />
-                  </td>
+                  <>
+                    <td className="px-4 py-2">
+                      <AttendanceStatusBadge
+                        health={today.health}
+                        attendanceState={today.attendanceState}
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelectDay(today)}
+                        className="text-left w-full"
+                      >
+                        <SessionSummary day={today} compact />
+                      </button>
+                    </td>
+                  </>
                 ) : null}
                 {columns.map((d) => {
                   const cell = row.byDate.get(d);
@@ -193,10 +219,15 @@ export function DailyAttendanceTable({
                   return (
                     <td
                       key={d}
-                      className="px-2 py-2 text-center cursor-pointer"
+                      className="px-2 py-2 text-center cursor-pointer align-top"
                       onClick={() => onSelectDay(cell)}
                     >
-                      <PunchDots punches={cell.punches} />
+                      <div className="flex flex-col items-center gap-1">
+                        <AttendanceStatusBadge attendanceState={cell.attendanceState} />
+                        {cell.totalHoursLabel ? (
+                          <span className="text-[10px] text-gray-500">{cell.totalHoursLabel}</span>
+                        ) : null}
+                      </div>
                     </td>
                   );
                 })}

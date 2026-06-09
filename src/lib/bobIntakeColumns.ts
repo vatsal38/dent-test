@@ -32,6 +32,8 @@ const IMPORTANT_INTAKE_FIELD_NAMES = [
   "Application Status",
   "Youth Works BoB '26 Status",
   "Youth Works BoB ’26 Status",
+  "2026 Track Placement",
+  "Returner",
   "Pipeline",
   "Stage",
   "Assigned To",

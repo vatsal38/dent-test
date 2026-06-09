@@ -13,6 +13,7 @@ import {
   getBobRecruitmentList,
   getBobRecruitmentRecord,
   getBobRecruitmentSchema,
+  getBobRecruitmentTransferableIds,
   type BobRecruitmentListParams,
 } from "@/platform/api/bob/recruitment";
 import { bobKeys } from "@/platform/query/queryKeys";
@@ -30,6 +31,18 @@ export function useBobRecruitmentFacets() {
     queryKey: bobKeys.recruitment.facets(),
     queryFn: getBobRecruitmentFacets,
     staleTime: 60_000,
+  });
+}
+
+export function useBobRecruitmentTransferableIds(
+  params: BobRecruitmentListParams,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: bobKeys.recruitment.transferableIds(params),
+    queryFn: () => getBobRecruitmentTransferableIds(params),
+    enabled,
+    staleTime: 30_000,
   });
 }
 

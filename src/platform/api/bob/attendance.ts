@@ -15,13 +15,34 @@ export interface BobAttendance {
   date: string;
   podId?: string | null;
   status?: BobAttendanceStatus;
-  /** Airtable punch event — maps to AM In / Lunch / PM slots */
+  /** Airtable punch event — maps to session slots */
   signType?: string | null;
   signInTime?: string | null;
   signOutTime?: string | null;
+  rawSignInTime?: string | null;
+  rawSignOutTime?: string | null;
+  adjustedSignIn?: string | null;
+  adjustedSignOut?: string | null;
+  /** Airtable formula fields — display only */
+  attendanceStatus?: string | null;
+  attendanceStatusHours?: string | null;
+  hoursPresent?: string | null;
+  amHours?: string | null;
+  pmHours?: string | null;
+  maxHours?: string | null;
+  totalHours?: string | null;
+  excusedAbsence?: boolean;
+  manualStartTime?: string | null;
+  manualEndTime?: string | null;
+  manualOverride?: string | null;
+  staffCorrectionSignIn?: string | null;
+  staffCorrectionSignOut?: string | null;
+  branch?: string | null;
+  program?: string | null;
+  track?: string | null;
+  personName?: string | null;
   airtableRecordId?: string | null;
   studentAirtableRecordId?: string | null;
-  track?: string | null;
   notes?: string | null;
   createdAt?: string;
   updatedAt?: string;

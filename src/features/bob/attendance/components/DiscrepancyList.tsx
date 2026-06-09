@@ -7,11 +7,11 @@ import { resolvePodName, resolveStudentName } from "../model/resolveDisplay";
 export function DiscrepancyList({
   items,
   workspace,
-  onResolve,
+  onViewDetails,
 }: {
   items: AttendanceDiscrepancy[];
   workspace: AttendanceWorkspaceData;
-  onResolve?: (item: AttendanceDiscrepancy) => void;
+  onViewDetails?: (item: AttendanceDiscrepancy) => void;
 }) {
   if (!items.length) {
     return (
@@ -59,20 +59,20 @@ export function DiscrepancyList({
                 </span>
               </td>
               <td className="px-4 py-3 text-right">
-                {onResolve ? (
+                {onViewDetails ? (
                   <button
                     type="button"
-                    onClick={() => onResolve(d)}
+                    onClick={() => onViewDetails(d)}
                     className="text-sm font-medium text-orange-600 hover:text-orange-700"
                   >
-                    Resolve →
+                    View →
                   </button>
                 ) : (
                   <Link
                     href={`/app/bob/attendance/mark?pod=${d.podId}&date=${d.date}`}
                     className="text-sm font-medium text-orange-600 hover:text-orange-700"
                   >
-                    Resolve →
+                    View →
                   </Link>
                 )}
               </td>

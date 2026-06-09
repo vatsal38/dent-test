@@ -20,6 +20,8 @@ export const bobKeys = {
       [...bobKeys.recruitment.all(), "list", params ?? {}] as const,
     detail: (id: string) => [...bobKeys.recruitment.all(), "detail", id] as const,
     facets: () => [...bobKeys.recruitment.all(), "facets"] as const,
+    transferableIds: (params?: BobRecruitmentListParams) =>
+      [...bobKeys.recruitment.all(), "transferable-ids", params ?? {}] as const,
     schema: () => [...bobKeys.recruitment.all(), "schema"] as const,
   },
   students: {

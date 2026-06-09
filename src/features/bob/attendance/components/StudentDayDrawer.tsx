@@ -1,16 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
-import {
-  BOB_ATTENDANCE_STATUSES,
-} from "@/platform/api/bob/attendance";
 import type { AttendanceWorkspaceData, StudentDayAttendance } from "../types";
 import { resolvePodName, resolveStudentName } from "../model/resolveDisplay";
-import { STATUS_LABELS } from "../model/constants";
-import { AttendanceStatusBadge } from "./AttendanceStatusBadge";
-import { AttendanceTimeline } from "./AttendanceTimeline";
-import { useUpsertBobAttendanceDay } from "@/platform/query/hooks/useBobAttendance";
+import { AttendanceStateBadge } from "./AttendanceStateBadge";
+import { SessionSummary } from "./SessionSummary";
+import { formatAttendanceTime } from "../model/formatAttendanceTime";
+import { PUNCH_LABELS } from "../model/constants";
+
+function AdjustmentRow({
+  label,
+  slot,
+}: {
+  label: string;
+  slot: StudentDayAttendance["morning"]["in"];
+}) {
+  const hasAdjustment =
+    slot.adjustedTimeLabel &&
+    slot.originalTimeLabel &&
+    slot.adjustedTimeLabel !== slot.originalTimeLabel;
+
+  if (!slot.timeLabel && !hasAdjustment) return null;
+
+  return (
+    <div className="rounded-lg border border-gray-100 bg-white p-3 space-y-2">
+      <p className="text-sm font-semibold text-gray-900">{label}</p>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <p className="text-gray-500">Original</p>
+          <p className="font-medium text-gray-800">
+            {slot.originalTimeLabel || slot.timeLabel || "Missing"}
+          </p>
+        </div>
+        <div>
+          <p className="text-gray-500">Adjusted</p>
+          <p className="font-medium text-gray-800">
+            {slot.adjustedTimeLabel || slot.timeLabel || "—"}
+          </p>
+        </div>
+      </div>
+      {slot.adjustmentReason ? (
+        <p className="text-xs text-gray-600">
+          Reason: {slot.adjustmentReason}
+          {slot.adjustmentSource ? ` · Source: ${slot.adjustmentSource}` : ""}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function StudentDayDrawer({
   day,
@@ -21,28 +58,13 @@ export function StudentDayDrawer({
   workspace: AttendanceWorkspaceData;
   onClose: () => void;
 }) {
-  const upsert = useUpsertBobAttendanceDay();
   const name = resolveStudentName(day.studentId, workspace.studentById);
   const podName = resolvePodName(day.podId, workspace.podById);
-  const student = workspace.studentById.get(day.studentId);
-
-  async function setStatus(status: BobAttendanceStatus) {
-    await upsert.mutateAsync({
-      studentId: day.studentId,
-      podId: day.podId,
-      date: day.date,
-      status,
-    });
-  }
 
   return (
     <>
-      <div
-        className="fixed inset-0 bg-black/25 z-40"
-        onClick={onClose}
-        aria-hidden
-      />
-      <aside className="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col border-l border-gray-200 bg-white shadow-xl">
+      <div className="fixed inset-0 bg-black/25 z-40" onClick={onClose} aria-hidden />
+      <aside className="fixed top-0 right-0 z-50 flex h-full w-full max-w-lg flex-col border-l border-gray-200 bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-gray-900">Attendance detail</h2>
           <button
@@ -54,55 +76,99 @@ export function StudentDayDrawer({
             ✕
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           <div>
             <p className="text-base font-semibold text-gray-900">{name}</p>
             <p className="text-sm text-gray-500">
               {podName} · {day.date}
-              {student?.track ? ` · ${student.track}` : ""}
+              {day.track ? ` · ${day.track}` : ""}
             </p>
             <div className="mt-2">
-              <AttendanceStatusBadge health={day.health} />
+              <AttendanceStateBadge state={day.attendanceState} />
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Timeline</h3>
-            <AttendanceTimeline day={day} />
-          </div>
+          <section>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Attendance summary</h3>
+            <SessionSummary day={day} />
+          </section>
 
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">
-              Payroll-safe correction
-            </h3>
-            <p className="text-xs text-gray-500 mb-2">
-              Sets the daily rollup status (syncs with existing attendance API).
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {BOB_ATTENDANCE_STATUSES.map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  disabled={upsert.isPending}
-                  onClick={() => setStatus(st)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                    day.dailyStatus === st
-                      ? "border-orange-500 bg-orange-50 text-orange-800"
-                      : "border-gray-200 text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {STATUS_LABELS[st]}
-                </button>
-              ))}
+          <section className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-lg border border-gray-200 p-3">
+              <p className="text-xs text-gray-500">Daily total</p>
+              <p className="font-semibold text-gray-900">{day.totalHoursLabel || "—"}</p>
             </div>
-          </div>
+            <div className="rounded-lg border border-gray-200 p-3">
+              <p className="text-xs text-gray-500">Expected hours</p>
+              <p className="font-semibold text-gray-900">{day.expectedHoursLabel || "—"}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3">
+              <p className="text-xs text-gray-500">Program</p>
+              <p className="font-medium text-gray-800 truncate">{day.program || "—"}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3">
+              <p className="text-xs text-gray-500">Site</p>
+              <p className="font-medium text-gray-800">{day.site || day.branch || "—"}</p>
+            </div>
+          </section>
+
+          {(day.staffCorrectionSignIn ||
+            day.staffCorrectionSignOut ||
+            day.manualOverride) && (
+            <section>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                Airtable adjustment record
+              </h3>
+              <div className="space-y-2 text-xs text-gray-700">
+                {day.staffCorrectionSignIn ? (
+                  <p>
+                    Adjusted sign in:{" "}
+                    <span className="font-medium">
+                      {formatAttendanceTime(day.staffCorrectionSignIn)}
+                    </span>
+                  </p>
+                ) : null}
+                {day.staffCorrectionSignOut ? (
+                  <p>
+                    Adjusted sign out:{" "}
+                    <span className="font-medium">
+                      {formatAttendanceTime(day.staffCorrectionSignOut)}
+                    </span>
+                  </p>
+                ) : null}
+                {day.manualOverride ? (
+                  <p>
+                    Manual override:{" "}
+                    <span className="font-medium">{day.manualOverride}</span>
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Punch adjustments</h3>
+            <div className="space-y-2">
+              <AdjustmentRow label={PUNCH_LABELS.am_in} slot={day.morning.in} />
+              <AdjustmentRow label={PUNCH_LABELS.pm_out} slot={day.afternoon.out} />
+            </div>
+          </section>
+
+          {day.notes ? (
+            <section>
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Notes</h3>
+              <p className="text-sm text-gray-600">{day.notes}</p>
+            </section>
+          ) : null}
         </div>
+
         <div className="border-t border-gray-100 px-5 py-4 flex gap-2">
           <Link
             href={`/app/bob/attendance/mark?pod=${day.podId}&date=${day.date}`}
             className="flex-1 text-center px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
           >
-            Open scan mode
+            Open issue triage
           </Link>
           <button
             type="button"

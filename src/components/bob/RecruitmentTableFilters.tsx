@@ -14,6 +14,7 @@ import {
   facetOptionsForField,
   formatBooleanValue,
   formatConditionChip,
+  formatFilterValueLabel,
   operatorsForField,
   type RecruitmentFilterCondition,
   type RecruitmentTableFilterState,
@@ -32,6 +33,7 @@ function ConditionRow({
   match,
   fieldCatalog,
   facets,
+  programOptions,
   onChange,
   onRemove,
   onMatchChange,
@@ -41,6 +43,7 @@ function ConditionRow({
   match: "and" | "or";
   fieldCatalog: ReturnType<typeof buildFilterFieldCatalog>;
   facets: BobRecruitmentFacetsResponse | null;
+  programOptions?: Array<{ id: string; label: string }>;
   onChange: (next: RecruitmentFilterCondition) => void;
   onRemove: () => void;
   onMatchChange: (m: "and" | "or") => void;
@@ -48,7 +51,7 @@ function ConditionRow({
   const def = fieldCatalog.find((f) => f.id === condition.field);
   const ops = operatorsForField(def);
   const opMeta = FILTER_OPERATORS.find((o) => o.id === condition.operator);
-  const options = facetOptionsForField(condition.field, facets);
+  const options = facetOptionsForField(condition.field, facets, programOptions);
   const showSelect =
     options.length > 0 && ["is", "is_not"].includes(condition.operator);
   const showBoolean =
@@ -138,7 +141,9 @@ function ConditionRow({
             <option value="">Select…</option>
             {options.map((v) => (
               <option key={v} value={v}>
-                {def?.kind === "boolean" ? formatBooleanValue(v) : v}
+                {def?.kind === "boolean"
+                  ? formatBooleanValue(v)
+                  : formatFilterValueLabel(condition.field, v, programOptions)}
               </option>
             ))}
           </select>
@@ -184,12 +189,14 @@ function AirtableFilterBuilder({
   schema,
   facets,
   facetsLoading,
+  programOptions,
   onChange,
 }: {
   draft: RecruitmentTableFilterState;
   schema: BobRosterSchemaField[] | null;
   facets: BobRecruitmentFacetsResponse | null;
   facetsLoading?: boolean;
+  programOptions?: Array<{ id: string; label: string }>;
   onChange: (next: RecruitmentTableFilterState) => void;
 }) {
   const fieldCatalog = useMemo(() => buildFilterFieldCatalog(schema), [schema]);
@@ -231,6 +238,7 @@ function AirtableFilterBuilder({
             match={draft.match}
             fieldCatalog={fieldCatalog}
             facets={facets}
+            programOptions={programOptions}
             onChange={(next) => updateCondition(c.id, next)}
             onRemove={() => removeCondition(c.id)}
             onMatchChange={(match) => onChange({ ...draft, match })}
@@ -266,6 +274,7 @@ export function RecruitmentRecordsToolbar({
   facets,
   facetsLoading,
   schema,
+  programOptions,
   drawerOpen,
   onDrawerOpenChange,
   onSearchChange,
@@ -276,6 +285,7 @@ export function RecruitmentRecordsToolbar({
   facets: BobRecruitmentFacetsResponse | null;
   facetsLoading?: boolean;
   schema: BobRosterSchemaField[] | null;
+  programOptions?: Array<{ id: string; label: string }>;
   drawerOpen: boolean;
   onDrawerOpenChange: (open: boolean) => void;
   onSearchChange: (search: string) => void;
@@ -392,10 +402,10 @@ export function RecruitmentRecordsToolbar({
                 type="button"
                 onClick={() => removeConditionChip(c.id)}
                 className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100 max-w-full"
-                title={formatConditionChip(c, fieldCatalog)}
+                title={formatConditionChip(c, fieldCatalog, programOptions)}
               >
                 <span className="truncate max-w-[280px]">
-                  {formatConditionChip(c, fieldCatalog)}
+                  {formatConditionChip(c, fieldCatalog, programOptions)}
                 </span>
                 <span className="text-blue-500 shrink-0" aria-hidden>
                   ×
@@ -456,6 +466,7 @@ export function RecruitmentRecordsToolbar({
               schema={schema}
               facets={facets}
               facetsLoading={facetsLoading}
+              programOptions={programOptions}
               onChange={setDraft}
             />
           </div>
