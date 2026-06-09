@@ -1,4 +1,16 @@
 import type { BobRosterSchemaField } from "@/lib/api";
+import {
+  RETURNER_FIELD,
+  TRACK_PLACEMENT_2026_FIELD,
+  YW_STATUS_FIELD_NAMES,
+} from "@/lib/bobRecruitmentFieldConstants";
+import {
+  BOB25_TRACK_SITE_LOOKUP_FIELDS,
+  BOB26_TRACK_FIELD_NAMES,
+  BOB26_TRACK_SITE_LOOKUP_FIELDS,
+  ROSTER_TRACK_PLACEMENT_2026_FIELD,
+  ROSTER_YW_STATUS_FIELD_NAMES,
+} from "@/lib/bobRosterFieldConstants";
 
 /** Exact Airtable field names to show when present (order preserved). */
 const IMPORTANT_INTAKE_FIELD_NAMES = [
@@ -30,10 +42,9 @@ const IMPORTANT_INTAKE_FIELD_NAMES = [
   "Status",
   "Recruitment Status",
   "Application Status",
-  "Youth Works BoB '26 Status",
-  "Youth Works BoB ’26 Status",
-  "2026 Track Placement",
-  "Returner",
+  ...YW_STATUS_FIELD_NAMES,
+  TRACK_PLACEMENT_2026_FIELD,
+  RETURNER_FIELD,
   "Pipeline",
   "Stage",
   "Assigned To",
@@ -169,11 +180,14 @@ const IMPORTANT_ROSTER_FIELD_NAMES = [
   "Parent/Guardian Name",
   "Guardian Email",
   "Start Date @ Dent",
+  ...BOB25_TRACK_SITE_LOOKUP_FIELDS,
+  ...BOB26_TRACK_FIELD_NAMES,
+  ...BOB26_TRACK_SITE_LOOKUP_FIELDS,
+  ROSTER_TRACK_PLACEMENT_2026_FIELD,
   "Track",
   "Coach",
   "Pod",
-  "YW Status",
-  "Youth Works Status",
+  ...ROSTER_YW_STATUS_FIELD_NAMES,
   "Stage",
   "Interview Stage",
   "Status",
@@ -191,6 +205,7 @@ const ROSTER_FIELD_FALLBACKS: Array<RegExp> = [
   /city|location|borough/i,
   /parent|guardian/i,
   /start\s*date.*dent|enroll/i,
+  /track\s*-\s*site|bob\s*[''\u2019]?\d{2}\s*track|2026\s*track/i,
   /^track$|coach|pod/i,
   /yw\s*status|youth\s*works/i,
   /interview|stage|status/i,

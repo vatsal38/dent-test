@@ -1,5 +1,11 @@
 import type { BobRecruitmentFacetsResponse, BobRosterSchemaField } from "@/lib/api";
 import { importantIntakeTableColumns } from "@/lib/bobIntakeColumns";
+import {
+  isSystemFilterIntakeField,
+  isYouthWorksBoB26StatusField,
+  isTrackPlacement2026Field,
+  isReturnerField,
+} from "@/lib/bobRecruitmentFieldConstants";
 
 export type FilterMatchMode = "and" | "or";
 
@@ -83,7 +89,7 @@ export function buildFilterFieldCatalog(
     },
     {
       id: "sys:ywStatus",
-      label: "Youth Works BoB '26 status",
+      label: "Youth Works BoB '26 status (Pay Source)",
       group: "Pipeline",
       kind: "select",
       path: "ywStatus",
@@ -153,7 +159,9 @@ export function buildFilterFieldCatalog(
     },
   ];
 
-  const intake = importantIntakeTableColumns(schema).map((f) => ({
+  const intake = importantIntakeTableColumns(schema)
+    .filter((f) => !isSystemFilterIntakeField(f.name))
+    .map((f) => ({
     id: `airtable:${f.name}`,
     label: f.name,
     group: "Intake fields",
@@ -280,19 +288,38 @@ export function facetOptionsForField(
       return ["yes", "no"];
     default:
       if (fieldId.startsWith("airtable:")) {
-        const name = fieldId.slice("airtable:".length);
-        if (/school|organization/i.test(name)) {
-          return facets.schools.map((x) => x.value);
-        }
-        if (/grade/i.test(name)) {
-          return facets.grades.map((x) => x.value);
-        }
-        if (/assign|recruit|counselor/i.test(name)) {
-          return facets.assignedTo.map((x) => x.value);
-        }
+        return facetOptionsForAirtableFieldName(
+          fieldId.slice("airtable:".length),
+          facets,
+        );
       }
       return [];
   }
+}
+
+function facetOptionsForAirtableFieldName(
+  name: string,
+  facets: BobRecruitmentFacetsResponse,
+): string[] {
+  if (/school|organization/i.test(name)) {
+    return facets.schools.map((x) => x.value);
+  }
+  if (/grade/i.test(name)) {
+    return facets.grades.map((x) => x.value);
+  }
+  if (/assign|recruit|counselor/i.test(name)) {
+    return facets.assignedTo.map((x) => x.value);
+  }
+  if (isYouthWorksBoB26StatusField(name)) {
+    return facets.ywStatuses.map((x) => x.value);
+  }
+  if (isTrackPlacement2026Field(name)) {
+    return (facets.trackPlacements2026 ?? []).map((x) => x.value);
+  }
+  if (isReturnerField(name)) {
+    return (facets.returners ?? []).map((x) => x.value);
+  }
+  return [];
 }
 
 export function formatBooleanValue(value: string): string {

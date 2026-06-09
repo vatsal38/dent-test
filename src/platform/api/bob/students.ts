@@ -103,6 +103,8 @@ export interface BobStudentsFacetsResponse {
   grades: BobStudentsFacetOption[];
   tracks: BobStudentsFacetOption[];
   coaches: BobStudentsFacetOption[];
+  ywStatuses?: BobStudentsFacetOption[];
+  bob26TrackSites?: BobStudentsFacetOption[];
   pipeline: {
     total: number;
     synced: number;
