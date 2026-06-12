@@ -13,6 +13,7 @@ import { useDentOpsAccess } from "@/platform/rbac/useDentOpsAccess";
 import { getBobHomeHref } from "@/platform/rbac/routes";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { Skeleton } from "@/components/Skeleton";
+import { useNotifications } from "@/components/NotificationDrawer";
 import {
   HiOutlineHome,
   HiOutlineClipboardList,
@@ -157,6 +158,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const appLogoHref = showDentOpsNav
     ? "/app"
     : getBobHomeHref(bobAccess);
+
+  const notifications = useNotifications();
 
   const {
     primary: bobNavItems,
@@ -462,7 +465,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-semibold text-gray-900">Dent Ops</span>
         </Link>
-        <div className="w-10 flex justify-end">
+        <div className="flex items-center gap-1">
+          {notifications.bell}
           <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm">
             {user?.name?.[0]?.toUpperCase() || "U"}
           </div>
@@ -471,9 +475,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 pt-14 md:pt-0 md:ml-64">
+        <div className="hidden md:flex items-center justify-end gap-2 px-6 py-3 border-b border-gray-100 bg-white sticky top-0 z-20">
+          {notifications.bell}
+          <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
+            <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm">
+              {user?.name?.[0]?.toUpperCase() || "U"}
+            </div>
+            <button
+              onClick={logout}
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
         <div className="min-h-screen md:min-h-0 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 bg-white">
           <DentOpsRouteGuard>{children}</DentOpsRouteGuard>
         </div>
+        {notifications.drawer}
       </main>
     </div>
   );

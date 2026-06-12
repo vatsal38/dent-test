@@ -11,7 +11,7 @@ export interface MetricDefinition {
 export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   studentsEnrolled: {
     key: "studentsEnrolled",
-    label: "Active BoB students",
+    label: "Students Enrolled",
     format: (v) => v,
     href: () => "/app/bob/roster",
   },
@@ -21,23 +21,47 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     format: (v) => `${v}%`,
     href: () => "/app/bob/roster?queue=bob_cohort",
   },
+  overallAttendancePct: {
+    key: "overallAttendancePct",
+    label: "Overall Attendance %",
+    format: (v) => `${v}%`,
+    href: () => "/app/bob/attendance",
+  },
   checkedInToday: {
     key: "checkedInToday",
-    label: "Checked in today",
+    label: "Checked In Today",
     format: (v) => v,
     href: () => "/app/bob/attendance",
   },
+  deliverablesSubmitted: {
+    key: "deliverablesSubmitted",
+    label: "Deliverables Submitted",
+    format: (v) => v,
+    href: () => "/app/bob/deliverables",
+  },
+  deliverablesCompleted: {
+    key: "deliverablesCompleted",
+    label: "Deliverables Completed",
+    format: (v) => v,
+    href: () => "/app/bob/deliverables",
+  },
   milestonesThisWeek: {
     key: "milestonesThisWeek",
-    label: "Milestones this week",
+    label: "Deliverables Submitted",
     format: (v) => `${v}%`,
-    href: () => "/app/bob/milestones",
+    href: () => "/app/bob/deliverables",
   },
   openDiscrepancies: {
     key: "openDiscrepancies",
     label: "Open discrepancies",
     format: (v) => v,
     href: () => "/app/bob/attendance/discrepancies",
+  },
+  openIncidents: {
+    key: "openIncidents",
+    label: "Open Incidents",
+    format: (v) => v,
+    href: () => "/app/bob/inbox?type=incident",
   },
   noShowsToday: {
     key: "noShowsToday",
@@ -81,10 +105,11 @@ export function metricsToKpiItems(
 /** Default KPI set for command center overview */
 export const COMMAND_CENTER_KPIS: BobDashboardMetricKey[] = [
   "studentsEnrolled",
-  "youthWorksSynced",
+  "overallAttendancePct",
   "checkedInToday",
-  "milestonesThisWeek",
-  "openDiscrepancies",
+  "deliverablesSubmitted",
+  "deliverablesCompleted",
+  "openIncidents",
 ];
 
 export const POD_OPS_KPIS: BobDashboardMetricKey[] = [

@@ -105,7 +105,7 @@ export function CommandCenterReports({ stats, loading }: Props) {
       <section>
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2">
           <HiOutlineUserGroup className="w-4 h-4" />
-          Milestone submission by track
+          Deliverable submission by track
         </h2>
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {stats.milestoneSubmissionByTrack.length === 0 ? (
@@ -142,10 +142,10 @@ export function CommandCenterReports({ stats, loading }: Props) {
           )}
           <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
             <Link
-              href="/app/bob/milestones"
+              href="/app/bob/deliverables"
               className="text-sm font-medium text-orange-600 hover:underline"
             >
-              Milestones admin →
+              Deliverables hub →
             </Link>
           </div>
         </div>

@@ -10,7 +10,7 @@ export function WeeklyMilestoneProgressWidget({
   isRefreshing,
   placement,
 }: WidgetRenderProps) {
-  const title = placement.title ?? "Weekly Milestone Progress";
+  const title = placement.title ?? "Weekly Deliverable Progress";
   if (loading) return <DashboardWidgetSkeleton variant="chart" />;
 
   const weeks = snapshot?.weeklyMilestoneProgress?.weeks ?? [];

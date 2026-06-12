@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getBobAttendance } from "@/platform/api/bob/attendance";
-import { getBobMilestones, type BobMilestone } from "@/platform/api/bob/milestones";
+import { getBobMilestones, type BobDeliverable } from "@/platform/api/bob/milestones";
 import { getBobSubmissions } from "@/platform/api/bob/submissions";
 import { BOB_MILESTONES_ORG_ID } from "@/platform/query/hooks/useBobMilestones";
 import { bobKeys } from "@/platform/query/queryKeys";
@@ -93,6 +93,7 @@ export function useStudentSubmissions(
 export function useStudentMilestones(
   studentId: string | null,
   activeTab: StudentDrawerTabId,
+  trackHint?: string | null,
 ) {
   const enabled =
     Boolean(studentId) &&
@@ -102,9 +103,12 @@ export function useStudentMilestones(
     queryKey: bobKeys.students.milestones(studentId ?? ""),
     queryFn: async () => {
       const res = await getBobMilestones({ orgId: BOB_MILESTONES_ORG_ID });
-      return res.data.filter(
-        (m: BobMilestone) => m.ownerId === studentId || m.scopeId === studentId,
-      );
+      const hint = String(trackHint || "").toLowerCase();
+      if (!hint) return res.data;
+      return res.data.filter((m: BobDeliverable) => {
+        const track = String(m.trackName || "").toLowerCase();
+        return track.includes(hint) || hint.includes(track);
+      });
     },
     enabled,
     staleTime: 60_000,
@@ -153,14 +157,18 @@ export function useStudentActivityFeed(
     }
 
     for (const m of milestones.data ?? []) {
-      const at = m.actualDate || m.targetDate || m.createdAt;
+      const at =
+        m.milestoneCompletionDate ||
+        m.targetCompletionDate ||
+        m.createdAt ||
+        new Date().toISOString();
       out.push({
         id: `mil-${m.id}`,
         at,
         kind: "milestone",
-        title: m.name,
-        subtitle: m.status,
-        tone: m.status === "Complete" ? "success" : "neutral",
+        title: m.deliverableName,
+        subtitle: m.progressStatus || m.reviewStatus,
+        tone: m.milestoneComplete || m.reviewStatus === "approved" ? "success" : "neutral",
       });
     }
 

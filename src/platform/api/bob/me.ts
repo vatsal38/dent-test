@@ -15,6 +15,12 @@ export interface BobMeResponse {
     name: string | null;
     isAdmin: boolean;
   } | null;
+  demoScope?: {
+    studentId?: string;
+    studentName?: string;
+    podName?: string;
+    siteNames?: string[];
+  } | null;
   /** Canonical role for RBAC */
   role: BobOpsRole;
   scopeType: BobScopeType;

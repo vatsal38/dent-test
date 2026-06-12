@@ -100,7 +100,7 @@ export function computeWellnessSignals(
   if (total > 0 && submitted / total < 0.5) {
     signals.push({
       id: "milestones-behind",
-      label: "Milestones",
+      label: "Deliverables",
       level: "watch",
       detail: `${submitted}/${total} submitted`,
     });

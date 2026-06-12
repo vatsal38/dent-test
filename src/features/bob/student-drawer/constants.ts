@@ -8,7 +8,7 @@ export const STUDENT_DRAWER_WIDTH =
 export const STUDENT_DRAWER_TABS_CONFIG: StudentDrawerTabDef[] = [
   { id: "overview", label: "Overview", shortLabel: "Overview" },
   { id: "attendance", label: "Attendance", shortLabel: "Attend." },
-  { id: "milestones", label: "Milestones", shortLabel: "Milestones" },
+  { id: "milestones", label: "Deliverables", shortLabel: "Deliverables" },
   { id: "notes", label: "Notes", shortLabel: "Notes" },
   { id: "incidents", label: "Incidents", shortLabel: "Incidents" },
   { id: "journey", label: "Journey", shortLabel: "Journey" },

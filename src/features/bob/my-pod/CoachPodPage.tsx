@@ -103,7 +103,7 @@ export function CoachPodPage() {
       <PageHeader
         eyebrow="Coach home"
         title={pod.name}
-        description="Your students today — attendance, milestones, and quick actions."
+        description="Your students today — attendance, deliverables, and quick actions."
         actions={
           <>
             <Link

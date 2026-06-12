@@ -67,8 +67,8 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     section: "primary",
   },
   {
-    href: "/app/bob/milestones",
-    label: "Milestones",
+    href: "/app/bob/deliverables",
+    label: "Deliverables",
     iconKey: "milestones",
     permission: "milestones.view",
     section: "primary",

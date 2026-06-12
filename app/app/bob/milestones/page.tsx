@@ -1,5 +1,5 @@
-import { MilestonesPage } from "@/features/bob/milestones/MilestonesPage";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return <MilestonesPage />;
+export default function MilestonesRedirectPage() {
+  redirect("/app/bob/deliverables");
 }

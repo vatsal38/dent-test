@@ -118,7 +118,7 @@ export function JourneyTab() {
       id: "last-milestone-sub",
       at: milestoneSubmission.createdAt,
       kind: "milestone",
-      title: `Milestone update: ${milestoneSubmission.milestone}`,
+      title: `Deliverable update: ${milestoneSubmission.milestone}`,
       tone: "success",
     });
   }

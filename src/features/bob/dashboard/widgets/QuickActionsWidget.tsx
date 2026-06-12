@@ -10,7 +10,7 @@ const QUICK_LINKS = [
   { label: "Operations inbox", desc: "Queues", href: "/app/bob/inbox", key: "inbox", perm: "inbox.view" as BobPermissionId },
   { label: "My pod", desc: "Your students", href: "/app/bob/my-pod", key: "my-pod", perm: "myPod.view" as BobPermissionId },
   { label: "Attendance", desc: "Mark & view", href: "/app/bob/attendance", key: "attendance", perm: "attendance.view" as BobPermissionId },
-  { label: "Milestones", desc: "Program milestones", href: "/app/bob/milestones", key: "milestones", perm: "milestones.view" as BobPermissionId },
+  { label: "Deliverables", desc: "Program deliverables", href: "/app/bob/deliverables", key: "milestones", perm: "milestones.view" as BobPermissionId },
 ];
 
 export function QuickActionsWidget() {

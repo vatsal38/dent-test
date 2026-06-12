@@ -1,4 +1,5 @@
 import { auth } from "@/lib/firebase";
+import { getStoredDemoToken } from "@/lib/demoAuth";
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -17,6 +18,8 @@ export function apiUnreachableMessage(): string {
 }
 
 export async function getIdToken(): Promise<string | null> {
+  const demoToken = getStoredDemoToken();
+  if (demoToken) return demoToken;
   const user = auth.currentUser;
   if (!user) return null;
   return user.getIdToken();

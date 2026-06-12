@@ -336,6 +336,13 @@ export function AttendanceHubPage() {
               workspace.summary.openDiscrepancies ? "warning" : "outline"
             }
           />
+          <BobPermissionGuard permission="attendance.correction" silent>
+            <BobActionButton
+              href="/app/bob/attendance/correction"
+              label="Correction form"
+              variant="outline"
+            />
+          </BobPermissionGuard>
           <BobPermissionGuard permission="attendance.mark" silent>
             <BobActionButton
               href={`/app/bob/attendance/mark?date=${focusDate}${trackFilter ? `&track=${encodeURIComponent(trackFilter)}` : ""}`}

@@ -9,9 +9,14 @@ import { TabPanelSkeleton } from "../../widgets/TabPanelSkeleton";
 
 export function MilestonesTab() {
   const { student, tab } = useStudentDrawerContext();
+  const trackHint =
+    student?.track ||
+    (student?.airtableFields?.["BoB '25 Final Track"] as string | undefined) ||
+    null;
   const { data: milestones = [], isLoading } = useStudentMilestones(
     student?.id ?? null,
     tab,
+    trackHint,
   );
 
   if (!student) return null;
@@ -22,22 +27,22 @@ export function MilestonesTab() {
       <DetailCard
         label="Portfolio summary"
         value={milestoneSummary(student)}
-        hint="Program milestones tied to this student"
+        hint="Program deliverables tied to this student"
       />
 
       <div className="flex justify-between items-center">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Milestone items ({milestones.length})
+          Deliverable items ({milestones.length})
         </h3>
-        <Link href="/app/bob/milestones" className="text-xs text-orange-600 font-medium">
-          Milestones hub →
+        <Link href="/app/bob/deliverables" className="text-xs text-orange-600 font-medium">
+          Deliverables hub →
         </Link>
       </div>
 
       <ul className="space-y-2">
         {milestones.length === 0 ? (
           <li className="text-sm text-gray-500 py-8 text-center rounded-xl border border-dashed border-gray-200">
-            No milestones linked to this student yet.
+            No deliverables linked to this student yet.
           </li>
         ) : (
           milestones.map((m) => (
@@ -45,13 +50,16 @@ export function MilestonesTab() {
               key={m.id}
               className="rounded-xl border border-gray-200 p-3 hover:border-orange-200 transition-colors"
             >
-              <p className="text-sm font-semibold text-gray-900">{m.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {m.phase || "—"} · {m.status}
-                {m.targetDate ? ` · due ${m.targetDate}` : ""}
+              <p className="text-sm font-semibold text-gray-900">
+                {m.deliverableNumber ? `${m.deliverableNumber}: ` : ""}
+                {m.deliverableName}
               </p>
-              {m.notes ? (
-                <p className="text-xs text-gray-600 mt-2 line-clamp-2">{m.notes}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {m.trackName || "—"} · {m.progressStatus || m.reviewStatus}
+                {m.targetCompletionDate ? ` · due ${m.targetCompletionDate}` : ""}
+              </p>
+              {m.details ? (
+                <p className="text-xs text-gray-600 mt-2 line-clamp-2">{m.details}</p>
               ) : null}
             </li>
           ))

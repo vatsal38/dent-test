@@ -1,34 +1,18 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { isDemoModeEnabledClient } from '@/lib/demoAuth';
 import { isDentOpsPath } from '@/platform/rbac/dentOpsRoutes';
+import type { DemoLoginRole } from '@/platform/api/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/Skeleton';
 
-const BOB_TEST_PASSWORD = 'BobTest2026!';
-
-const BOB_TEST_ACCOUNTS = [
-  {
-    role: 'Admin',
-    email: 'bob.admin@dent.test',
-    password: BOB_TEST_PASSWORD,
-  },
-  {
-    role: 'Program Manager',
-    email: 'bob.pm@dent.test',
-    password: BOB_TEST_PASSWORD,
-  },
-  {
-    role: 'Site Supporter',
-    email: 'bob.site@dent.test',
-    password: BOB_TEST_PASSWORD,
-  },
-  {
-    role: 'Coach',
-    email: 'bob.coach@dent.test',
-    password: BOB_TEST_PASSWORD,
-  },
+const DEMO_ROLES: { role: DemoLoginRole; label: string }[] = [
+  { role: 'admin', label: 'Admin' },
+  { role: 'site_supporter', label: 'Site Supporter' },
+  { role: 'coach', label: 'Coach' },
+  { role: 'student', label: 'Student' },
 ];
 
 function firebaseAuthErrorMessage(error: unknown): string {
@@ -53,15 +37,21 @@ function firebaseAuthErrorMessage(error: unknown): string {
 }
 
 function LoginForm() {
-  const { signInWithGoogle, signInWithEmail, isAuthenticated, isLoading, user } =
-    useAuth();
+  const {
+    signInWithGoogle,
+    signInWithEmail,
+    signInWithDemo,
+    isAuthenticated,
+    isLoading,
+    user,
+  } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [signingIn, setSigningIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [showTestAccounts, setShowTestAccounts] = useState(false);
+  const demoModeEnabled = isDemoModeEnabledClient();
 
   const fromParam = searchParams.get('from');
   const defaultHome = user?.isAdmin ? '/app' : '/app/bob';
@@ -105,10 +95,15 @@ function LoginForm() {
     }
   };
 
-  const fillTestAccount = (accountEmail: string, accountPassword: string) => {
-    setEmail(accountEmail);
-    setPassword(accountPassword);
+  const handleDemoSignIn = async (role: DemoLoginRole) => {
+    setSigningIn(true);
     setError(null);
+    try {
+      await signInWithDemo(role);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Demo sign in failed.');
+      setSigningIn(false);
+    }
   };
 
   if (isLoading) {
@@ -236,46 +231,29 @@ function LoginForm() {
             Continue with Google
           </button>
 
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => setShowTestAccounts(!showTestAccounts)}
-              className="text-sm font-medium text-orange-600 hover:text-orange-700"
-            >
-              {showTestAccounts ? 'Hide' : 'Show'} BoB test accounts
-            </button>
-            {showTestAccounts && (
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-gray-500">
-                  Demo logins for BoB role testing. Password for all accounts:{' '}
-                  <code className="bg-gray-100 px-1 rounded">
-                    {BOB_TEST_PASSWORD}
-                  </code>
-                </p>
-                <ul className="space-y-1">
-                  {BOB_TEST_ACCOUNTS.map((a) => (
-                    <li key={a.email}>
-                      <button
-                        type="button"
-                        onClick={() => fillTestAccount(a.email, a.password)}
-                        className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-orange-50 text-gray-700"
-                      >
-                        <span className="font-medium text-gray-900">
-                          {a.role}
-                        </span>
-                        <span className="text-gray-500 block truncate">
-                          {a.email}
-                        </span>
-                        <span className="text-gray-400 text-xs">
-                          password: {a.password}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+          {demoModeEnabled ? (
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                Demo accounts (for review)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO_ROLES.map((item) => (
+                  <button
+                    key={item.role}
+                    type="button"
+                    disabled={signingIn}
+                    onClick={() => handleDemoSignIn(item.role)}
+                    className="px-3 py-2.5 rounded-lg border border-orange-200 bg-orange-50 text-sm font-medium text-orange-900 hover:bg-orange-100 disabled:opacity-50"
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
+              <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                Demo accounts are for review only — data is read-only.
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

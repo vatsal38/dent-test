@@ -13,7 +13,7 @@ export function MilestoneSummaryWidget({
   isRefreshing,
   placement,
 }: WidgetRenderProps) {
-  const title = placement.title ?? "Milestones";
+  const title = placement.title ?? "Deliverables";
 
   if (loading) return <DashboardWidgetSkeleton variant="chart" />;
 
@@ -39,7 +39,7 @@ export function MilestoneSummaryWidget({
       refreshing={isRefreshing}
       action={
         <Link
-          href="/app/bob/milestones"
+          href="/app/bob/deliverables"
           className="text-sm font-medium text-gray-600 hover:text-gray-900"
         >
           Review pending →
@@ -52,9 +52,9 @@ export function MilestoneSummaryWidget({
       </p>
       {trackItems.length === 0 ? (
         <DashboardEmpty
-          message="No milestone-eligible tracks in this scope."
-          actionLabel="Milestones admin"
-          actionHref="/app/bob/milestones"
+          message="No deliverable-eligible tracks in this scope."
+          actionLabel="Deliverables hub"
+          actionHref="/app/bob/deliverables"
         />
       ) : (
         <MetricBarRow items={trackItems} />

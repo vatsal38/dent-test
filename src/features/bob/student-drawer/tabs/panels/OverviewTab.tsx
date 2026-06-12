@@ -54,7 +54,7 @@ export function OverviewTab() {
           }
         />
         <DetailCard
-          label="Milestones"
+          label="Deliverables"
           value={
             student.milestoneStats?.total
               ? `${student.milestoneStats?.submitted ?? 0}/${student.milestoneStats.total}`

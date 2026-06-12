@@ -12,6 +12,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { auth, googleProvider } from '@/lib/firebase';
 import { bootstrap, BootstrapResponse } from '@/lib/api';
 import {
+    getStoredDemoToken,
+    setStoredDemoToken,
+} from '@/lib/demoAuth';
+import {
+    postDemoLogin,
+    type DemoLoginRole,
+} from '@/platform/api/auth';
+import {
     clearBobSessionCache,
     invalidateBobSession,
 } from '@/platform/query/sessionCache';
@@ -47,8 +55,10 @@ interface AuthContextType {
     organization: Organization | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isDemoSession: boolean;
     signInWithGoogle: () => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
+    signInWithDemo: (role: DemoLoginRole) => Promise<void>;
     logout: () => Promise<void>;
     getIdToken: () => Promise<string | null>;
 }
@@ -61,29 +71,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
     const [appUser, setAppUser] = useState<AppUser | null>(null);
     const [organization, setOrganization] = useState<Organization | null>(null);
+    const [demoToken, setDemoToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Bootstrap user after Firebase auth
-    const bootstrapUser = useCallback(async (fbUser: FirebaseUser) => {
-        try {
-            const response: BootstrapResponse = await bootstrap();
-            if (lastBootstrapUid.current !== fbUser.uid) {
+    const applyBootstrapResponse = useCallback(
+        (response: BootstrapResponse, sessionKey: string) => {
+            if (lastBootstrapUid.current !== sessionKey) {
                 invalidateBobSession(queryClient);
-                lastBootstrapUid.current = fbUser.uid;
+                lastBootstrapUid.current = sessionKey;
             }
-
-            // User is registered (either admin or has invite)
             const currentOrg = response.orgs.length > 0 ? response.orgs[0] : null;
-
             setAppUser({
                 id: response.user.id,
-                firebaseUid: fbUser.uid,
+                firebaseUid: sessionKey,
                 email: response.user.email,
-                name: response.user.name || fbUser.displayName || '',
-                photoURL: fbUser.photoURL,
+                name: response.user.name || '',
+                photoURL: null,
                 isAdmin: response.isAdmin,
                 orgId: response.defaultOrgId || currentOrg?.id || '',
-                memberships: response.orgs.map(o => ({
+                memberships: response.orgs.map((o) => ({
                     orgId: o.id,
                     orgName: o.name,
                     orgSlug: o.slug || undefined,
@@ -91,7 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     role: o.role,
                 })),
             });
-
             if (currentOrg) {
                 setOrganization({
                     id: currentOrg.id,
@@ -101,21 +106,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     role: currentOrg.role,
                 });
             }
+        },
+        [queryClient],
+    );
+
+    // Bootstrap user after Firebase auth
+    const bootstrapUser = useCallback(async (fbUser: FirebaseUser) => {
+        try {
+            const response: BootstrapResponse = await bootstrap();
+            applyBootstrapResponse(response, fbUser.uid);
+
         } catch (error) {
             console.error('Bootstrap error:', error);
-            // User might not be registered yet - that's okay
             setAppUser(null);
             setOrganization(null);
         }
-    }, [queryClient]);
+    }, [applyBootstrapResponse]);
 
-    // Listen to auth state changes
+    const bootstrapDemoSession = useCallback(async (token: string) => {
+        try {
+            const response: BootstrapResponse = await bootstrap();
+            applyBootstrapResponse(response, `demo:${token.slice(-24)}`);
+        } catch (error) {
+            console.error('Demo bootstrap error:', error);
+            setAppUser(null);
+            setOrganization(null);
+            setDemoToken(null);
+            setStoredDemoToken(null);
+        }
+    }, [applyBootstrapResponse]);
+
     useEffect(() => {
+        const stored = getStoredDemoToken();
+        if (stored) {
+            setDemoToken(stored);
+            bootstrapDemoSession(stored).finally(() => setIsLoading(false));
+            return;
+        }
+
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setFirebaseUser(user);
             if (user) {
                 await bootstrapUser(user);
-            } else {
+            } else if (!getStoredDemoToken()) {
                 setAppUser(null);
                 setOrganization(null);
                 lastBootstrapUid.current = null;
@@ -125,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         return () => unsubscribe();
-    }, [bootstrapUser, queryClient]);
+    }, [bootstrapUser, bootstrapDemoSession, queryClient]);
 
     const signInWithGoogle = useCallback(async () => {
         try {
@@ -157,31 +190,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         [bootstrapUser],
     );
 
+    const signInWithDemo = useCallback(
+        async (role: DemoLoginRole) => {
+            const result = await postDemoLogin(role);
+            setStoredDemoToken(result.token);
+            setDemoToken(result.token);
+            setFirebaseUser(null);
+            await bootstrapDemoSession(result.token);
+        },
+        [bootstrapDemoSession],
+    );
+
     const logout = useCallback(async () => {
         try {
             clearBobSessionCache(queryClient);
             setAppUser(null);
             setOrganization(null);
-            await firebaseSignOut(auth);
+            setDemoToken(null);
+            setStoredDemoToken(null);
+            lastBootstrapUid.current = null;
+            if (firebaseUser) {
+                await firebaseSignOut(auth);
+            }
         } catch (error) {
             console.error('Sign-out error:', error);
             throw error;
         }
-    }, [queryClient]);
+    }, [queryClient, firebaseUser]);
 
     const getIdToken = useCallback(async () => {
+        if (demoToken) return demoToken;
         if (!firebaseUser) return null;
         return firebaseUser.getIdToken();
-    }, [firebaseUser]);
+    }, [demoToken, firebaseUser]);
 
     const value: AuthContextType = {
         user: appUser,
         firebaseUser,
         organization,
-        isAuthenticated: !!firebaseUser && !!appUser,
+        isAuthenticated: !!(demoToken || firebaseUser) && !!appUser,
         isLoading,
+        isDemoSession: Boolean(demoToken),
         signInWithGoogle,
         signInWithEmail,
+        signInWithDemo,
         logout,
         getIdToken,
     };

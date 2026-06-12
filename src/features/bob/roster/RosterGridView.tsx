@@ -199,7 +199,7 @@ export function RosterGridView({
                 </div>
               </div>
               <div className="min-w-0">
-                <div className="text-[11px] text-gray-400">Milestones</div>
+                <div className="text-[11px] text-gray-400">Deliverables</div>
                 <div className="truncate font-medium text-gray-800">{c.milestone ?? "—"}</div>
               </div>
               <div className="min-w-0 text-right">

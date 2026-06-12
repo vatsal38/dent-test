@@ -26,9 +26,13 @@ export interface BobDashboardMetricValue {
 export type BobDashboardMetricKey =
   | "studentsEnrolled"
   | "youthWorksSynced"
+  | "overallAttendancePct"
   | "checkedInToday"
+  | "deliverablesSubmitted"
+  | "deliverablesCompleted"
   | "milestonesThisWeek"
   | "openDiscrepancies"
+  | "openIncidents"
   | "noShowsToday"
   | "atRiskCount"
   | "escalationCount";
@@ -152,9 +156,13 @@ export interface BobDashboardSnapshot {
   cards: {
     studentsEnrolled: number;
     youthWorksSynced: number;
+    overallAttendancePct?: number;
     checkedInToday: number;
+    deliverablesSubmitted?: number;
+    deliverablesCompleted?: number;
     milestonesThisWeek: number;
     openDiscrepancies: number;
+    openIncidents?: number;
   };
 }
 

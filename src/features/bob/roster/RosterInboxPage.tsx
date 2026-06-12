@@ -280,7 +280,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         <PageHeader
           eyebrow="Operational roster"
           title="Students"
-          description="Active youth on program — attendance, milestones, and pod assignments."
+          description="Active youth on program — attendance, deliverables, and pod assignments."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button

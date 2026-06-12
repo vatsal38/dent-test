@@ -47,11 +47,17 @@ export const BOB_ROUTES: BobRouteDef[] = [
     fallback: "/app/bob/attendance",
   },
   {
+    path: "/app/bob/attendance/correction",
+    permission: "attendance.correction",
+    fallback: "/app/bob/attendance",
+  },
+  {
     path: "/app/bob/attendance",
     permission: "attendance.view",
     fallback: "/app/bob/roster",
   },
-  { path: "/app/bob/milestones", permission: "milestones.view" },
+  { path: "/app/bob/deliverables", permission: "milestones.view" },
+  { path: "/app/bob/milestones", permission: "milestones.view", fallback: "/app/bob/deliverables" },
   { path: "/app/bob/inbox", permission: "inbox.view" },
   { path: "/app/bob/workflow", permission: "inbox.view" },
   { path: "/app/bob/interview", permission: "roster.view" },

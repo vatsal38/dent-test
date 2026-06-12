@@ -1,85 +1,116 @@
 import { apiRequest } from "@/platform/api/client";
 
-
-export interface BobMilestone {
+export interface BobDeliverableAttachment {
   id: string;
-  projectId: string;
-  orgSlug: string;
-  scopeId: string | null;
-  name: string;
-  scopeArea: string;
-  phase: string | null;
-  targetDate: string;
-  targetEndDate: string;
-  contractualDate: string | null;
-  projectedEndDate: string | null;
-  actualDate: string | null;
-  actualEndDate: string | null;
-  status: string;
-  owner: string;
-  ownerId: string | null;
-  ownerName: string;
-  ownerRole: string | null;
-  gcTrackingNumber: number | null;
-  lookaheadItemCount: number;
-  lookaheadBlockedCount: number;
-  materialBlockedCount: number;
-  predecessors: string[];
-  successors: string[];
-  durationDays: number;
-  isCriticalPath: boolean;
-  floatDays: number | null;
-  notes: string | null;
-  reviewStatus: string | null;
-  createdAt: string;
-  updatedAt: string;
+  filename: string;
+  url: string;
+  type: string | null;
+  size?: number | null;
 }
 
+export interface BobDeliverableTrackerRecord {
+  id: string;
+  airtableRecordId: string;
+  date: string | null;
+  deliverableStatus: string | null;
+  reviewStatus: string;
+  staffReviewNotes: string | null;
+  projectDeliverable: string | null;
+  amountEarned: number | null;
+  uploads: BobDeliverableAttachment[];
+}
+
+export interface BobDeliverable {
+  id: string;
+  airtableRecordId: string;
+  label: string | null;
+  trackName: string | null;
+  deliverableNumber: string | null;
+  deliverableName: string;
+  details: string | null;
+  plannedStartDate: string | null;
+  targetCompletionDate: string | null;
+  milestoneCompletionDate: string | null;
+  progressStatus: string | null;
+  milestoneComplete: boolean;
+  typeOfMilestone: string | null;
+  teamAirtableIds: string[];
+  teamNames: string[];
+  studentAirtableIds: string[];
+  projectNames: string[];
+  programSemester: string | null;
+  staffProgressNotes: string | null;
+  finalDeliverableLinks: string | null;
+  finalAttachments: BobDeliverableAttachment[];
+  trackerRecords: BobDeliverableTrackerRecord[];
+  reviewStatus: string;
+  createdAt: string | null;
+  syncedAt?: string | null;
+}
+
+/** @deprecated Use BobDeliverable */
+export type BobMilestone = BobDeliverable;
+
 export interface BobMilestonesListParams {
-  orgId: string;
-  status?: string;
-  projectId?: string;
-  phase?: string;
+  orgId?: string;
+  track?: string;
+  deliverableNumber?: string;
   reviewStatus?: string;
   tab?: "pending_review";
 }
 
 export interface BobMilestonesListResponse {
-  data: BobMilestone[];
+  data: BobDeliverable[];
   count: number;
+  source?: string;
+  syncedAt?: string | null;
+  needsImport?: boolean;
 }
 
 export async function getBobMilestones(
   params: BobMilestonesListParams,
 ): Promise<BobMilestonesListResponse> {
   const sp = new URLSearchParams();
-  sp.set("orgId", params.orgId);
-  if (params.status) sp.set("status", params.status);
-  if (params.projectId) sp.set("projectId", params.projectId);
-  if (params.phase) sp.set("phase", params.phase);
+  if (params.track) sp.set("track", params.track);
+  if (params.deliverableNumber) sp.set("deliverableNumber", params.deliverableNumber);
   if (params.reviewStatus) sp.set("reviewStatus", params.reviewStatus);
   if (params.tab) sp.set("tab", params.tab);
+  const qs = sp.toString();
   return apiRequest<BobMilestonesListResponse>(
-    `/api/bob/milestones?${sp.toString()}`,
+    `/api/bob/deliverables${qs ? `?${qs}` : ""}`,
   );
 }
 
+export async function syncBobDeliverables(): Promise<{
+  synced: number;
+  trackerCount: number;
+}> {
+  return apiRequest(`/api/bob/deliverables/sync`, { method: "POST" });
+}
+
 export async function getBobMilestone(
-  orgId: string,
   milestoneId: string,
-): Promise<BobMilestone> {
-  return apiRequest<BobMilestone>(
-    `/api/bob/milestones/${milestoneId}?orgId=${encodeURIComponent(orgId)}`,
+): Promise<BobDeliverable> {
+  return apiRequest<BobDeliverable>(
+    `/api/bob/deliverables/${milestoneId}`,
   );
 }
 
 export async function updateBobMilestone(
-  orgId: string,
+  _orgId: string,
   milestoneId: string,
-  data: Partial<Pick<BobMilestone, "reviewStatus" | "status" | "notes">>,
-): Promise<BobMilestone> {
-  return apiRequest<BobMilestone>(`/api/bob/milestones/${milestoneId}`, {
+  data: Partial<{
+    reviewStatus: string;
+    trackerDeliverableStatus: string;
+    staffProgressNotes: string;
+    staffReviewNotes: string;
+    progressStatus: string;
+    milestoneComplete: boolean;
+    trackerId: string;
+  }>,
+): Promise<BobDeliverable> {
+  return apiRequest<BobDeliverable>(`/api/bob/deliverables/${milestoneId}`, {
     method: "PATCH",
-    body: JSON.stringify({ ...data, orgId }),
+    body: JSON.stringify(data),
   });
 }

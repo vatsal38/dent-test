@@ -78,7 +78,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "cc-milestones",
             kind: "milestone_summary",
-            title: "Milestone Submissions by Track",
+            title: "Deliverable Submissions by Track",
             colSpan: 8,
             permissions: ["dashboard.view", "milestones.view"],
           },
@@ -98,7 +98,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "cc-weekly-progress",
             kind: "weekly_milestone_progress",
-            title: "Weekly Milestone Progress",
+            title: "Weekly Deliverable Progress",
             colSpan: 8,
             permissions: ["dashboard.view"],
           },
@@ -141,7 +141,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "rpt-milestones",
             kind: "milestone_summary",
-            title: "Milestone submission by track",
+            title: "Deliverable submission by track",
             permissions: ["dashboard.reports"],
           },
           {
@@ -193,8 +193,8 @@ export const DASHBOARD_LAYOUTS: Record<
             kind: "kpi_row",
             metrics: [
               "checkedInToday",
-              "milestonesThisWeek",
-              "openDiscrepancies",
+              "deliverablesSubmitted",
+              "openIncidents",
             ],
             minScope: "student",
           },

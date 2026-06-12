@@ -19,8 +19,9 @@ export const BOB_PERMISSIONS = {
   "attendance.view": "View attendance",
   "attendance.mark": "Mark attendance",
   "attendance.discrepancies": "View attendance discrepancies",
-  "milestones.view": "View milestones",
-  "milestones.edit": "Edit milestones",
+  "attendance.correction": "Submit absence and time correction requests",
+  "milestones.view": "View deliverables",
+  "milestones.edit": "Edit deliverables",
   "inbox.view": "View operations inbox",
   "inbox.notificationsAll": "See org-wide notifications",
   "myPod.view": "View my pod workspace",
@@ -61,6 +62,7 @@ const PROGRAM_MANAGER = pick(
   "attendance.view",
   "attendance.mark",
   "attendance.discrepancies",
+  "attendance.correction",
   "milestones.view",
   "milestones.edit",
   "inbox.view",
@@ -79,6 +81,7 @@ const SITE_SUPPORTER = pick(
   "attendance.view",
   "attendance.mark",
   "attendance.discrepancies",
+  "attendance.correction",
   "inbox.view",
   "submit.view",
   "drawer.studentDetail",
@@ -92,11 +95,12 @@ const COACH = pick(
   "inbox.view",
   "myPod.view",
   "submit.view",
+  "attendance.correction",
   "drawer.studentDetail",
   "drawer.podDetail",
 );
 
-const READ_ONLY = pick("dashboard.view");
+const READ_ONLY = pick("dashboard.view", "attendance.correction");
 
 /** Role → granted permission set (static matrix; extend for ABAC later). */
 export const ROLE_PERMISSIONS: Record<BobOpsRole, Set<BobPermissionId>> = {

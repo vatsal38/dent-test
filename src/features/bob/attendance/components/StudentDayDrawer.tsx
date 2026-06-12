@@ -163,10 +163,16 @@ export function StudentDayDrawer({
           ) : null}
         </div>
 
-        <div className="border-t border-gray-100 px-5 py-4 flex gap-2">
+        <div className="border-t border-gray-100 px-5 py-4 flex flex-wrap gap-2">
+          <Link
+            href={`/app/bob/attendance/correction?studentId=${encodeURIComponent(day.studentId)}&date=${day.date}`}
+            className="flex-1 min-w-[140px] text-center px-4 py-2 rounded-lg border border-orange-300 text-orange-700 text-sm font-medium hover:bg-orange-50"
+          >
+            Request correction
+          </Link>
           <Link
             href={`/app/bob/attendance/mark?pod=${day.podId}&date=${day.date}`}
-            className="flex-1 text-center px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
+            className="flex-1 min-w-[140px] text-center px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
           >
             Open issue triage
           </Link>
