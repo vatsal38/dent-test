@@ -442,7 +442,7 @@ export default function HomePage() {
                                     <Link
                                         key={priority.id}
                                         href={`/app/partnerships/${priority.id}`}
-                                        className={`block p-4 rounded-lg border hover:shadow-md transition-all ${isStuck
+                                        className={`group block p-4 rounded-lg border hover:shadow-md transition-all ${isStuck
                                                 ? 'bg-red-50 border-red-300'
                                                 : isUrgent
                                                     ? 'bg-orange-50 border-orange-300'
@@ -519,13 +519,9 @@ export default function HomePage() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Link
-                                                href={`/app/partnerships/${priority.id}`}
-                                                className="ml-4 px-4 py-2 text-sm font-medium text-[#3b82f6] hover:text-[#2563eb] hover:bg-blue-50 rounded-lg transition-colors shrink-0"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
+                                            <span className="ml-4 px-4 py-2 text-sm font-medium text-[#3b82f6] group-hover:text-[#2563eb] shrink-0">
                                                 View →
-                                            </Link>
+                                            </span>
                                         </div>
                                     </Link>
                                 );

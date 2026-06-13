@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     const applyBootstrapResponse = useCallback(
-        (response: BootstrapResponse, sessionKey: string) => {
+        (response: BootstrapResponse, sessionKey: string, photoURL?: string | null) => {
             if (lastBootstrapUid.current !== sessionKey) {
                 invalidateBobSession(queryClient);
                 lastBootstrapUid.current = sessionKey;
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 firebaseUid: sessionKey,
                 email: response.user.email,
                 name: response.user.name || '',
-                photoURL: null,
+                photoURL: photoURL ?? null,
                 isAdmin: response.isAdmin,
                 orgId: response.defaultOrgId || currentOrg?.id || '',
                 memberships: response.orgs.map((o) => ({
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const bootstrapUser = useCallback(async (fbUser: FirebaseUser) => {
         try {
             const response: BootstrapResponse = await bootstrap();
-            applyBootstrapResponse(response, fbUser.uid);
+            applyBootstrapResponse(response, fbUser.uid, fbUser.photoURL);
 
         } catch (error) {
             console.error('Bootstrap error:', error);

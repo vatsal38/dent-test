@@ -11,6 +11,10 @@ export function MilestonesTab() {
   const { student, tab } = useStudentDrawerContext();
   const trackHint =
     student?.track ||
+    (student?.airtableFields?.["Track - Site (from BoB '26 Track)"] as
+      | string
+      | string[]
+      | undefined) ||
     (student?.airtableFields?.["BoB '25 Final Track"] as string | undefined) ||
     null;
   const { data: milestones = [], isLoading } = useStudentMilestones(

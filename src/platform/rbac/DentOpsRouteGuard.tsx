@@ -7,6 +7,7 @@ import { useBobAccess } from "./useBobAccess";
 import { getBobHomeHref } from "./routes";
 import { isDentOpsPath } from "./dentOpsRoutes";
 import { Skeleton } from "@/components/Skeleton";
+import { APP_NAME } from "@/platform/brand";
 
 /**
  * Blocks non-admin users from Dent Ops pages (`/app`, partnerships, inbox, runs).
@@ -55,7 +56,7 @@ export function DentOpsRouteGuard({ children }: { children: ReactNode }) {
         aria-live="polite"
       >
         <p className="text-sm text-gray-600">
-          Dent Ops is available to platform admins only.
+          {APP_NAME} partnerships tools are available to platform admins only.
         </p>
         <p className="text-sm text-gray-500">Redirecting to Bet on Baltimore…</p>
       </div>

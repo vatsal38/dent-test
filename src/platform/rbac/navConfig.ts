@@ -13,6 +13,8 @@ export type BobNavConfigItem = {
     | "inbox"
     | "myPod"
     | "submit"
+    | "keyLinks"
+    | "teams"
     | "settings"
     | "staff";
   permission: BobPermissionId;
@@ -74,6 +76,14 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     section: "primary",
   },
   {
+    href: "/app/bob/key-links",
+    label: "Key Links",
+    iconKey: "keyLinks",
+    permission: "keyLinks.view",
+    section: "primary",
+    after: "/app/bob/deliverables",
+  },
+  {
     href: "/app/bob/inbox",
     label: "Submissions",
     iconKey: "inbox",
@@ -85,6 +95,13 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     label: "Submit",
     iconKey: "submit",
     permission: "submit.view",
+    section: "more",
+  },
+  {
+    href: "/app/bob/teams",
+    label: "Teams",
+    iconKey: "teams",
+    permission: "teams.view",
     section: "more",
   },
   {

@@ -13,6 +13,9 @@ import { useDentOpsAccess } from "@/platform/rbac/useDentOpsAccess";
 import { getBobHomeHref } from "@/platform/rbac/routes";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { Skeleton } from "@/components/Skeleton";
+import { AppLogo } from "@/components/AppLogo";
+import { UserAvatar } from "@/components/UserAvatar";
+import { APP_NAME, PARTNERSHIPS_SECTION } from "@/platform/brand";
 import { useNotifications } from "@/components/NotificationDrawer";
 import {
   HiOutlineHome,
@@ -30,6 +33,7 @@ import {
   HiOutlineChartBar,
   HiOutlineMenu,
   HiOutlineX,
+  HiOutlineLink,
 } from "react-icons/hi";
 
 function AirtableStatusBadge() {
@@ -135,7 +139,7 @@ function AirtableStatusBadge() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { isAuthenticated, isLoading, user, logout, firebaseUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [bobMoreOpen, setBobMoreOpen] = useState(false);
@@ -178,6 +182,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       submit: <HiOutlineDocumentText className="w-4 h-4 shrink-0" />,
       settings: <HiOutlineChartBar className="w-4 h-4 shrink-0" />,
       staff: <HiOutlineAcademicCap className="w-4 h-4 shrink-0" />,
+      keyLinks: <HiOutlineLink className="w-5 h-5 shrink-0" />,
+      teams: <HiOutlineUserGroup className="w-4 h-4 shrink-0" />,
     },
     { enabled: isAuthenticated && !isLoading },
   );
@@ -288,12 +294,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2"
             onClick={() => setSidebarOpen(false)}
           >
-            <div className="w-8 h-8 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-sm">
-              DO
-            </div>
-            <span className="text-xl font-semibold text-gray-900">
-              Dent Ops
-            </span>
+            <AppLogo size="md" />
           </Link>
           <button
             type="button"
@@ -310,7 +311,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {showDentOpsNav && (
             <>
               <p className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Dent Ops
+                {PARTNERSHIPS_SECTION}
               </p>
               <nav className="p-3 pt-0 space-y-0.5">
                 {dentOpsNavItems.map((item) => {
@@ -436,9 +437,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <div className="flex items-center gap-2 pt-2">
-            <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm shrink-0">
-              {user?.name?.[0]?.toUpperCase() || "U"}
-            </div>
+            <UserAvatar
+              name={user?.name}
+              photoURL={firebaseUser?.photoURL ?? user?.photoURL}
+              size="sm"
+            />
             <button
               onClick={logout}
               className="text-sm text-gray-600 hover:text-gray-900 text-left"
@@ -460,16 +463,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <HiOutlineMenu className="w-6 h-6 text-gray-700" />
         </button>
         <Link href={appLogoHref} className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-xs">
-            DO
-          </div>
-          <span className="font-semibold text-gray-900">Dent Ops</span>
+          <AppLogo size="sm" />
         </Link>
         <div className="flex items-center gap-1">
           {notifications.bell}
-          <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm">
-            {user?.name?.[0]?.toUpperCase() || "U"}
-          </div>
+          <UserAvatar
+            name={user?.name}
+            photoURL={firebaseUser?.photoURL ?? user?.photoURL}
+            size="sm"
+          />
         </div>
       </header>
 
@@ -478,9 +480,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="hidden md:flex items-center justify-end gap-2 px-6 py-3 border-b border-gray-100 bg-white sticky top-0 z-20">
           {notifications.bell}
           <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-            <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white font-semibold text-sm">
-              {user?.name?.[0]?.toUpperCase() || "U"}
-            </div>
+            <UserAvatar
+              name={user?.name}
+              photoURL={firebaseUser?.photoURL ?? user?.photoURL}
+              size="sm"
+            />
             <button
               onClick={logout}
               className="text-sm text-gray-600 hover:text-gray-900"

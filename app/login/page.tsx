@@ -7,6 +7,10 @@ import type { DemoLoginRole } from '@/platform/api/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/Skeleton';
+import { AppLogo } from '@/components/AppLogo';
+import { useBobMe } from '@/platform/query/hooks/useBobMe';
+import { getBobHomeHref } from '@/platform/rbac/routes';
+import { resolveBobAccess } from '@/platform/rbac/resolveBobAccess';
 
 const DEMO_ROLES: { role: DemoLoginRole; label: string }[] = [
   { role: 'admin', label: 'Admin' },
@@ -53,23 +57,26 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const demoModeEnabled = isDemoModeEnabledClient();
 
+  const meQuery = useBobMe({ enabled: isAuthenticated && !isLoading });
   const fromParam = searchParams.get('from');
-  const defaultHome = user?.isAdmin ? '/app' : '/app/bob';
 
   function resolvePostLoginPath() {
+    const access = resolveBobAccess(meQuery.data);
+    const roleHome = getBobHomeHref(access);
+    const defaultHome = user?.isAdmin ? '/app' : roleHome;
     const target = fromParam?.startsWith('/') ? fromParam : defaultHome;
     if (!user?.isAdmin && isDentOpsPath(target)) {
-      return '/app/bob';
+      return roleHome;
     }
     return target;
   }
 
   useEffect(() => {
-    if (isAuthenticated && !isLoading && user) {
-      router.push(resolvePostLoginPath());
-      setSigningIn(false);
-    }
-  }, [isAuthenticated, isLoading, user, router, fromParam]);
+    if (!isAuthenticated || isLoading || !user) return;
+    if (!user.isAdmin && meQuery.isLoading) return;
+    router.push(resolvePostLoginPath());
+    setSigningIn(false);
+  }, [isAuthenticated, isLoading, user, router, fromParam, meQuery.data, meQuery.isLoading]);
 
   const handleGoogleSignIn = async () => {
     setSigningIn(true);
@@ -131,11 +138,8 @@ function LoginForm() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="w-12 h-12 bg-[#3b82f6] rounded flex items-center justify-center text-white font-bold text-lg">
-                DO
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900">Dent Ops</h1>
+            <div className="flex items-center justify-center mb-4">
+              <AppLogo size="lg" />
             </div>
             <p className="text-gray-600">Sign in to continue</p>
           </div>

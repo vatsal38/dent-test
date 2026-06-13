@@ -15,6 +15,8 @@ export type BobRouteDef = {
  * Checked by {@link BobRouteGuard} — blocks render + redirects on direct URL access.
  */
 export const BOB_ROUTES: BobRouteDef[] = [
+  { path: "/app/bob/key-links", permission: "keyLinks.view", fallback: "/app/bob" },
+  { path: "/app/bob/teams", permission: "teams.view", fallback: "/app/bob" },
   { path: "/app/bob/settings", permission: "settings.view", fallback: "/app/bob" },
   { path: "/app/bob/staff", permission: "staff.view", fallback: "/app/bob" },
   {
@@ -85,6 +87,9 @@ export function matchBobRoute(pathname: string): BobRouteDef | null {
 
 /** First allowed landing page for this access context (used when URL is forbidden). */
 export function getBobHomeHref(access: BobAccessContext): string {
+  if (access.role === "student" && canAccess(access, "attendance.correction")) {
+    return "/app/bob/attendance/correction";
+  }
   if (canAccess(access, "myPod.view") && access.primaryPod) {
     return "/app/bob/my-pod";
   }

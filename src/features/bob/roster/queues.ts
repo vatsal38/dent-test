@@ -25,7 +25,7 @@ export const ROSTER_QUEUES: RosterQueueDef[] = [
   {
     id: "bob_cohort",
     label: "BoB cohort",
-    description: "FY26 potential list (Final Track assigned)",
+    description: "BoB '26 Student Roster (track assigned)",
     listParams: { bobCohort: "active" },
   },
   {

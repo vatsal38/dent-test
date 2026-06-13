@@ -6,6 +6,7 @@ export type BobOpsRole =
   | "program_manager"
   | "site_supporter"
   | "coach"
+  | "student"
   | "read_only";
 
 /** Data visibility boundary for the signed-in user. */

@@ -26,6 +26,8 @@ export const BOB_PERMISSIONS = {
   "inbox.notificationsAll": "See org-wide notifications",
   "myPod.view": "View my pod workspace",
   "submit.view": "Submit operational forms",
+  "keyLinks.view": "View staff key links and resources",
+  "teams.view": "View teams workspace (coming soon)",
   "staff.view": "View staff directory",
   "settings.view": "Open settings page",
   "settings.manage": "Run imports, sync, pipeline reset",
@@ -68,6 +70,8 @@ const PROGRAM_MANAGER = pick(
   "inbox.view",
   "inbox.notificationsAll",
   "submit.view",
+  "keyLinks.view",
+  "teams.view",
   "staff.view",
   "drawer.studentDetail",
   "drawer.intakeDetail",
@@ -84,6 +88,7 @@ const SITE_SUPPORTER = pick(
   "attendance.correction",
   "inbox.view",
   "submit.view",
+  "keyLinks.view",
   "drawer.studentDetail",
   "drawer.podDetail",
 );
@@ -95,9 +100,15 @@ const COACH = pick(
   "inbox.view",
   "myPod.view",
   "submit.view",
+  "keyLinks.view",
   "attendance.correction",
   "drawer.studentDetail",
   "drawer.podDetail",
+);
+
+const STUDENT = pick(
+  "attendance.correction",
+  "submit.view",
 );
 
 const READ_ONLY = pick("dashboard.view", "attendance.correction");
@@ -108,6 +119,7 @@ export const ROLE_PERMISSIONS: Record<BobOpsRole, Set<BobPermissionId>> = {
   program_manager: PROGRAM_MANAGER,
   site_supporter: SITE_SUPPORTER,
   coach: COACH,
+  student: STUDENT,
   read_only: READ_ONLY,
 };
 

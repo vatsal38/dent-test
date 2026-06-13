@@ -4,8 +4,9 @@ import { AuthProvider } from "@/context/AuthContext";
 import { QueryProvider } from "@/platform/query/QueryProvider";
 
 export const metadata: Metadata = {
-  title: "Dent Ops OS",
-  description: "Internal work system for Dent Education's partnerships team",
+  title: "DentOS",
+  description: "Dent Education program operations platform",
+  icons: { icon: "/brand/dent-logo.svg" },
 };
 
 export default function RootLayout({
