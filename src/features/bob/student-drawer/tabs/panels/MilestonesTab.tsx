@@ -7,15 +7,25 @@ import { useStudentMilestones } from "../../hooks/useStudentTabQueries";
 import { DetailCard } from "../../widgets/DetailCard";
 import { TabPanelSkeleton } from "../../widgets/TabPanelSkeleton";
 
+function firstTrackLabel(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value.trim() || null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === "string" && item.trim()) return item.trim();
+    }
+  }
+  return null;
+}
+
 export function MilestonesTab() {
   const { student, tab } = useStudentDrawerContext();
   const trackHint =
-    student?.track ||
-    (student?.airtableFields?.["Track - Site (from BoB '26 Track)"] as
-      | string
-      | string[]
-      | undefined) ||
-    (student?.airtableFields?.["BoB '25 Final Track"] as string | undefined) ||
+    firstTrackLabel(student?.track) ||
+    firstTrackLabel(
+      student?.airtableFields?.["Track - Site (from BoB '26 Track)"],
+    ) ||
+    firstTrackLabel(student?.airtableFields?.["BoB '25 Final Track"]) ||
     null;
   const { data: milestones = [], isLoading } = useStudentMilestones(
     student?.id ?? null,

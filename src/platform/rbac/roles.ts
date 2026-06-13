@@ -44,9 +44,6 @@ export function normalizeBobOpsRole(me: {
     case "read_only":
       return "read_only";
     default:
-      if (me?.bobRole === "student" || me?.role === "student") {
-        return "student";
-      }
       return "program_manager";
   }
 }
