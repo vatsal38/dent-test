@@ -10,6 +10,7 @@ import {
   createBobAttendance,
   getBobAttendance,
   getBobAttendanceDateBounds,
+  getBobAttendanceRecord,
   updateBobAttendance,
   type BobAttendance,
   type BobAttendanceListParams,
