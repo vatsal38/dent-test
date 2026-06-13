@@ -14,6 +14,7 @@ import {
   StatusBadge,
 } from "@/components/bob/RecruitmentUi";
 import { extractAirtableAttachments } from "@/lib/bobAirtableDisplay";
+import { formatBobFieldDisplayName } from "@/lib/bobDisplayTerminology";
 import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
 import { TruncatedWithTooltip } from "@/components/TruncatedWithTooltip";
 import {
@@ -205,8 +206,8 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
       "readyForProgram",
       "attendancePresent",
       "attendanceAbsent",
-      "milestonesSubmitted",
-      "milestonesTotal",
+      "deliverablesSubmitted",
+      "deliverablesTotal",
     ];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
@@ -280,7 +281,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         <PageHeader
           eyebrow="Operational roster"
           title="Students"
-          description="Active youth on program — attendance, deliverables, and pod assignments."
+          description="Active youth on program — attendance, deliverables, and track assignments."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -476,7 +477,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
                       key={f.name}
                       className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase max-w-[140px] truncate"
                     >
-                      {f.name}
+                      {formatBobFieldDisplayName(f.name)}
                     </th>
                   ))}
                   <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase sticky right-0 bg-gray-50">

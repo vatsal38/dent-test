@@ -13,7 +13,7 @@ export function PodDashboardPanel({ podId, podName }: Props) {
   const scope: DashboardScope = {
     level: "pod",
     podId,
-    label: podName ?? "Pod",
+    label: podName ?? "Track",
   };
 
   return (

@@ -1,5 +1,6 @@
-import { AttendanceCorrectionPage } from "@/features/bob/attendance/AttendanceCorrectionPage";
+import { redirect } from "next/navigation";
 
+/** Youth submit corrections via One Stop — staff triage in discrepancies. */
 export default function AttendanceCorrectionRoutePage() {
-  return <AttendanceCorrectionPage />;
+  redirect("/app/bob/attendance/discrepancies");
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { cellDisplayValue } from "@/lib/bobAirtableDisplay";
+import { formatBobFieldDisplayName } from "@/lib/bobDisplayTerminology";
 import { studentSummaryRows } from "@/features/bob/roster/recordDisplay";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
@@ -57,12 +58,13 @@ export function DemographicsTab() {
 
   function row(label: string, value: string) {
     if (!value || value === "—") return null;
+    const displayLabel = formatBobFieldDisplayName(label);
     return (
       <div
         key={label}
         className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"
       >
-        <dt className="text-[11px] text-gray-500">{label}</dt>
+        <dt className="text-[11px] text-gray-500">{displayLabel}</dt>
         <dd className="text-sm font-medium text-gray-900">{value}</dd>
       </div>
     );

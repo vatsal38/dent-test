@@ -40,7 +40,7 @@ export function CoachPodPage() {
   const kpis: KpiItem[] = [
     {
       id: "students",
-      label: "Students in pod",
+      label: "Students in track",
       value: students.length,
       href: pod ? `/app/bob/roster?pod=${pod.id}` : "/app/bob/roster",
     },
@@ -82,14 +82,14 @@ export function CoachPodPage() {
       <div>
         <PageHeader
           eyebrow="Coach home"
-          title="My pod"
-          description="No pod is assigned to your account yet."
+          title="My track"
+          description="No track is assigned to your account yet."
         />
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
           <p className="text-sm text-gray-700">
-            Ask an admin to set your email or user id on a pod&apos;s coach field in{" "}
+            Ask an admin to set your email or user id on a track&apos;s coach field in{" "}
             <Link href="/app/bob/pods" className="text-orange-600 font-medium">
-              Pods
+              Tracks
             </Link>
             .
           </p>
@@ -116,7 +116,7 @@ export function CoachPodPage() {
               href={`/app/bob/pods/${pod.id}`}
               className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium"
             >
-              Pod settings
+              Track settings
             </Link>
           </>
         }

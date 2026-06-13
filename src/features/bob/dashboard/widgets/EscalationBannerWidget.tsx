@@ -30,10 +30,16 @@ export function EscalationBannerWidget({
         </p>
       </div>
       <Link
-        href="/app/bob/inbox"
+        href={
+          (att.openIncidents ?? 0) > 0
+            ? "/app/bob/inbox?type=incident"
+            : "/app/bob/attendance/discrepancies"
+        }
         className="text-sm font-medium text-red-700 hover:text-red-800 shrink-0"
       >
-        Open operations inbox →
+        {(att.openIncidents ?? 0) > 0
+          ? "Open operations inbox →"
+          : "Review discrepancies →"}
       </Link>
     </div>
   );

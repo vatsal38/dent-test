@@ -158,7 +158,7 @@ export function BobSettingsPage() {
                 href="/app/bob/pods"
                 className="text-orange-600 hover:underline"
               >
-                Pod assignments →
+                Track assignments →
               </Link>
             </li>
           </ul>

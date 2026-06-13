@@ -21,10 +21,21 @@ export function commandCenterToKpis(stats: BobCommandCenterStats) {
     kpis: {
       studentsEnrolled: { value: stats.cards.studentsEnrolled, unit: "count" as const },
       youthWorksSynced: { value: stats.cards.youthWorksSynced, unit: "percent" as const },
+      onboardingCompleted: {
+        value: stats.cards.onboardingCompleted ?? stats.cards.youthWorksSynced,
+        unit: "percent" as const,
+      },
       overallAttendancePct: { value: 0, unit: "percent" as const },
       checkedInToday: { value: stats.cards.checkedInToday, unit: "count" as const },
+      checkedInPctToday: {
+        value: stats.cards.checkedInPctToday ?? 0,
+        unit: "percent" as const,
+      },
       deliverablesSubmitted: { value: 0, unit: "count" as const },
-      deliverablesCompleted: { value: 0, unit: "count" as const },
+      deliverablesCompleted: {
+        value: stats.cards.deliverablesCompleted ?? 0,
+        unit: "count" as const,
+      },
       milestonesThisWeek: { value: stats.cards.milestonesThisWeek, unit: "percent" as const },
       openDiscrepancies: { value: stats.cards.openDiscrepancies, unit: "count" as const },
       openIncidents: { value: 0, unit: "count" as const },

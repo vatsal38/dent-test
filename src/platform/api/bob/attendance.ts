@@ -43,9 +43,23 @@ export interface BobAttendance {
   personName?: string | null;
   airtableRecordId?: string | null;
   studentAirtableRecordId?: string | null;
+  /** roster_baseline — blank daily row generated from pod roster */
+  source?: string | null;
   notes?: string | null;
+  /** YouthWorks payroll — longer-term; synced when Airtable columns exist */
+  paid?: boolean;
+  paidAmount?: number | null;
+  youthWorksBatch?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  airtableSync?: {
+    synced?: boolean;
+    skipped?: boolean;
+    writeBlocked?: boolean;
+    reason?: string;
+    message?: string;
+    airtableRecordId?: string;
+  };
 }
 
 export interface BobAttendanceListParams {
@@ -98,12 +112,31 @@ export async function getBobAttendanceRecord(
   return apiRequest<BobAttendance>(`/api/bob/attendance/${id}`);
 }
 
+export const BOB_ATTENDANCE_DEFAULT_PAID_AMOUNT = 75;
+
 export interface CreateBobAttendanceInput {
   studentId: string;
   date: string;
   podId: string;
   status?: BobAttendanceStatus;
+  signInTime?: string | null;
+  signOutTime?: string | null;
+  staffCorrectionSignIn?: string | null;
+  staffCorrectionSignOut?: string | null;
+  manualStartTime?: string | null;
+  manualEndTime?: string | null;
+  excusedAbsence?: boolean;
+  attendanceStatus?: string | null;
+  attendanceStatusHours?: string | null;
+  hoursPresent?: string | null;
+  notes?: string | null;
+  manualOverride?: string | null;
+  paid?: boolean;
+  paidAmount?: number | null;
+  youthWorksBatch?: string | null;
 }
+
+export type UpdateBobAttendanceInput = Partial<CreateBobAttendanceInput>;
 
 export async function createBobAttendance(
   data: CreateBobAttendanceInput,
@@ -116,7 +149,7 @@ export async function createBobAttendance(
 
 export async function updateBobAttendance(
   id: string,
-  data: { status: BobAttendanceStatus },
+  data: UpdateBobAttendanceInput,
 ): Promise<BobAttendance> {
   return apiRequest<BobAttendance>(`/api/bob/attendance/${id}`, {
     method: "PATCH",

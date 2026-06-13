@@ -11,9 +11,9 @@ export interface MetricDefinition {
 export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   studentsEnrolled: {
     key: "studentsEnrolled",
-    label: "Students Enrolled",
+    label: "Active BoB students",
     format: (v) => v,
-    href: () => "/app/bob/roster",
+    href: () => "/app/bob/roster?bobCohort=active",
   },
   youthWorksSynced: {
     key: "youthWorksSynced",
@@ -21,33 +21,45 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     format: (v) => `${v}%`,
     href: () => "/app/bob/roster?queue=bob_cohort",
   },
+  onboardingCompleted: {
+    key: "onboardingCompleted",
+    label: "Onboarding completed",
+    format: (v) => `${v}%`,
+    href: () => "/app/bob/roster?queue=onboarding_pending",
+  },
   overallAttendancePct: {
     key: "overallAttendancePct",
-    label: "Overall Attendance %",
+    label: "Overall attendance %",
     format: (v) => `${v}%`,
     href: () => "/app/bob/attendance",
   },
   checkedInToday: {
     key: "checkedInToday",
-    label: "Checked In Today",
+    label: "Checked in today",
     format: (v) => v,
+    href: () => "/app/bob/attendance",
+  },
+  checkedInPctToday: {
+    key: "checkedInPctToday",
+    label: "Checked in today",
+    format: (v) => `${v}%`,
     href: () => "/app/bob/attendance",
   },
   deliverablesSubmitted: {
     key: "deliverablesSubmitted",
-    label: "Deliverables Submitted",
+    label: "Deliverables submitted",
     format: (v) => v,
     href: () => "/app/bob/deliverables",
   },
   deliverablesCompleted: {
     key: "deliverablesCompleted",
-    label: "Deliverables Completed",
+    label: "Deliverables completed this week",
     format: (v) => v,
     href: () => "/app/bob/deliverables",
   },
   milestonesThisWeek: {
     key: "milestonesThisWeek",
-    label: "Deliverables Submitted",
+    label: "Deliverables logged",
     format: (v) => `${v}%`,
     href: () => "/app/bob/deliverables",
   },
@@ -59,7 +71,7 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   },
   openIncidents: {
     key: "openIncidents",
-    label: "Open Incidents",
+    label: "Open incidents",
     format: (v) => v,
     href: () => "/app/bob/inbox?type=incident",
   },
@@ -102,19 +114,18 @@ export function metricsToKpiItems(
   });
 }
 
-/** Default KPI set for command center overview */
+/** Command Center top-row KPIs — FY26 active cohort roster. */
 export const COMMAND_CENTER_KPIS: BobDashboardMetricKey[] = [
   "studentsEnrolled",
-  "overallAttendancePct",
-  "checkedInToday",
-  "deliverablesSubmitted",
+  "onboardingCompleted",
+  "checkedInPctToday",
   "deliverablesCompleted",
-  "openIncidents",
+  "openDiscrepancies",
 ];
 
 export const POD_OPS_KPIS: BobDashboardMetricKey[] = [
   "studentsEnrolled",
-  "checkedInToday",
+  "checkedInPctToday",
   "noShowsToday",
   "atRiskCount",
   "escalationCount",

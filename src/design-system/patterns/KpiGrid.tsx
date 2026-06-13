@@ -13,10 +13,13 @@ function kpiToneClasses(id: string) {
   switch (id) {
     case "studentsEnrolled":
       return "bg-amber-50 border-amber-200 hover:border-amber-300";
+    case "onboardingCompleted":
     case "youthWorksSynced":
       return "bg-emerald-50 border-emerald-200 hover:border-emerald-300";
+    case "checkedInPctToday":
     case "checkedInToday":
       return "bg-orange-50 border-orange-200 hover:border-orange-300";
+    case "deliverablesCompleted":
     case "milestonesThisWeek":
       return "bg-teal-50 border-teal-200 hover:border-teal-300";
     case "openDiscrepancies":

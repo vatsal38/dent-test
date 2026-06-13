@@ -13,14 +13,18 @@ import {
 } from "../types";
 import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
-  mapAttendanceStateFromRecord,
-  sessionStatusLabel,
-} from "./mapAttendanceState";
+  expectedPunchTypes,
+  isShowcaseDay,
+} from "@/lib/bobProgramCalendar";
 import {
   isDailyAttendanceRecord,
   isPunchEventRecord,
   normalizeSignType,
 } from "./normalizeSignType";
+import {
+  mapAttendanceStateFromRecord,
+  sessionStatusLabel,
+} from "./mapAttendanceState";
 
 function emptyPunches(): Record<PunchType, PunchSlot> {
   return Object.fromEntries(
@@ -174,10 +178,16 @@ function deriveHealth(
   punches: Record<PunchType, PunchSlot>,
   attendanceState: AttendanceState,
   dailyStatus?: BobAttendanceStatus,
+  date?: string,
 ): { health: DayHealth; missingPunchCount: number; isLate: boolean } {
-  const states = PUNCH_TYPES.map((t) => punches[t].state);
+  const required = date ? expectedPunchTypes(date) : [...PUNCH_TYPES];
+  const states = required.map((t) => punches[t].state);
   const missingPunchCount = states.filter((s) => s === "missing").length;
   const isLate = attendanceState === "late" || dailyStatus === "late";
+
+  if (required.length === 0) {
+    return { health: "complete", missingPunchCount: 0, isLate: false };
+  }
 
   if (attendanceState === "absent" || dailyStatus === "absent")
     return { health: "absent", missingPunchCount, isLate };
@@ -191,7 +201,7 @@ function deriveHealth(
     return { health: "complete", missingPunchCount, isLate };
   if (attendanceState === "missing_punch" || missingPunchCount > 0)
     return {
-      health: missingPunchCount === PUNCH_TYPES.length ? "missing" : "partial",
+      health: missingPunchCount === required.length ? "missing" : "partial",
       missingPunchCount,
       isLate,
     };
@@ -206,6 +216,12 @@ export interface ExpectedEnrollment {
 }
 
 export const UNASSIGNED_POD_ID = "__unassigned__";
+
+export function isBaselineDailyRecord(record: {
+  source?: string | null;
+}): boolean {
+  return String(record.source || "").trim() === "roster_baseline";
+}
 
 export function isAirtableSourcedAttendance(record: BobAttendance): boolean {
   return Boolean(record.airtableRecordId && String(record.airtableRecordId).trim());
@@ -229,6 +245,28 @@ export function listExpectedEnrollments(
       out.push({ studentId: sid, podId: pod.id });
     }
   }
+  return out;
+}
+
+export function supplementEnrollmentsFromStudents(
+  students: BobStudent[],
+  enrollments: ExpectedEnrollment[],
+  podFilter?: string,
+): ExpectedEnrollment[] {
+  const seen = new Set(enrollments.map((e) => `${e.podId}|${e.studentId}`));
+  const out = [...enrollments];
+
+  for (const student of students) {
+    const studentId = String(student.id);
+    const podId = student.podId ? String(student.podId) : UNASSIGNED_POD_ID;
+    if (podFilter && podId !== podFilter) continue;
+
+    const key = `${podId}|${studentId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ studentId, podId });
+  }
+
   return out;
 }
 
@@ -282,7 +320,7 @@ export function buildStudentDayAttendance(
     const podId =
       r.podId || studentById.get(studentId)?.podId || UNASSIGNED_POD_ID;
     const dayKey = `${podId}|${studentId}|${r.date}`;
-    if (isDailyAttendanceRecord(r) || r.status) {
+    if (isDailyAttendanceRecord(r) || r.status || isBaselineDailyRecord(r)) {
       dailyByKey.set(dayKey, r);
     }
   }
@@ -321,10 +359,21 @@ export function buildStudentDayAttendance(
         punches = applyStatusToPunches(punches, daily.status);
       }
 
+      const requiredPunches = expectedPunchTypes(date);
+      if (isShowcaseDay(date)) {
+        punches.am_in = { ...punches.am_in, state: "na" };
+        punches.am_out = { ...punches.am_out, state: "na" };
+      } else if (requiredPunches.length === 0) {
+        for (const pt of PUNCH_TYPES) {
+          punches[pt] = { ...punches[pt], state: "na" };
+        }
+      }
+
       const { health, missingPunchCount, isLate } = deriveHealth(
         punches,
         attendanceState,
         daily?.status,
+        date,
       );
 
       const morning = buildSession(

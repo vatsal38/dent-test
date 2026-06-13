@@ -17,15 +17,20 @@ import {
   WEEK_VIEW_ENROLLMENT_THRESHOLD,
 } from "./scale";
 import { PUNCH_LABELS } from "./constants";
-import { PUNCH_TYPES } from "../types";
 import {
   buildStudentDayAttendance,
-  isAirtableSourcedAttendance,
+  listExpectedEnrollments,
   supplementEnrollmentsFromAttendance,
+  supplementEnrollmentsFromStudents,
   UNASSIGNED_POD_ID,
 } from "./buildAttendanceIndex";
 import { resolvePodName, resolveSiteName, resolveStudentName } from "./resolveDisplay";
 import { studentMatchesRosterTrack } from "@/lib/bobRosterTrackOptions";
+import {
+  expectedPunchTypes,
+  isAttendanceExpectedOn,
+  isProgramDay,
+} from "@/lib/bobProgramCalendar";
 
 function buildDiscrepancies(
   days: ReturnType<typeof buildStudentDayAttendance>,
@@ -35,10 +40,13 @@ function buildDiscrepancies(
   const list: AttendanceDiscrepancy[] = [];
 
   for (const day of days) {
+    if (!isAttendanceExpectedOn(day.date)) continue;
+
     const studentName = resolveStudentName(day.studentId, studentById);
     const podName = resolvePodName(day.podId, podById);
+    const requiredPunches = expectedPunchTypes(day.date);
 
-    if (day.health === "missing") {
+    if (day.health === "missing" && requiredPunches.length > 0) {
       list.push({
         id: `${day.key}|missing_day`,
         kind: "missing_day",
@@ -99,7 +107,7 @@ function buildDiscrepancies(
       });
     }
 
-    for (const pt of PUNCH_TYPES) {
+    for (const pt of requiredPunches) {
       if (day.punches[pt].state !== "missing") continue;
       if (day.health === "excused" || day.health === "absent") continue;
       list.push({
@@ -128,7 +136,9 @@ function buildPodStats(
   podById: Map<string, BobPod>,
   focusDate: string,
 ): PodAttendanceStats[] {
-  const todayDays = days.filter((d) => d.date === focusDate);
+  const todayDays = days.filter(
+    (d) => d.date === focusDate && isProgramDay(focusDate),
+  );
   return pods.map((pod) => {
     const podDays = todayDays.filter((d) => d.podId === pod.id);
     const hoursSum = podDays.reduce((sum, d) => {
@@ -202,7 +212,7 @@ function buildAlerts(
     alerts.push({
       id: "more-pods",
       severity: "info",
-      title: `${hiddenPodAlerts} more pod${hiddenPodAlerts === 1 ? "" : "s"} need review`,
+      title: `${hiddenPodAlerts} more track${hiddenPodAlerts === 1 ? "" : "s"} need review`,
       href: `/app/bob/attendance/discrepancies?date=${focusDate}`,
       count: hiddenPodAlerts,
     });
@@ -275,12 +285,21 @@ export function computeAttendanceWorkspace(
       ? [rangeStart]
       : getDaysInRange(rangeStart, rangeEnd);
 
-  // Attendance hub shows Airtable-imported rows only (not pod-roster placeholders).
-  const airtableRecords = records.filter(isAirtableSourcedAttendance);
+  const trackTerm = String(trackFilter || "").trim();
+
+  // When track-scoped, enrollments come from the filtered student list only.
+  const rosterEnrollments = trackTerm
+    ? []
+    : listExpectedEnrollments(pods, podFilter);
+  const cohortEnrollments = supplementEnrollmentsFromStudents(
+    students,
+    rosterEnrollments,
+    podFilter,
+  );
   const enrollments = supplementEnrollmentsFromAttendance(
-    airtableRecords,
+    records,
     dates,
-    [],
+    cohortEnrollments,
     studentById,
     podFilter,
   );
@@ -288,7 +307,7 @@ export function computeAttendanceWorkspace(
   if (enrollments.some((e) => e.podId === UNASSIGNED_POD_ID)) {
     podById.set(UNASSIGNED_POD_ID, {
       id: UNASSIGNED_POD_ID,
-      name: "No pod assigned",
+      name: "No track assigned",
       coachId: null,
       siteSupporterId: null,
       students: [],
@@ -298,13 +317,12 @@ export function computeAttendanceWorkspace(
   }
 
   let days = buildStudentDayAttendance(
-    airtableRecords,
+    records,
     enrollments,
     dates,
     studentById,
   );
 
-  const trackTerm = String(trackFilter || "").trim();
   if (trackTerm) {
     days = days.filter((d) => {
       const student = studentById.get(d.studentId);
@@ -315,7 +333,9 @@ export function computeAttendanceWorkspace(
   const discrepancies = buildDiscrepancies(days, studentById, podById);
   const openDiscrepancies = discrepancies.filter((d) => d.status === "open").length;
 
-  const todayDays = days.filter((d) => d.date === focusDate);
+  const todayDays = days.filter(
+    (d) => d.date === focusDate && isProgramDay(focusDate),
+  );
   const summary = {
     expected: todayDays.length,
     complete: todayDays.filter(
@@ -367,10 +387,8 @@ export function computeAttendanceWorkspace(
     issues,
     scale: {
       enrollmentCount,
-      requiresPodScope:
-        enrollmentCount > POD_SCOPE_ENROLLMENT_THRESHOLD &&
-        !podFilter &&
-        !trackTerm,
+      /** Soft hint only — grid is never hard-blocked. */
+      requiresPodScope: false,
       recommendPodScope:
         enrollmentCount > POD_SCOPE_ENROLLMENT_THRESHOLD / 2 &&
         !podFilter &&
@@ -442,7 +460,7 @@ export function siteRollup(podStats: PodAttendanceStats[]) {
     }
   >();
   for (const p of podStats) {
-    const site = p.siteName || "Unassigned site";
+    const site = p.siteName || "Unassigned track";
     const cur = bySite.get(site) || {
       siteName: site,
       expected: 0,

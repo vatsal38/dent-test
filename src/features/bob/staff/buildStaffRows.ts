@@ -4,7 +4,7 @@ import type { BobStudent } from "@/platform/api/bob/students";
 export type StaffRow = {
   id: string;
   label: string;
-  roles: ("Coach" | "Site supporter" | "Coach (student)")[];
+  roles: ("Coach" | "Track supporter" | "Coach (student)")[];
   podIdsAsCoach: string[];
   podIdsAsSiteSupporter: string[];
   studentIds: string[];
@@ -19,7 +19,7 @@ export function buildStaffRows(
   function getOrCreate(
     id: string,
     label: string,
-    role: "Coach" | "Site supporter" | "Coach (student)",
+    role: "Coach" | "Track supporter" | "Coach (student)",
   ) {
     let row = byId.get(id);
     if (!row) {
@@ -43,10 +43,10 @@ export function buildStaffRows(
       row.podIdsAsCoach.push(p.id);
     }
     if (p.siteSupporterId && p.siteSupporterId !== p.coachId) {
-      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Site supporter");
+      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Track supporter");
       row.podIdsAsSiteSupporter.push(p.id);
     } else if (p.siteSupporterId) {
-      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Site supporter");
+      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Track supporter");
       if (!row.podIdsAsSiteSupporter.includes(p.id)) {
         row.podIdsAsSiteSupporter.push(p.id);
       }

@@ -10,11 +10,10 @@ export const TRACK_FILTERS = [
 
 export const REVIEW_STATUS_OPTIONS = [
   { value: "", label: "—" },
-  { value: "pending_review", label: "Pending review" },
-  { value: "in_progress", label: "In progress" },
-  { value: "approved", label: "Approved" },
-  { value: "changes_requested", label: "Changes requested" },
-  { value: "not_started", label: "Not started" },
+  { value: "not_started", label: "Submission" },
+  { value: "pending_review", label: "Pending Review" },
+  { value: "changes_requested", label: "Needs Student Work" },
+  { value: "approved", label: "Completed" },
 ] as const;
 
 export const TRACKER_STATUS_OPTIONS = [
@@ -45,16 +44,21 @@ export const APP_REVIEW_TO_TRACKER: Record<string, string> = {
 export function reviewStatusBadge(status: string | null | undefined) {
   switch (status) {
     case "approved":
-      return { label: "Approved", className: "bg-green-100 text-green-800" };
+      return { label: "Completed", className: "bg-green-100 text-green-800" };
     case "changes_requested":
-      return { label: "Changes requested", className: "bg-red-100 text-red-800" };
-    case "in_progress":
-      return { label: "In progress", className: "bg-blue-100 text-blue-800" };
+      return {
+        label: "Needs Student Work",
+        className: "bg-red-100 text-red-800",
+      };
     case "not_started":
-      return { label: "Not started", className: "bg-gray-100 text-gray-700" };
+    case "in_progress":
+      return { label: "Submission", className: "bg-blue-100 text-blue-800" };
     case "pending_review":
     default:
-      return { label: "Pending review", className: "bg-amber-100 text-amber-900" };
+      return {
+        label: "Pending Review",
+        className: "bg-amber-100 text-amber-900",
+      };
   }
 }
 

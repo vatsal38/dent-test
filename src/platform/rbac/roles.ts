@@ -8,7 +8,7 @@ export function bobRoleLabel(role: BobOpsRole): string {
     case "program_manager":
       return "Program Manager";
     case "site_supporter":
-      return "Site Supporter";
+      return "Track Supporter";
     case "coach":
       return "Coach";
     case "student":

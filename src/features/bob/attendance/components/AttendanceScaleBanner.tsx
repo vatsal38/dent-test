@@ -11,18 +11,18 @@ export function AttendanceScaleBanner({
   onSelectTrack?: () => void;
   inline?: boolean;
 }) {
-  if (!scale.requiresPodScope && !scale.recommendPodScope && !scale.weekViewHeavy) {
+  if (!scale.recommendPodScope && !scale.weekViewHeavy) {
     return null;
   }
 
   if (inline) {
-    const message = scale.requiresPodScope
-      ? `${scale.enrollmentCount} students — select a track for best performance`
-      : `${scale.enrollmentCount} in scope${scale.recommendPodScope ? " · filter by track" : ""}`;
+    const message = scale.recommendPodScope
+      ? `${scale.enrollmentCount} students — filter by track for faster scanning`
+      : `${scale.enrollmentCount} in scope`;
     return (
       <p className="text-[11px] text-gray-500 shrink-0">
         {message}
-        {scale.requiresPodScope && onSelectTrack ? (
+        {scale.recommendPodScope && onSelectTrack ? (
           <>
             {" · "}
             <button
@@ -38,11 +38,11 @@ export function AttendanceScaleBanner({
     );
   }
 
-  if (scale.requiresPodScope) {
+  if (scale.recommendPodScope) {
     return (
       <div className="mb-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-950">
         <span className="font-medium">{scale.enrollmentCount} students</span>
-        {" — select a track for faster loading. "}
+        {" — filter by track for faster scanning. "}
         {onSelectTrack ? (
           <button
             type="button"

@@ -85,7 +85,7 @@ export function DailyAttendanceTable({
       <div className="p-8 text-center text-gray-500 text-sm bg-white border border-gray-200 rounded-lg">
         {search.trim()
           ? "No students match your search."
-          : "No students in scope. Select a pod or assign students from the Pods page."}
+          : "No students in scope. Select a track or assign students from the Tracks page."}
       </div>
     );
   }

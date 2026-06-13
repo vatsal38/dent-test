@@ -69,7 +69,7 @@ export function BobCommandCenterPage() {
             href="/app/bob/my-pod"
             className="text-sm font-medium text-orange-700 hover:text-orange-800"
           >
-            Open My Pod →
+            Open My Track →
           </Link>
         </div>
       )}

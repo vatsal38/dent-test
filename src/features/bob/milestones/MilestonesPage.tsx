@@ -27,6 +27,7 @@ import {
   progressStatusBadge,
   reviewStatusBadge,
 } from './deliverableDisplay';
+import { formatBobTrackDisplayLabel } from '@/lib/bobDisplayTerminology';
 
 export function MilestonesPage() {
   const orgId = BOB_MILESTONES_ORG_ID;
@@ -256,7 +257,7 @@ export function MilestonesPage() {
           {groupedByTrack.map(([track, items]) => (
             <section key={track}>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                {track}
+                {formatBobTrackDisplayLabel(track)}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {items.map((d) => {

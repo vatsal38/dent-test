@@ -15,6 +15,7 @@ import {
   type BobAttendanceListParams,
   type BobAttendanceStatus,
   type CreateBobAttendanceInput,
+  type UpdateBobAttendanceInput,
 } from "@/platform/api/bob/attendance";
 import { bobKeys } from "@/platform/query/queryKeys";
 
@@ -51,11 +52,37 @@ export function useUpdateBobAttendance() {
   return useMutation({
     mutationFn: ({
       id,
-      status,
-    }: {
-      id: string;
-      status: BobAttendanceStatus;
-    }) => updateBobAttendance(id, { status }),
+      ...data
+    }: UpdateBobAttendanceInput & { id: string }) =>
+      updateBobAttendance(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: bobKeys.attendance.all() });
+      qc.invalidateQueries({ queryKey: bobKeys.stats() });
+      qc.invalidateQueries({ queryKey: bobKeys.dashboard() });
+    },
+  });
+}
+
+export function useBobAttendanceRecord(id: string | null) {
+  return useQuery({
+    queryKey: bobKeys.attendance.detail(id ?? ""),
+    queryFn: () => getBobAttendanceRecord(id!),
+    enabled: Boolean(id),
+  });
+}
+
+export function useSaveBobAttendanceRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string | null;
+      data: CreateBobAttendanceInput;
+    }) => {
+      if (input.id) {
+        return updateBobAttendance(input.id, input.data);
+      }
+      return createBobAttendance(input.data);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: bobKeys.attendance.all() });
       qc.invalidateQueries({ queryKey: bobKeys.stats() });

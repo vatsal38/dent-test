@@ -16,9 +16,9 @@ export function resolvePodName(
   podId: string,
   podById: Map<string, BobPod>,
 ): string {
-  if (podId === UNASSIGNED_POD_ID) return "No pod assigned";
+  if (podId === UNASSIGNED_POD_ID) return "No track assigned";
   const p = podById.get(podId);
-  return p?.name ?? "Unknown pod";
+  return p?.name ?? "Unknown track";
 }
 
 export function resolveSiteName(

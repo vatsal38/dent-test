@@ -8,10 +8,18 @@ import { WellnessAlertsWidget } from "./WellnessAlertsWidget";
 import { AlertStripWidget } from "./AlertStripWidget";
 
 function deriveCount(snapshot: WidgetRenderProps["snapshot"]) {
-  const escalation = snapshot?.attention?.escalation ?? 0;
-  const clockins = snapshot?.noShowsToday?.length ?? 0;
-  const alerts = snapshot?.alerts?.length ?? 0;
-  return escalation + clockins + alerts;
+  if (!snapshot) return 0;
+  const openDiscrepancies = Number(
+    snapshot.kpis?.openDiscrepancies?.value ??
+      snapshot.cards?.openDiscrepancies ??
+      0,
+  );
+  const otherAlerts = (snapshot.alerts ?? []).filter(
+    (a) => a.id !== "discrepancies" && a.id !== "no-shows" && a.id !== "program-off",
+  ).length;
+  const atRisk = snapshot.atRiskStudents?.length ?? 0;
+  const incidents = snapshot.attention?.openIncidents ?? 0;
+  return openDiscrepancies + otherAlerts + atRisk + incidents;
 }
 
 export function AlertsDropdownWidget(props: WidgetRenderProps) {

@@ -20,7 +20,7 @@ export function ActivityTab() {
     <div className="p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-600">
-          Unified operational timeline — attendance, submissions, milestones.
+          Unified operational timeline — attendance, submissions, deliverables.
         </p>
         <button
           type="button"

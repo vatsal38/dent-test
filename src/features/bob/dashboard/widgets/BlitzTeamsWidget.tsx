@@ -27,7 +27,7 @@ export function BlitzTeamsWidget({
   const title = placement.title ?? "Blitz teams";
   if (loading) return <DashboardWidgetSkeleton variant="list" />;
 
-  const teams = (snapshot?.blitzTeams ?? []).slice(0, 4);
+  const teams = snapshot?.blitzTeams ?? [];
 
   return (
     <DashboardCard
@@ -49,47 +49,58 @@ export function BlitzTeamsWidget({
           message="Assign Blitz Squad on Students & Alums to see color teams here."
         />
       ) : (
-        <div className="divide-y divide-amber-200/50 rounded-lg overflow-hidden">
-          {teams.map((t, idx) => {
-            const memberCount = t.memberCount ?? 0;
-            const points = t.points ?? 0;
-            const weekPts = t.pointsThisWeek ?? 0;
-            return (
-              <div
-                key={t.id}
-                className="flex items-center justify-between gap-3 px-3 py-3 bg-amber-50/40"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-6 w-6 rounded-full bg-amber-200 text-amber-900 text-xs font-semibold flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${pillTone(t.name)}`}
-                  >
-                    {t.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 shrink-0 text-right">
-                  <div className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {points > 0 ? points : memberCount}
-                    <span className="text-xs font-normal text-gray-500 ml-1">
-                      {points > 0 ? "pts" : "students"}
-                    </span>
-                  </div>
-                  {weekPts > 0 ? (
-                    <div className="text-xs text-emerald-700 font-medium tabular-nums">
-                      +{weekPts} wk
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-gray-500 uppercase tracking-wide">
+                <th className="pb-2 pr-3 font-medium">Team</th>
+                <th className="pb-2 px-2 font-medium text-right">
+                  Points overall
+                </th>
+                <th className="pb-2 pl-2 font-medium text-right">
+                  Points this week
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-amber-200/60">
+              {teams.map((t, idx) => {
+                const points = t.points ?? 0;
+                const weekPts = t.pointsThisWeek ?? 0;
+                return (
+                  <tr key={t.id}>
+                    <td className="py-2.5 pr-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-semibold text-amber-900/70 tabular-nums w-4 shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold truncate ${pillTone(t.name)}`}
+                        >
+                          {t.name}
+                        </span>
+                        {t.memberCount != null ? (
+                          <span className="text-xs text-gray-500 shrink-0">
+                            {t.memberCount} students
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2 text-right font-semibold text-gray-900 tabular-nums">
+                      {points}
+                    </td>
+                    <td className="py-2.5 pl-2 text-right font-medium text-emerald-800 tabular-nums">
+                      {weekPts}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
       <p className="text-xs text-gray-500 mt-3">
-        Grouped by blitz color from Airtable. Points total Dent One Stop blitz
-        submissions when logged.
+        Grouped by blitz color from Airtable. Points from Dent One Stop blitz
+        submissions; weekly totals use the current program week.
       </p>
     </DashboardCard>
   );

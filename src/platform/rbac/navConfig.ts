@@ -34,7 +34,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
   },
   {
     href: "/app/bob/my-pod",
-    label: "My Pod",
+    label: "My Track",
     iconKey: "myPod",
     permission: "myPod.view",
     section: "primary",
@@ -56,7 +56,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
   },
   {
     href: "/app/bob/pods",
-    label: "Pods",
+    label: "Tracks",
     iconKey: "pods",
     permission: "pods.view",
     section: "primary",

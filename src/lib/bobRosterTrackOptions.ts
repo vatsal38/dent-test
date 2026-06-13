@@ -55,6 +55,11 @@ export function studentMatchesRosterTrack(
   if (!want) return true;
 
   const labels: string[] = [];
+
+  if (student.track) {
+    labels.push(String(student.track).trim());
+  }
+
   const af = student.airtableFields;
   if (af && typeof af === "object") {
     const scopeFields = [

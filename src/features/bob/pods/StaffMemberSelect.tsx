@@ -8,7 +8,7 @@ export function StaffMemberSelect({
   hint,
   value,
   onChange,
-  staff,
+  staff = [],
   disabled,
   placeholder = "Unassigned",
 }: {
@@ -16,7 +16,7 @@ export function StaffMemberSelect({
   hint?: string;
   value: string;
   onChange: (ref: string) => void;
-  staff: BobStaffMember[];
+  staff?: BobStaffMember[];
   disabled?: boolean;
   placeholder?: string;
 }) {

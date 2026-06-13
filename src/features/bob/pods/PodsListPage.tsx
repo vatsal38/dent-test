@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
+import { BobImportProgress } from "@/components/BobImportProgress";
 import { useBobPodsList } from "@/platform/query/hooks/useBobPods";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
@@ -13,10 +14,15 @@ import { useBobStaffList } from "../../../platform/query/hooks/useBobStaff";
 import { resolveStaffLabel } from "./staffDisplay";
 import { BobActionButton } from "@/features/bob/ui/BobActionButton";
 import { FiPlus, FiUsers } from "react-icons/fi";
+import {
+  getBobPodsImportStatus,
+  startBobPodsImport,
+} from "@/platform/api/bob/pods";
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
 export function PodsListPage() {
   const { access, can } = useBobAccess();
-  const { data, isLoading, error } = useBobPodsList({ limit: 100, offset: 0 });
+  const podsQuery = useBobPodsList({ limit: 100, offset: 0 });
   const staffQuery = useBobStaffList();
 
   const staff = staffQuery.data?.staff ?? [];
@@ -25,45 +31,45 @@ export function PodsListPage() {
     [staff],
   );
 
-  if (isLoading) {
+  if (podsQuery.isLoading) {
     return (
       <div>
         <PageHeader
-          title="Pods"
-          description="Manage pods and assign students."
+          title="Tracks"
+          description="FY26 program tracks from Airtable Programs."
         />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
   }
 
-  if (error) {
+  if (podsQuery.error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        {parseApiError(error)}
+        {parseApiError(podsQuery.error)}
       </div>
     );
   }
 
-  const pods = data?.pods ?? [];
+  const pods = podsQuery.data?.pods ?? [];
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title="Pods"
-        description="Create pods in Dent, assign coach and site supporter, then add students."
+        title="Tracks"
+        description="Tracks sync with Airtable Programs. Create new tracks here or re-import to refresh from Airtable."
         actions={
           <>
             <BobActionButton
               href="/app/bob/my-pod"
-              label="My Pod"
+              label="My Track"
               icon={<FiUsers />}
               variant="outline"
             />
             <BobPermissionGuard permission="pods.create" silent>
               <BobActionButton
                 href="/app/bob/pods/new"
-                label="Create pod"
+                label="Create track"
                 icon={<FiPlus />}
                 variant="primary"
               />
@@ -72,6 +78,32 @@ export function PodsListPage() {
         }
       />
 
+      <BobPermissionGuard permission="pods.create" silent>
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-sm text-gray-600 mb-3">
+            Sync from the{" "}
+            <a
+              href="https://airtable.com/appjDzuL6WUmrcZ5d/tblDzhEwzjy0F8KQT/viw81hftI7DSiVraa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-orange-600 hover:underline"
+            >
+              Programs
+            </a>{" "}
+            table. Re-import updates metadata; tracks created in Dent stay linked
+            via Airtable.
+          </p>
+          <BobImportProgress
+            label="tracks"
+            fetchStatus={getBobPodsImportStatus}
+            startImport={startBobPodsImport}
+            onComplete={() => {
+              void podsQuery.refetch();
+            }}
+          />
+        </section>
+      </BobPermissionGuard>
+
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {pods.length === 0 ? (
           <div className="p-8 text-center">
@@ -79,11 +111,10 @@ export function PodsListPage() {
               access={access}
               resource="pods"
               actionHref={can("pods.create") ? "/app/bob/pods/new" : undefined}
-              actionLabel={can("pods.create") ? "Create pod" : undefined}
+              actionLabel={can("pods.create") ? "Create track" : undefined}
             />
             <p className="mt-3 text-sm text-gray-500 max-w-md mx-auto">
-              No pods yet. Create a pod, assign coach and site supporter from
-              your staff directory, then add students from the roster.
+              No tracks yet. Create a track or import from Airtable Programs.
             </p>
           </div>
         ) : (
@@ -92,7 +123,10 @@ export function PodsListPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
+                    Track
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Program year
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Site
@@ -101,7 +135,7 @@ export function PodsListPage() {
                     Coach
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Site supporter
+                    Track supporter
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Students
@@ -119,8 +153,13 @@ export function PodsListPage() {
                         href={`/app/bob/pods/${p.id}`}
                         className="text-sm font-medium text-orange-600 hover:underline"
                       >
-                        {p.name}
+                        {formatBobTrackDisplayLabel(
+                          p.displayLabel || p.name,
+                        )}
                       </Link>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {p.programYear || "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {p.site || "—"}
@@ -131,8 +170,10 @@ export function PodsListPage() {
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {resolve(p.siteSupporterId)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {p.students?.length ?? 0}
+                    <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
+                      {p.students?.length ??
+                        p.airtableStudentCount ??
+                        "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
@@ -149,11 +190,11 @@ export function PodsListPage() {
           </div>
         )}
       </div>
-      {data && data.total > 0 && (
-        <p className="mt-2 text-sm text-gray-500">
-          Showing {pods.length} of {data.total}
+      {podsQuery.data && podsQuery.data.total > 0 ? (
+        <p className="text-sm text-gray-500">
+          Showing {pods.length} of {podsQuery.data.total}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

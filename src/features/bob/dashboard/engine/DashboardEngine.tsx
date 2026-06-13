@@ -69,7 +69,7 @@ export function DashboardEngine({
           {data?.scope.coachScoped ? (
             <span className="text-orange-800">
               {" "}
-              · Active BoB cohort on your pods
+              · Active BoB cohort on your tracks
             </span>
           ) : null}
           {data?.cohort?.activeCount != null ? (

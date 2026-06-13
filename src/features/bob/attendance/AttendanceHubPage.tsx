@@ -160,7 +160,7 @@ export function AttendanceHubPage() {
   );
 
   const exportCsv = useCallback(() => {
-    const headers = ["Date", "Pod", "Student", "Health", "Missing punches"];
+    const headers = ["Date", "Track", "Student", "Health", "Missing punches"];
     const rows = tableDays.map((d) => {
       const student = workspace.studentById.get(d.studentId);
       const pod = workspace.podById.get(d.podId);
@@ -330,23 +330,16 @@ export function AttendanceHubPage() {
           />
           <BobActionButton
             href="/app/bob/attendance/discrepancies"
-            label={`Issues (${workspace.summary.openDiscrepancies})`}
+            label={`Correction triage (${workspace.summary.openDiscrepancies})`}
             icon={<FiAlertTriangle />}
             variant={
               workspace.summary.openDiscrepancies ? "warning" : "outline"
             }
           />
-          <BobPermissionGuard permission="attendance.correction" silent>
-            <BobActionButton
-              href="/app/bob/attendance/correction"
-              label="Correction form"
-              variant="outline"
-            />
-          </BobPermissionGuard>
           <BobPermissionGuard permission="attendance.mark" silent>
             <BobActionButton
               href={`/app/bob/attendance/mark?date=${focusDate}${trackFilter ? `&track=${encodeURIComponent(trackFilter)}` : ""}`}
-              label="Issue triage"
+              label="Scan mode"
               icon={<FiZap />}
               variant="primary"
             />
@@ -401,7 +394,7 @@ export function AttendanceHubPage() {
         onTrackFilterChange={setTrackFilter}
         trackOptions={trackOptions}
         tracksLoading={rosterFacetsLoading}
-        requiresScope={workspace.scale.requiresPodScope}
+        requiresScope={false}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         weekViewDisabled={workspace.scale.weekViewHeavy && !trackFilter}
@@ -417,38 +410,29 @@ export function AttendanceHubPage() {
         trackSelectRef={trackSelectRef}
       />
 
-      {!workspace.scale.requiresPodScope || trackFilter ? (
-        <>
-          <DailyAttendanceTable
-            days={tableDays}
-            workspace={workspace}
-            focusDate={focusDate}
-            weekDates={viewMode === "week" ? weekDates : undefined}
-            onSelectDay={setSelectedDay}
-            search={debouncedSearch}
-            page={page}
-          />
-        </>
-      ) : (
-        <div className="p-8 text-center bg-white border border-gray-200 rounded-lg text-sm text-gray-600">
-          Choose a track above to load the student grid for large rosters.
-        </div>
-      )}
+      <DailyAttendanceTable
+        days={tableDays}
+        workspace={workspace}
+        focusDate={focusDate}
+        weekDates={viewMode === "week" ? weekDates : undefined}
+        onSelectDay={setSelectedDay}
+        search={debouncedSearch}
+        page={page}
+      />
 
-      {trackFilter || !workspace.scale.recommendPodScope ? (
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold text-gray-900 mb-3">
-            Pod analytics
-          </h2>
-          <PodSiteAnalytics podStats={workspace.podStats} />
-        </section>
-      ) : null}
+      <section className="mt-8">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">
+          Track analytics
+        </h2>
+        <PodSiteAnalytics podStats={workspace.podStats} />
+      </section>
 
       {selectedDay ? (
         <StudentDayDrawer
           day={selectedDay}
           workspace={workspace}
           onClose={() => setSelectedDay(null)}
+          onSaved={() => refetch()}
         />
       ) : null}
     </div>

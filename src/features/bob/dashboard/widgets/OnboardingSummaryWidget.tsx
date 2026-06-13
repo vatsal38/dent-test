@@ -59,16 +59,18 @@ export function OnboardingSummaryWidget({
     );
   }
 
-  const ready = onboarding.readyForProgram;
-  const pending = total - ready;
+  const ready =
+    onboarding.contractAndPreSurveyComplete ?? onboarding.readyForProgram;
+  const pending =
+    onboarding.contractAndPreSurveyPending ?? Math.max(0, total - ready);
 
   return (
     <DashboardCard title={title} refreshing={isRefreshing}>
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
           <span className="font-semibold text-gray-900">{ready}</span> of{" "}
-          <span className="font-semibold text-gray-900">{total}</span> ready for
-          in-program
+          <span className="font-semibold text-gray-900">{total}</span> with
+          contract and pre-survey complete
           {pending > 0 ? (
             <span className="text-amber-700"> · {pending} pending</span>
           ) : null}

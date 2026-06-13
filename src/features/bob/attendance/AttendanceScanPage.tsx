@@ -88,7 +88,7 @@ export function AttendanceScanPage() {
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 mt-4 mb-1">Issue triage</h1>
       <p className="text-gray-600 text-sm mb-6">
-        Review operational issues for this pod and date. Attendance changes happen in Airtable.
+        Review operational issues for this track and date. Attendance changes happen in Airtable.
       </p>
 
       {podId && todayRows.length > 0 ? (
@@ -119,13 +119,13 @@ export function AttendanceScanPage() {
 
       <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Pod</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Track</label>
           <select
             value={podId}
             onChange={(e) => setPodId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
-            <option value="">Select pod</option>
+            <option value="">Select track</option>
             {pods.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -145,9 +145,9 @@ export function AttendanceScanPage() {
       </div>
 
       {!podId ? (
-        <p className="text-sm text-gray-500">Select a pod to begin.</p>
+        <p className="text-sm text-gray-500">Select a track to begin.</p>
       ) : todayRows.length === 0 ? (
-        <p className="text-sm text-gray-500">No attendance records for this pod on this date.</p>
+        <p className="text-sm text-gray-500">No attendance records for this track on this date.</p>
       ) : (
         <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 bg-white">
           {issueRows.map((row) => {

@@ -60,20 +60,20 @@ export function PodSiteAnalytics({ podStats }: { podStats: PodAttendanceStats[] 
 
   if (!activePods.length && !sites.length) {
     return (
-      <p className="text-sm text-gray-500">No pod attendance data for this date.</p>
+      <p className="text-sm text-gray-500">No track attendance data for this date.</p>
     );
   }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">Pod attendance</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Track attendance</h3>
         {activePods.map((p) => (
           <PodCard key={p.podId} pod={p} />
         ))}
       </div>
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">Site rollup</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Track rollup</h3>
         {sites.map((s) => {
           const pct = s.expected > 0 ? Math.round((s.complete / s.expected) * 100) : 0;
           return (

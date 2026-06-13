@@ -6,10 +6,10 @@ export default function BobTeamsComingSoonPage() {
       <PageHeader
         eyebrow="Coming soon"
         title="Teams"
-        description="Team rosters and pod assignments will live here in a future release."
+        description="Team rosters and track assignments will live here in a future release."
       />
       <p className="text-sm text-gray-600">
-        For now, use Roster and Pods in the sidebar for student and pod
+        For now, use Roster and Tracks in the sidebar for student and track
         management.
       </p>
     </div>

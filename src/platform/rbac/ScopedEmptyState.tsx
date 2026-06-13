@@ -22,9 +22,9 @@ export function ScopedEmptyState({
 }: ScopedEmptyStateProps) {
   const scopeHint =
     access.scopeType === "pod" && access.primaryPod
-      ? `your pod (${access.primaryPod.name})`
+      ? `your track (${access.primaryPod.name})`
       : access.scopeType === "site" && access.siteNames.length
-        ? `your site${access.siteNames.length > 1 ? "s" : ""} (${access.siteNames.join(", ")})`
+        ? `your track${access.siteNames.length > 1 ? "s" : ""} (${access.siteNames.join(", ")})`
         : `your ${bobRoleLabel(access.role).toLowerCase()} scope`;
 
   return (
@@ -32,7 +32,7 @@ export function ScopedEmptyState({
       <p>No {resource} found for {scopeHint}.</p>
       {access.role === "coach" && !access.primaryPod && (
         <p className="mt-2 text-sm">
-          Ask a program manager to assign you to a pod.
+          Ask a program manager to assign you to a track.
         </p>
       )}
       {actionHref && actionLabel && (

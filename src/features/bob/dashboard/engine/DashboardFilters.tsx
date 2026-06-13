@@ -53,7 +53,7 @@ export function DashboardFilters({
               scope.level === "organization" && !scope.podId,
             )}
           >
-            All my pods
+            All my tracks
           </button>
         ) : null}
         {assignedPods.map((pod) => (

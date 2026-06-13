@@ -33,7 +33,7 @@ export function DiscrepancyList({
               Date
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Pod
+              Track
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
               Issue
@@ -65,14 +65,14 @@ export function DiscrepancyList({
                     onClick={() => onViewDetails(d)}
                     className="text-sm font-medium text-orange-600 hover:text-orange-700"
                   >
-                    View →
+                    Review & edit →
                   </button>
                 ) : (
                   <Link
                     href={`/app/bob/attendance/mark?pod=${d.podId}&date=${d.date}`}
                     className="text-sm font-medium text-orange-600 hover:text-orange-700"
                   >
-                    View →
+                    Review & edit →
                   </Link>
                 )}
               </td>

@@ -8,7 +8,7 @@ const QUICK_LINKS = [
   { label: "Intake pipeline", desc: "Review & transfer", href: "/app/bob/recruitment", key: "intake", perm: "intake.view" as BobPermissionId },
   { label: "Roster", desc: "Active students", href: "/app/bob/roster", key: "roster", perm: "roster.view" as BobPermissionId },
   { label: "Operations inbox", desc: "Queues", href: "/app/bob/inbox", key: "inbox", perm: "inbox.view" as BobPermissionId },
-  { label: "My pod", desc: "Your students", href: "/app/bob/my-pod", key: "my-pod", perm: "myPod.view" as BobPermissionId },
+  { label: "My track", desc: "Your students", href: "/app/bob/my-pod", key: "my-pod", perm: "myPod.view" as BobPermissionId },
   { label: "Attendance", desc: "Mark & view", href: "/app/bob/attendance", key: "attendance", perm: "attendance.view" as BobPermissionId },
   { label: "Deliverables", desc: "Program deliverables", href: "/app/bob/deliverables", key: "milestones", perm: "milestones.view" as BobPermissionId },
 ];

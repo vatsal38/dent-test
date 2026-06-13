@@ -4,13 +4,23 @@ export interface BobCommandCenterStats {
   cards: {
     studentsEnrolled: number;
     youthWorksSynced: number;
+    onboardingCompleted?: number;
     checkedInToday: number;
+    checkedInPctToday?: number;
+    deliverablesCompleted?: number;
     milestonesThisWeek: number;
     openDiscrepancies: number;
   };
   attendanceBySite: Array<{
     siteId: string;
     siteName: string;
+    studentCount?: number;
+    todayPct?: number;
+    weekPct?: number;
+    overallPct?: number;
+    today?: { present: number; expected: number; pct: number };
+    week?: { recorded: number; expected: number; pct: number };
+    overall?: { recorded: number; expected: number; pct: number };
     present: number;
     absent: number;
     excused: number;

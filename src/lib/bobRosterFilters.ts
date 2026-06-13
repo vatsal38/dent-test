@@ -107,7 +107,7 @@ export function buildFilterFieldCatalog(
     },
     {
       id: "sys:track",
-      label: "Track site",
+      label: "Track",
       group: "Program",
       kind: "select",
       path: "track",

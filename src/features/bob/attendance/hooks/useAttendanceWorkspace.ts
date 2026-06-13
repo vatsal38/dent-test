@@ -9,10 +9,8 @@ import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { filterPodsByAccess } from "@/platform/rbac/scopedFilters";
 import { getWeekMonday, getWeekSunday } from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
-import { isAirtableSourcedAttendance } from "../model/buildAttendanceIndex";
 import {
   ATTENDANCE_FETCH_LIMIT,
-  STUDENT_IDS_BATCH_MAX,
   countEnrollment,
 } from "../model/scale";
 
@@ -21,18 +19,6 @@ export interface UseAttendanceWorkspaceOptions {
   weekMode?: boolean;
   podFilter?: string;
   trackFilter?: string;
-}
-
-function enrollmentIdsFromPods(
-  pods: { id: string; students?: string[] }[],
-  podFilter?: string,
-): string[] {
-  const ids = new Set<string>();
-  for (const p of pods) {
-    if (podFilter && p.id !== podFilter) continue;
-    for (const sid of p.students || []) ids.add(String(sid));
-  }
-  return Array.from(ids);
 }
 
 export function useAttendanceWorkspace({
@@ -52,15 +38,19 @@ export function useAttendanceWorkspace({
   const podsQuery = useBobPodsList({ limit: 100 });
   const pods = filterPodsByAccess(podsQuery.data?.pods ?? [], access);
 
-  const enrollmentCount = useMemo(
-    () => countEnrollment(pods, effectivePod || undefined),
-    [pods, effectivePod],
-  );
+  const studentsQuery = useBobStudentsList({
+    bobCohort: "active",
+    track: effectiveTrack || undefined,
+    limit: 500,
+  });
+  const students = studentsQuery.data?.students ?? [];
 
-  const rosterIds = useMemo(
-    () => enrollmentIdsFromPods(pods, effectivePod || undefined),
-    [pods, effectivePod],
-  );
+  const enrollmentCount = useMemo(() => {
+    if (effectiveTrack) return students.length;
+    const fromPods = countEnrollment(pods, effectivePod || undefined);
+    if (fromPods > 0) return fromPods;
+    return students.length;
+  }, [pods, effectivePod, effectiveTrack, students.length]);
 
   const attendanceParams = useMemo(
     () => ({
@@ -72,29 +62,7 @@ export function useAttendanceWorkspace({
   );
 
   const attendanceQuery = useBobAttendanceList(attendanceParams);
-  const records = useMemo(
-    () =>
-      (attendanceQuery.data?.attendance ?? []).filter(isAirtableSourcedAttendance),
-    [attendanceQuery.data?.attendance],
-  );
-
-  const studentIdsForFetch = useMemo(() => {
-    const ids = new Set<string>();
-    for (const r of records) {
-      if (r.studentId) ids.add(String(r.studentId));
-    }
-    return Array.from(ids);
-  }, [records]);
-
-  const studentListParams = useMemo(() => {
-    if (studentIdsForFetch.length === 0) return { limit: 50 as const };
-    const batch = studentIdsForFetch.slice(0, STUDENT_IDS_BATCH_MAX);
-    return { ids: batch.join(","), limit: batch.length };
-  }, [studentIdsForFetch]);
-
-  const studentsQuery = useBobStudentsList(studentListParams);
-
-  const students = studentsQuery.data?.students ?? [];
+  const records = attendanceQuery.data?.attendance ?? [];
 
   const workspace = useMemo(
     () =>
@@ -108,7 +76,7 @@ export function useAttendanceWorkspace({
         students,
         records,
         enrollmentCount,
-        studentsRequested: rosterIds.length,
+        studentsRequested: students.length,
       }),
     [
       focusDate,
@@ -121,7 +89,7 @@ export function useAttendanceWorkspace({
       students,
       records,
       enrollmentCount,
-      rosterIds.length,
+      students.length,
     ],
   );
 

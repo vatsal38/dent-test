@@ -12,19 +12,18 @@ export const BOB_PERMISSIONS = {
   "roster.edit": "Edit roster records",
   "intake.view": "View recruitment / intake pipeline",
   "intake.edit": "Edit intake records",
-  "pods.view": "View pods list",
-  "pods.viewAll": "View all pods (org-wide)",
-  "pods.create": "Create pods",
-  "pods.edit": "Edit pod assignments",
+  "pods.view": "View tracks list",
+  "pods.viewAll": "View all tracks (org-wide)",
+  "pods.create": "Create tracks",
+  "pods.edit": "Edit track assignments",
   "attendance.view": "View attendance",
-  "attendance.mark": "Mark attendance",
-  "attendance.discrepancies": "View attendance discrepancies",
-  "attendance.correction": "Submit absence and time correction requests",
+  "attendance.mark": "Mark and edit attendance records",
+  "attendance.discrepancies": "Review attendance correction triage queue",
   "milestones.view": "View deliverables",
   "milestones.edit": "Edit deliverables",
   "inbox.view": "View operations inbox",
   "inbox.notificationsAll": "See org-wide notifications",
-  "myPod.view": "View my pod workspace",
+  "myPod.view": "View my track workspace",
   "submit.view": "Submit operational forms",
   "keyLinks.view": "View staff key links and resources",
   "teams.view": "View teams workspace (coming soon)",
@@ -34,8 +33,8 @@ export const BOB_PERMISSIONS = {
   "airtable.sync": "Trigger Airtable sync",
   "drawer.studentDetail": "Open student detail drawer",
   "drawer.intakeDetail": "Open intake detail drawer",
-  "drawer.podDetail": "Open pod detail drawer",
-  "action.studentTransfer": "Transfer students between pods",
+  "drawer.podDetail": "Open track detail drawer",
+  "action.studentTransfer": "Transfer students between tracks",
   "action.studentDelete": "Delete student records",
 } as const;
 
@@ -64,7 +63,6 @@ const PROGRAM_MANAGER = pick(
   "attendance.view",
   "attendance.mark",
   "attendance.discrepancies",
-  "attendance.correction",
   "milestones.view",
   "milestones.edit",
   "inbox.view",
@@ -85,7 +83,6 @@ const SITE_SUPPORTER = pick(
   "attendance.view",
   "attendance.mark",
   "attendance.discrepancies",
-  "attendance.correction",
   "inbox.view",
   "submit.view",
   "keyLinks.view",
@@ -96,22 +93,21 @@ const SITE_SUPPORTER = pick(
 const COACH = pick(
   "dashboard.view",
   "roster.view",
+  "attendance.view",
+  "attendance.mark",
+  "attendance.discrepancies",
   "milestones.view",
   "inbox.view",
   "myPod.view",
   "submit.view",
   "keyLinks.view",
-  "attendance.correction",
   "drawer.studentDetail",
   "drawer.podDetail",
 );
 
-const STUDENT = pick(
-  "attendance.correction",
-  "submit.view",
-);
+const STUDENT = pick("submit.view");
 
-const READ_ONLY = pick("dashboard.view", "attendance.correction");
+const READ_ONLY = pick("dashboard.view");
 
 /** Role → granted permission set (static matrix; extend for ABAC later). */
 export const ROLE_PERMISSIONS: Record<BobOpsRole, Set<BobPermissionId>> = {

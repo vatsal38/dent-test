@@ -8,6 +8,7 @@ import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect"
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { getWeekMonday, getWeekSunday } from "./weekDates";
+import { isBeforeProgramStart, PROGRAM_START_DATE, PROGRAM_END_DATE } from "@/lib/bobProgramCalendar";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { DiscrepancyList } from "./components/DiscrepancyList";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
@@ -23,7 +24,7 @@ export function AttendanceDiscrepanciesPage() {
   const [detailDay, setDetailDay] = useState<StudentDayAttendance | null>(null);
 
   const focusDate = weekOf;
-  const { workspace, loading, error } = useAttendanceWorkspace({
+  const { workspace, loading, error, refetch } = useAttendanceWorkspace({
     focusDate,
     weekMode: true,
     trackFilter,
@@ -87,10 +88,21 @@ export function AttendanceDiscrepanciesPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Discrepancies</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Correction triage
+          </h1>
           <p className="text-gray-600 text-sm mt-1">
-            Missing punches, late arrivals, and flags from Airtable — view only until correction workflow is defined.
+            Youth submit absence and time corrections through One Stop. Review
+            open items here, then edit the attendance record in the drawer —
+            same fields as Airtable. Missing check-ins are tracked on program
+            weekdays only ({PROGRAM_START_DATE} – {PROGRAM_END_DATE}).
           </p>
+          {isBeforeProgramStart(new Date().toISOString().slice(0, 10)) ? (
+            <p className="text-sm text-amber-800 mt-2">
+              Program has not started yet — discrepancy counts will stay at zero
+              until Mon {PROGRAM_START_DATE}.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm text-gray-600">Week of</label>
@@ -139,6 +151,7 @@ export function AttendanceDiscrepanciesPage() {
           day={detailDay}
           workspace={workspace}
           onClose={() => setDetailDay(null)}
+          onSaved={() => refetch()}
         />
       ) : null}
     </div>

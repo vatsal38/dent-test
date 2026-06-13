@@ -26,8 +26,10 @@ export interface BobDashboardMetricValue {
 export type BobDashboardMetricKey =
   | "studentsEnrolled"
   | "youthWorksSynced"
+  | "onboardingCompleted"
   | "overallAttendancePct"
   | "checkedInToday"
+  | "checkedInPctToday"
   | "deliverablesSubmitted"
   | "deliverablesCompleted"
   | "milestonesThisWeek"
@@ -64,6 +66,8 @@ export interface BobDashboardOnboardingSummary {
   preSurveyIncomplete: number;
   preSurveyNotSynced: number;
   readyForProgram: number;
+  contractAndPreSurveyComplete?: number;
+  contractAndPreSurveyPending?: number;
 }
 
 export interface BobDashboardSnapshot {
@@ -93,6 +97,13 @@ export interface BobDashboardSnapshot {
   attendanceBySite: Array<{
     siteId: string;
     siteName: string;
+    studentCount?: number;
+    todayPct?: number;
+    weekPct?: number;
+    overallPct?: number;
+    today?: { present: number; expected: number; pct: number };
+    week?: { recorded: number; expected: number; pct: number };
+    overall?: { recorded: number; expected: number; pct: number };
     present: number;
     absent: number;
     excused: number;
@@ -156,8 +167,10 @@ export interface BobDashboardSnapshot {
   cards: {
     studentsEnrolled: number;
     youthWorksSynced: number;
+    onboardingCompleted?: number;
     overallAttendancePct?: number;
     checkedInToday: number;
+    checkedInPctToday?: number;
     deliverablesSubmitted?: number;
     deliverablesCompleted?: number;
     milestonesThisWeek: number;

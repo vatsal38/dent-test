@@ -58,7 +58,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "cc-attendance",
             kind: "attendance_summary",
-            title: "Attendance by site",
+            title: "Attendance by track",
             colSpan: 8,
             permissions: ["dashboard.view", "attendance.view"],
           },
@@ -105,7 +105,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "cc-blitz",
             kind: "blitz_teams",
-            title: "Blitz Teams This Week",
+            title: "Blitz Teams",
             colSpan: 4,
             permissions: ["dashboard.view"],
           },
@@ -135,7 +135,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "rpt-attendance",
             kind: "attendance_summary",
-            title: "Attendance by site",
+            title: "Attendance by track",
             permissions: ["dashboard.reports"],
           },
           {
@@ -150,6 +150,12 @@ export const DASHBOARD_LAYOUTS: Record<
             title: "At-risk students",
             permissions: ["dashboard.reports"],
           },
+          {
+            id: "rpt-blitz",
+            kind: "blitz_teams",
+            title: "Blitz Teams",
+            permissions: ["dashboard.reports"],
+          },
         ],
       },
     ],
@@ -159,7 +165,7 @@ export const DASHBOARD_LAYOUTS: Record<
     sections: [
       {
         id: "pod-kpis",
-        title: "Pod health",
+        title: "Track health",
         widgets: [
           {
             id: "pod-kpis",

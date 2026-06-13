@@ -41,7 +41,7 @@ export function attendanceSummary(s: BobStudent): string {
 
 export function milestoneSummary(s: BobStudent): string {
   const m = s.milestoneStats;
-  if (!m) return "No milestone data";
+  if (!m) return "No deliverable data";
   const submitted = m.submitted ?? 0;
   const total = m.total ?? 0;
   if (!total) return `${submitted} submitted`;

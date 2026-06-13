@@ -2,23 +2,52 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { useCreateBobPod } from "@/platform/query/hooks/useBobPods";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 import { StaffMemberSelect } from "@/features/bob/pods/StaffMemberSelect";
 import { staffForRole } from "@/features/bob/pods/staffDisplay";
 import { parseApiError } from "@/platform/api/errors";
+import { getBobTrackFormOptions } from "@/platform/api/bob/pods";
+import { Skeleton } from "@/components/Skeleton";
 
 export function PodCreatePage() {
   const router = useRouter();
   const createPod = useCreateBobPod();
   const staffQuery = useBobStaffList();
   const [name, setName] = useState("");
+  const [trackRole, setTrackRole] = useState("");
   const [site, setSite] = useState("");
+  const [program, setProgram] = useState("");
   const [coachId, setCoachId] = useState("");
   const [siteSupporterId, setSiteSupporterId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [trackRoles, setTrackRoles] = useState<string[]>([]);
+  const [sites, setSites] = useState<string[]>([]);
+  const [programs, setPrograms] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getBobTrackFormOptions()
+      .then((opts) => {
+        if (cancelled) return;
+        setTrackRoles(opts.trackRoles);
+        setSites(opts.sites);
+        setPrograms(opts.programs);
+        setProgram(opts.defaultProgram);
+      })
+      .catch(() => {
+        if (!cancelled) setPrograms(["Bet on Baltimore"]);
+      })
+      .finally(() => {
+        if (!cancelled) setOptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const staff = staffQuery.data?.staff ?? [];
   const coachOptions = staffForRole(staff, "coach");
@@ -29,16 +58,17 @@ export function PodCreatePage() {
     setError(null);
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError("Pod name is required.");
+      setError("Track name is required.");
       return;
     }
     try {
       const pod = await createPod.mutateAsync({
         name: trimmedName,
+        trackRole: trackRole.trim() || trimmedName,
         site: site.trim() || null,
+        program: program.trim() || null,
         coachId: coachId || null,
         siteSupporterId: siteSupporterId || null,
-        students: [],
       });
       router.push(`/app/bob/pods/${pod.id}`);
     } catch (err) {
@@ -46,89 +76,126 @@ export function PodCreatePage() {
     }
   }
 
-  return (
-    <div className="max-w-2xl">
-      <PageHeader
-        title="Create pod"
-        description="Create a pod in Dent and assign coach and site supporter from your staff directory."
-        actions={
-          <Link
-            href="/app/bob/pods"
-            className="text-sm text-orange-600 hover:underline"
-          >
-            ← Back to Pods
-          </Link>
-        }
-      />
+  if (optionsLoading) {
+    return (
+      <div>
+        <PageHeader title="Create track" description="Adds a row to Airtable Programs and Dent." />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
 
+  return (
+    <div className="max-w-xl">
+      <PageHeader
+        title="Create track"
+        description="Creates the track in Airtable Programs and in Dent. Assign coach and students on the next screen."
+      />
       <form
-        onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 rounded-lg p-6 space-y-4"
+        onSubmit={(e) => void handleSubmit(e)}
+        className="space-y-4 bg-white border border-gray-200 rounded-lg p-6"
       >
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Pod name *
+            Track name
           </label>
           <input
             type="text"
-            required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="e.g. Made@Dent"
+            required
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Track / role (Airtable)
+          </label>
+          <input
+            type="text"
+            list="track-role-options"
+            value={trackRole}
+            onChange={(e) => setTrackRole(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Defaults to track name"
+          />
+          <datalist id="track-role-options">
+            {trackRoles.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
+          <p className="text-xs text-gray-500 mt-1">
+            Must match an Airtable Programs choice when possible.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Program
+          </label>
+          <select
+            value={program}
+            onChange={(e) => setProgram(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            {programs.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Site (optional)
           </label>
           <input
             type="text"
+            list="site-options"
             value={site}
             onChange={(e) => setSite(e.target.value)}
-            placeholder="e.g. Harbor East"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
+          <datalist id="site-options">
+            {sites.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <StaffMemberSelect
-            label="Coach"
-            hint="BoB user with coach role — controls My Pod access."
-            value={coachId}
-            onChange={setCoachId}
-            staff={coachOptions.length ? coachOptions : staff}
-          />
-          <StaffMemberSelect
-            label="Site supporter"
-            hint="Can mark attendance for this pod."
-            value={siteSupporterId}
-            onChange={setSiteSupporterId}
-            staff={supporterOptions.length ? supporterOptions : staff}
-          />
-        </div>
-        {staffQuery.isLoading ? (
-          <p className="text-xs text-gray-500">Loading staff directory…</p>
-        ) : staff.length === 0 ? (
-          <p className="text-xs text-amber-700">
-            No staff users found. Add BoB users with coach or site supporter roles
-            in Settings, or sync from your user admin.
+
+        <StaffMemberSelect
+          label="Coach (optional)"
+          value={coachId}
+          onChange={setCoachId}
+          staff={coachOptions.length ? coachOptions : staff}
+        />
+        <StaffMemberSelect
+          label="Track supporter (optional)"
+          value={siteSupporterId}
+          onChange={setSiteSupporterId}
+          staff={supporterOptions.length ? supporterOptions : staff}
+        />
+
+        {error ? (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
           </p>
         ) : null}
-        <div className="flex gap-3 pt-2">
+
+        <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
             disabled={createPod.isPending}
-            className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 text-sm font-medium"
+            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60"
           >
-            {createPod.isPending ? "Creating…" : "Create pod"}
+            {createPod.isPending ? "Creating…" : "Create track"}
           </button>
           <Link
             href="/app/bob/pods"
-            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
+            className="text-sm text-gray-600 hover:text-gray-900"
           >
             Cancel
           </Link>
