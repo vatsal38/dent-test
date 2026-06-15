@@ -11,9 +11,8 @@ export const STUDENT_DRAWER_TABS_CONFIG: StudentDrawerTabDef[] = [
   { id: "milestones", label: "Deliverables", shortLabel: "Deliverables" },
   { id: "notes", label: "Notes", shortLabel: "Notes" },
   { id: "incidents", label: "Incidents", shortLabel: "Incidents" },
-  { id: "journey", label: "Journey", shortLabel: "Journey" },
   { id: "onboarding", label: "Onboarding", shortLabel: "Onboard." },
-  { id: "demographics", label: "Demographics", shortLabel: "Demo." },
+  { id: "demographics", label: "Personal", shortLabel: "Personal" },
   { id: "activity", label: "Activity", shortLabel: "Activity" },
 ];
 

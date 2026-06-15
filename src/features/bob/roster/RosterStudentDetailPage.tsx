@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getBobRosterSchema,
   getBobStudent,
@@ -10,6 +11,14 @@ import {
   type BobRosterSchemaField,
   type BobStudent,
 } from "@/platform/api/bob/students";
+import { bobKeys } from "@/platform/query/queryKeys";
+import {
+  pickField,
+  GUARDIAN_NAME_KEYS,
+  GUARDIAN_PHONE_KEYS,
+  GUARDIAN_EMAIL_KEYS,
+  EMERGENCY_KEYS,
+} from "@/features/bob/student-drawer/lib/personalFieldDisplay";
 import { cellDisplayValue, isAirtableRecordId } from "@/lib/bobAirtableDisplay";
 import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
 import { Skeleton } from "@/components/Skeleton";
@@ -280,10 +289,57 @@ function Section({
           <div className="text-sm font-semibold text-gray-900">{title}</div>
           {subtitle && <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>}
         </div>
-        <div className="text-xs text-gray-500 pt-0.5">Toggle</div>
+        <div className="text-xs text-gray-500 pt-0.5" aria-hidden>
+          ▾
+        </div>
       </summary>
       <div className="px-4">{children}</div>
     </details>
+  );
+}
+
+function FamilyGuardianSummary({
+  fields,
+}: {
+  fields: Record<string, unknown>;
+}) {
+  const name = pickField(fields, GUARDIAN_NAME_KEYS);
+  const phone = pickField(fields, GUARDIAN_PHONE_KEYS);
+  const email = pickField(fields, GUARDIAN_EMAIL_KEYS);
+  const emergency = pickField(fields, EMERGENCY_KEYS);
+  if (!name && !phone && !email && !emergency) return null;
+
+  return (
+    <div className="mb-4 rounded-xl border border-orange-100 bg-orange-50/50 p-4 space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wider text-orange-800">
+        Primary guardian
+      </p>
+      {name ? (
+        <p className="text-base font-semibold text-gray-900">
+          {String(name.value).trim()}
+        </p>
+      ) : null}
+      <div className="grid gap-1 sm:grid-cols-2 text-sm text-gray-700">
+        {phone ? (
+          <p>
+            <span className="text-gray-500">{phone.key}: </span>
+            {String(phone.value).trim()}
+          </p>
+        ) : null}
+        {email ? (
+          <p>
+            <span className="text-gray-500">{email.key}: </span>
+            {String(email.value).trim()}
+          </p>
+        ) : null}
+        {emergency ? (
+          <p className="sm:col-span-2">
+            <span className="text-gray-500">{emergency.key}: </span>
+            {String(emergency.value).trim()}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -291,6 +347,7 @@ export function RosterStudentDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const id = params?.id;
   const openedEditFromQueryRef = useRef(false);
 
@@ -341,6 +398,14 @@ export function RosterStudentDetailPage() {
     const m = new Map<string, string>();
     for (const f of schema || []) {
       if (f?.name) m.set(f.name, f.type);
+    }
+    return m;
+  }, [schema]);
+
+  const fieldChoicesByName = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const f of schema || []) {
+      if (f?.name && f.choices?.length) m.set(f.name, f.choices);
     }
     return m;
   }, [schema]);
@@ -492,7 +557,14 @@ export function RosterStudentDetailPage() {
     student.phone ||
     null;
   const school =
-    (airtableFields["School"] as string | undefined) || student.school || null;
+    formatValue(
+      airtableFields["School"],
+      labelsForField("School"),
+    ) !== "—"
+      ? formatValue(airtableFields["School"], labelsForField("School"))
+      : (airtableFields["School"] as string | undefined) ||
+        student.school ||
+        null;
   const startDate =
     (airtableFields["Start Date @ Dent"] as string | undefined) || null;
 
@@ -539,6 +611,25 @@ export function RosterStudentDetailPage() {
           />
           {Boolean(value) ? "Yes" : "No"}
         </label>
+      );
+    }
+    if (t === "singleSelect") {
+      const choices = fieldChoicesByName.get(name) || [];
+      const current = typeof normalized === "string" ? normalized : formatValue(normalized);
+      const options = [...new Set([...choices, current].filter(Boolean))];
+      return (
+        <select
+          value={current}
+          onChange={(e) => setDraftField(name, e.target.value || null)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        >
+          <option value="">—</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
       );
     }
     if (t === "multilineText") {
@@ -592,12 +683,35 @@ export function RosterStudentDetailPage() {
         />
       );
     }
-    if (t === "multipleSelects" || t === "multipleRecordLinks") {
-      const str = Array.isArray(value)
-        ? value.map((x) => String(x ?? "")).filter(Boolean).join(", ")
-        : typeof value === "string"
-          ? value
-          : "";
+    if (t === "multipleSelects") {
+      const choices = fieldChoicesByName.get(name) || [];
+      const current = Array.isArray(value)
+        ? value.map((x) => String(x ?? "")).filter(Boolean)
+        : typeof value === "string" && value.trim()
+          ? value.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+      if (choices.length) {
+        return (
+          <select
+            multiple
+            value={current}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map(
+                (o) => o.value,
+              );
+              setDraftField(name, selected);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm min-h-[88px] focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          >
+            {choices.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        );
+      }
+      const str = current.join(", ");
       return (
         <input
           value={str}
@@ -613,6 +727,17 @@ export function RosterStudentDetailPage() {
           placeholder="Comma separated…"
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
         />
+      );
+    }
+    if (t === "multipleRecordLinks" || t === "singleRecordLink") {
+      const display = formatValue(value, labelsForField(name));
+      return (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 space-y-1">
+          <p className="text-sm text-gray-800">{display}</p>
+          <p className="text-xs text-gray-500">
+            Linked Airtable records — edit in Airtable to avoid breaking links.
+          </p>
+        </div>
       );
     }
     // default: string-like
@@ -817,8 +942,9 @@ export function RosterStudentDetailPage() {
         <Section
           title={`Family / Guardian (${grouped.Family.length})`}
           subtitle="Parent/guardian and emergency info"
-          defaultOpen={false}
+          defaultOpen
         >
+          <FamilyGuardianSummary fields={airtableFields} />
           {grouped.Family.length === 0 ? (
             <div className="py-6 text-sm text-gray-500">No family/guardian info found.</div>
           ) : (
@@ -894,57 +1020,16 @@ export function RosterStudentDetailPage() {
           )}
         </Section>
 
-        <Section
-          title={`Attendance (${grouped.Attendance.length})`}
-          subtitle="Attendance-related fields"
-          defaultOpen={false}
-        >
-          {grouped.Attendance.length === 0 ? (
-            <div className="py-6 text-sm text-gray-500">No attendance info found.</div>
-          ) : (
-            grouped.Attendance.map((f) =>
-              editing ? (
-                <FieldRow
-                  key={f.name}
-                  label={f.name}
-                  value={draft[f.name]}
-                  valueNode={<div className="w-full">{renderEditor(f.name, draft[f.name])}</div>}
-                />
-              ) : (
-                <FieldRow
-                  key={f.name}
-                  label={f.name}
-                  value={f.value}
-                  labelsByRecordId={labelsForField(f.name)}
-                />
-              ),
-            )
-          )}
-        </Section>
-
-        <Section title={`Notes (${grouped.Notes.length})`} subtitle="Notes and comments" defaultOpen={false}>
-          {grouped.Notes.length === 0 ? (
-            <div className="py-6 text-sm text-gray-500">No notes found.</div>
-          ) : (
-            grouped.Notes.map((f) =>
-              editing ? (
-                <FieldRow
-                  key={f.name}
-                  label={f.name}
-                  value={draft[f.name]}
-                  valueNode={<div className="w-full">{renderEditor(f.name, draft[f.name])}</div>}
-                />
-              ) : (
-                <FieldRow
-                  key={f.name}
-                  label={f.name}
-                  value={f.value}
-                  labelsByRecordId={labelsForField(f.name)}
-                />
-              ),
-            )
-          )}
-        </Section>
+        <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          Attendance and coach notes are in the{" "}
+          <Link
+            href={`/app/bob/roster?id=${student.id}&tab=attendance`}
+            className="text-orange-600 font-medium hover:underline"
+          >
+            student command center
+          </Link>{" "}
+          — not duplicated on this page.
+        </div>
 
         <Section
           title={`Other information (${grouped.Other.length})`}
@@ -1012,6 +1097,9 @@ export function RosterStudentDetailPage() {
                       });
                       setStudent(updated);
                       setEditing(false);
+                      await queryClient.invalidateQueries({
+                        queryKey: bobKeys.students.all(),
+                      });
                     } catch (e) {
                       setSaveError(
                         e instanceof Error ? e.message : "Failed to save changes",

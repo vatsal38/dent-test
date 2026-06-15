@@ -81,11 +81,6 @@ export function OnboardingSummaryWidget({
           total={total}
         />
         <StatRow
-          label="YouthWorks ready"
-          value={onboarding.ywReady}
-          total={total}
-        />
-        <StatRow
           label="Pre-survey complete"
           value={onboarding.preSurveyComplete}
           total={total}

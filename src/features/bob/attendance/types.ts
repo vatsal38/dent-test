@@ -54,7 +54,8 @@ export type DayHealth =
   | "late"
   | "excused"
   | "absent"
-  | "auto_filled";
+  | "auto_filled"
+  | "future";
 
 export interface StudentDayAttendance {
   key: string;

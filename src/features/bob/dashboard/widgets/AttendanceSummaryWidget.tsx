@@ -23,7 +23,7 @@ export function AttendanceSummaryWidget({
 }: WidgetRenderProps) {
   const title = placement.title ?? "Attendance";
 
-  if (loading) return <DashboardWidgetSkeleton variant="chart" />;
+  if (loading) return <DashboardWidgetSkeleton variant="table" titleWidth="w-32" />;
 
   const tracks = snapshot?.attendanceBySite ?? [];
   const hasStudents = tracks.some((t) => (t.studentCount ?? t.total) > 0);

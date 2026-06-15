@@ -25,12 +25,21 @@ export type BobInterviewStage = (typeof BOB_INTERVIEW_STAGES)[number];
 export interface BobStudentAttendanceStats {
   present?: number;
   absent?: number;
+  hoursAttended?: number;
+  hoursPotential?: number;
+  hoursPct?: number;
+  hoursPctThisWeek?: number;
+  earnedPreTax?: number;
   [key: string]: number | undefined;
 }
 
 export interface BobStudentMilestoneStats {
   submitted?: number;
   total?: number;
+  completed?: number;
+  overdue?: number;
+  pctDueSubmitted?: number;
+  pctDueCompleted?: number;
   [key: string]: number | undefined;
 }
 
@@ -111,6 +120,7 @@ export interface BobStudentsFacetsResponse {
     notSynced: number;
   };
   bobCohort?: { active: number };
+  droppedOut?: { count: number };
   onboarding?: { ready: number; incomplete: number; total: number };
 }
 
@@ -119,8 +129,10 @@ export interface BobStudentsListParams {
   ids?: string;
   status?: BobStudentStatus;
   interviewStage?: BobInterviewStage;
-  /** `active` = BoB '25 Final Track cohort (~95 students). */
+  /** `active` = BoB '26 cohort with track assigned. */
   bobCohort?: "active";
+  /** `dropped` = BoB '26 Active Status dropouts + withdrawn. */
+  bobActiveStatus?: "dropped";
   /** Filter by onboarding gates (active cohort only). */
   onboardingReady?: "yes" | "no";
   search?: string;
@@ -133,6 +145,8 @@ export interface BobStudentsListParams {
   limit?: number;
   offset?: number;
   includeAirtableFields?: boolean;
+  /** When true, attach live attendance + deliverable stats (expensive). Default false on list. */
+  includeStats?: boolean;
 }
 
 export interface BobStudentsListResponse {
@@ -150,6 +164,7 @@ export async function getBobStudents(
   if (params?.status) sp.set("status", params.status);
   if (params?.interviewStage) sp.set("interviewStage", params.interviewStage);
   if (params?.bobCohort) sp.set("bobCohort", params.bobCohort);
+  if (params?.bobActiveStatus) sp.set("bobActiveStatus", params.bobActiveStatus);
   if (params?.onboardingReady) sp.set("onboardingReady", params.onboardingReady);
   if (params?.search) sp.set("search", params.search);
   if (params?.track) sp.set("track", params.track);
@@ -159,6 +174,7 @@ export async function getBobStudents(
   if (params?.limit != null) sp.set("limit", String(params.limit));
   if (params?.offset != null) sp.set("offset", String(params.offset));
   if (params?.includeAirtableFields) sp.set("includeAirtableFields", "1");
+  if (params?.includeStats) sp.set("includeStats", "1");
   const qs = sp.toString();
   return apiRequest<BobStudentsListResponse>(
     `/api/bob/students${qs ? `?${qs}` : ""}`,

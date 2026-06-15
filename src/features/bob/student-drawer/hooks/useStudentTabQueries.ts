@@ -36,7 +36,7 @@ export function useStudentAttendanceHistory(
   const range = dateRangeIso(ATTENDANCE_WINDOW_DAYS);
   const enabled =
     Boolean(studentId) &&
-  tabEnablesFetch(activeTab, ["attendance", "overview", "activity", "journey"]);
+    tabEnablesFetch(activeTab, ["attendance", "overview", "activity"]);
 
   return useQuery({
     queryKey: bobKeys.students.attendance(studentId ?? "", range),
@@ -65,7 +65,6 @@ export function useStudentSubmissions(
       "incidents",
       "overview",
       "activity",
-      "journey",
       "notes",
     ]);
 
@@ -97,7 +96,7 @@ export function useStudentMilestones(
 ) {
   const enabled =
     Boolean(studentId) &&
-    tabEnablesFetch(activeTab, ["milestones", "overview", "activity", "journey"]);
+    tabEnablesFetch(activeTab, ["milestones", "overview", "activity"]);
 
   return useQuery({
     queryKey: bobKeys.students.milestones(studentId ?? ""),
@@ -152,7 +151,7 @@ export function useStudentActivityFeed(
         title: cardTitle(s),
         subtitle: SUBMISSION_STATUS_LABELS[s.status] || s.status,
         tone: s.type === "incident" ? "danger" : "info",
-        href: `/app/bob/workflow?id=${encodeURIComponent(s.id)}`,
+        href: `/app/bob/inbox?id=${encodeURIComponent(s.id)}`,
       });
     }
 

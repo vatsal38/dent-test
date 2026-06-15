@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Dent Education">
   <rect width="64" height="64" rx="14" fill="#EA580C"/>
-  <path d="M18 18h16c10.5 0 17 6.2 17 14.5S44.5 47 34 47H18V18zm10 10v20h6c5.8 0 9.5-3.4 9.5-9s-3.7-9-9.5-9h-6z" fill="#fff"/>
+  <path
+    fill="#fff"
+    fill-rule="evenodd"
+    d="M18 18h16c9.5 0 17 6.5 17 14.5S43.5 47 34 47H18V18ZM28 28h6c5.5 0 7.5 2.5 7.5 6.5S39.5 37 34 37H28V28Z"
+  />
 </svg>

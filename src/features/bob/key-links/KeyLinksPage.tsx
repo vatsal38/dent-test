@@ -47,9 +47,10 @@ export function KeyLinksPage() {
       </div>
 
       <p className="mt-10 text-xs text-gray-500">
-        Link URLs are configured in{' '}
-        <code className="text-gray-700">keyLinksConfig.ts</code>. Ask program
-        ops to update with your team&apos;s folders.
+        Link URLs are configured via{' '}
+        <code className="text-gray-700">NEXT_PUBLIC_BOB_KEY_LINK_*</code> env
+        vars (see <code className="text-gray-700">env.example</code>). Ask
+        program ops to update with your team&apos;s folders.
       </p>
     </div>
   );

@@ -11,7 +11,7 @@ import { ScopedEmptyState } from "@/platform/rbac/ScopedEmptyState";
 import { Skeleton } from "@/components/Skeleton";
 import { parseApiError } from "@/platform/api/errors";
 import { useBobStaffList } from "../../../platform/query/hooks/useBobStaff";
-import { resolveStaffLabel } from "./staffDisplay";
+import { resolveStaffLabel, podCoachIds, resolveStaffLabels } from "./staffDisplay";
 import { BobActionButton } from "@/features/bob/ui/BobActionButton";
 import { FiPlus, FiUsers } from "react-icons/fi";
 import {
@@ -132,7 +132,7 @@ export function PodsListPage() {
                     Site
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Coach
+                    Coaches
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Track supporter
@@ -165,7 +165,7 @@ export function PodsListPage() {
                       {p.site || "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {resolve(p.coachId)}
+                      {resolveStaffLabels(staff, podCoachIds(p))}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {resolve(p.siteSupporterId)}

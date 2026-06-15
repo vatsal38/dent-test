@@ -11,6 +11,8 @@ export type IntakeQueueId =
   | "transferred"
   | "approved";
 
+export const DEFAULT_INTAKE_QUEUE_ID: IntakeQueueId = "bob26_transfer";
+
 export interface IntakeQueueDef {
   id: IntakeQueueId;
   label: string;
@@ -21,10 +23,11 @@ export interface IntakeQueueDef {
 
 export const INTAKE_QUEUES: IntakeQueueDef[] = [
   {
-    id: "all",
-    label: "All",
-    description: "Full intake pipeline",
-    listParams: {},
+    id: "bob26_transfer",
+    label: "BoB '26 bulk transfer",
+    description:
+      "Not yet in Students & Alums — BoB '26 track, YW status, or programs linked",
+    listParams: { transferred: "no", bob26Cohort: "yes" },
   },
   {
     id: "new",
@@ -45,13 +48,6 @@ export const INTAKE_QUEUES: IntakeQueueDef[] = [
     listParams: { status: "Ready To Transfer", transferred: "no" },
   },
   {
-    id: "bob26_transfer",
-    label: "BoB '26 bulk transfer",
-    description:
-      "Not yet in Students & Alums — BoB '26 track, YW status, or programs linked",
-    listParams: { transferred: "no", bob26Cohort: "yes" },
-  },
-  {
     id: "awaiting_approval",
     label: "Awaiting approval",
     description: "Transferred — approve to roster",
@@ -69,10 +65,19 @@ export const INTAKE_QUEUES: IntakeQueueDef[] = [
     description: "Approved students",
     listParams: { onRoster: "yes" },
   },
+  {
+    id: "all",
+    label: "Full history",
+    description: "Entire intake pipeline (all statuses)",
+    listParams: {},
+  },
 ];
 
 export function getIntakeQueue(id: string | null | undefined): IntakeQueueDef {
-  return INTAKE_QUEUES.find((q) => q.id === id) ?? INTAKE_QUEUES[0];
+  return (
+    INTAKE_QUEUES.find((q) => q.id === id) ??
+    INTAKE_QUEUES.find((q) => q.id === DEFAULT_INTAKE_QUEUE_ID)!
+  );
 }
 
 export function intakeQueueCount(

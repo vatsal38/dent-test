@@ -11,6 +11,53 @@ const NOTE_FIELD_CANDIDATES = [
   "Counselor Notes",
 ] as const;
 
+export const INDUSTRY_CREDENTIAL_FIELD_NAMES = [
+  "Industry Credential",
+  "Industry Credentials",
+  "Industry Certificate",
+  "Has Industry Credential",
+] as const;
+
+function truthyFieldValue(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    return (
+      v === "yes" ||
+      v === "true" ||
+      v === "complete" ||
+      v === "completed" ||
+      v === "earned" ||
+      v === "received"
+    );
+  }
+  return false;
+}
+
+export function coachNoteFieldKey(
+  student: BobStudent | undefined,
+): string {
+  const fields = (student?.airtableFields || {}) as Record<string, unknown>;
+  for (const key of NOTE_FIELD_CANDIDATES) {
+    if (key in fields) return key;
+  }
+  return NOTE_FIELD_CANDIDATES[0];
+}
+
+export function hasIndustryCredential(student: BobStudent | undefined): boolean {
+  if (!student?.airtableFields) return false;
+  const fields = student.airtableFields as Record<string, unknown>;
+  for (const key of INDUSTRY_CREDENTIAL_FIELD_NAMES) {
+    if (truthyFieldValue(fields[key])) return true;
+  }
+  for (const [key, value] of Object.entries(fields)) {
+    if (/industry\s*credential/i.test(key) && truthyFieldValue(value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function extractCoachNotes(
   student: BobStudent | undefined,
 ): CoachNote[] {

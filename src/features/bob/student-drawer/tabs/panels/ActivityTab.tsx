@@ -3,7 +3,7 @@
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentActivityFeed } from "../../hooks/useStudentTabQueries";
 import { ActivityTimeline } from "../../widgets/ActivityTimeline";
-import { TabPanelSkeleton } from "../../widgets/TabPanelSkeleton";
+import { ActivityTabSkeleton } from "../../widgets/TabPanelSkeleton";
 
 export function ActivityTab() {
   const { student, tab } = useStudentDrawerContext();
@@ -14,7 +14,7 @@ export function ActivityTab() {
   );
 
   if (!student) return null;
-  if (isLoading) return <TabPanelSkeleton rows={6} />;
+  if (isLoading) return <ActivityTabSkeleton />;
 
   return (
     <div className="p-5">

@@ -25,7 +25,7 @@ import {
   serializeFiltersForApi,
   type RosterTableFilterState,
 } from "@/lib/bobRosterFilters";
-import { Skeleton } from "@/components/Skeleton";
+import { RosterPageSkeleton } from "@/features/bob/roster/RosterPageSkeleton";
 import { BobImportProgress } from "@/components/BobImportProgress";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
@@ -79,10 +79,11 @@ function listParams(
     limit: pageSize,
     offset: (page - 1) * pageSize,
     includeAirtableFields: true,
+    includeStats: true,
   };
   const q = f.search.trim();
   if (q) params.search = q;
-  const track = trackFilter?.trim();
+  const track = String(queueParams.track || trackFilter || "").trim();
   if (track) params.track = track;
   const filtersJson = serializeFiltersForApi(f);
   if (filtersJson) params.filters = filtersJson;
@@ -268,10 +269,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
 
   if (isLoading && !listData) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-96 w-full rounded-xl" />
-      </div>
+      <RosterPageSkeleton embedded={embedded} view={view === "table" ? "table" : "grid"} />
     );
   }
 
@@ -334,6 +332,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
           onChange={(q) =>
             updateUrl((sp) => {
               sp.set("queue", q);
+              sp.delete("track");
               sp.delete("id");
               sp.delete("tab");
               sp.delete("student");
@@ -390,7 +389,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
             }`}
             aria-pressed={view === "grid"}
           >
-            Grid
+            Gallery
           </button>
           <button
             type="button"

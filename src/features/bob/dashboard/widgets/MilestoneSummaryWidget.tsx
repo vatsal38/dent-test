@@ -16,7 +16,7 @@ export function MilestoneSummaryWidget({
 }: WidgetRenderProps) {
   const title = placement.title ?? "Deliverables";
 
-  if (loading) return <DashboardWidgetSkeleton variant="chart" />;
+  if (loading) return <DashboardWidgetSkeleton variant="metricBars" titleWidth="w-36" />;
 
   const tracks = snapshot?.milestoneSubmissionByTrack ?? [];
   const trackItems = tracks.map((t) => ({

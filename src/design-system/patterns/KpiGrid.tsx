@@ -55,8 +55,10 @@ export function KpiGrid({
             key={i}
             className="p-4 rounded-xl border border-gray-200 bg-white shadow-sm"
           >
-            <Skeleton className="h-3 w-28 mb-2" />
-            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-28 mb-1" />
+            <Skeleton className="h-8 w-16 mt-1" />
+            <Skeleton className="h-3 w-20 mt-1" />
+            <Skeleton className="h-0.5 w-12 mt-3 rounded-full" rounded="full" />
           </div>
         ))}
       </div>

@@ -12,6 +12,7 @@ import {
   cardTitle,
   eventTypeLabel,
   formatWhen,
+  formatLabel,
   severityBadge,
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
@@ -111,19 +112,20 @@ export function SubmissionDetailPanel({
         <div className="mt-3 flex flex-wrap gap-2">
           {data.severity ? (
             <span
-              className={`text-xs px-2 py-0.5 rounded border uppercase ${severityBadge(data.severity)}`}
+              className={`text-xs px-2 py-0.5 rounded border ${severityBadge(data.severity)}`}
             >
-              {data.severity}
+              Severity: {formatLabel(data.severity)}
             </span>
           ) : null}
           {data.wellnessLevel ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-rose-50 text-rose-800">
-              wellness: {data.wellnessLevel}
+              Wellness: {formatLabel(data.wellnessLevel)}
             </span>
           ) : null}
-          {data.priority ? (
+          {data.priority &&
+          data.priority.toLowerCase() !== (data.severity || "").toLowerCase() ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-gray-100">
-              {data.priority} priority
+              Priority: {formatLabel(data.priority)}
             </span>
           ) : null}
         </div>
@@ -356,6 +358,34 @@ export function SubmissionDetailPanel({
 
         <div>
           <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+            Add comment
+          </h3>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            placeholder="Add a comment…"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
+          />
+          <button
+            type="button"
+            disabled={commentMutation.isPending || !comment.trim()}
+            onClick={() => {
+              const c = comment.trim();
+              if (!c) return;
+              commentMutation.mutate(
+                { id: data.id, content: c },
+                { onSuccess: () => setComment("") },
+              );
+            }}
+            className="mt-2 w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-50"
+          >
+            Post comment
+          </button>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
             Activity
           </h3>
           <div className="space-y-2">
@@ -401,31 +431,6 @@ export function SubmissionDetailPanel({
             </ul>
           </div>
         ) : null}
-      </div>
-
-      <div className="p-6 border-t border-gray-200">
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          rows={3}
-          placeholder="Add a comment…"
-          className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
-        />
-        <button
-          type="button"
-          disabled={commentMutation.isPending || !comment.trim()}
-          onClick={() => {
-            const c = comment.trim();
-            if (!c) return;
-            commentMutation.mutate(
-              { id: data.id, content: c },
-              { onSuccess: () => setComment("") },
-            );
-          }}
-          className="mt-2 w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-50"
-        >
-          Post comment
-        </button>
       </div>
     </div>
   );

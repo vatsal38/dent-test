@@ -25,6 +25,13 @@ export const ROSTER_YW_STATUS_FIELD_NAMES = [
   "BoB '24 YW Status",
 ] as const;
 
+export const INDUSTRY_CREDENTIAL_FIELD_NAMES = [
+  "Industry Credential",
+  "Industry Credentials",
+  "Industry Certificate",
+  "Has Industry Credential",
+] as const;
+
 export function isYouthWorksStatusField(name: string): boolean {
   return /youth\s*works|yw\s*status|bob\s*[''\u2019]?\d{2}\s*yw\s*status/i.test(
     name,

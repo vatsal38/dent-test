@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Drawer } from "@/components/Drawer";
-import { Skeleton } from "@/components/Skeleton";
+import { StudentDrawerShellSkeleton } from "./widgets/TabPanelSkeleton";
 import { parseApiError } from "@/platform/api/errors";
 import { useBobStudentDetail } from "@/platform/query/hooks/useBobStudents";
 import { STUDENT_DRAWER_WIDTH } from "./constants";
@@ -73,11 +73,7 @@ export function StudentCommandDrawer({
     >
       <div className="flex flex-col h-full min-h-0 bg-gray-50/30">
         {isLoading && !student ? (
-          <div className="p-6 space-y-4 bg-white">
-            <Skeleton className="h-12 w-12 rounded-xl" />
-            <Skeleton className="h-8 w-56" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-          </div>
+          <StudentDrawerShellSkeleton />
         ) : error && !student ? (
           <div className="p-6 bg-white">
             <p className="text-sm text-red-700">{parseApiError(error)}</p>

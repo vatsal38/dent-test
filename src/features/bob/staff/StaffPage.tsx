@@ -6,12 +6,13 @@ import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { buildStaffRows } from "@/features/bob/staff/buildStaffRows";
 import { useBobPodsList } from "@/platform/query/hooks/useBobPods";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
+import { PageHeaderSkeleton } from "@/design-system/patterns/PageHeaderSkeleton";
 import { Skeleton } from "@/components/Skeleton";
 import { parseApiError } from "@/platform/api/errors";
 
 export function StaffPage() {
   const podsQuery = useBobPodsList({ limit: 200 });
-  const studentsQuery = useBobStudentsList({ limit: 500 });
+  const studentsQuery = useBobStudentsList({ limit: 500, includeStats: false });
 
   const loading = podsQuery.isLoading || studentsQuery.isLoading;
   const error = podsQuery.error ?? studentsQuery.error;
@@ -29,11 +30,32 @@ export function StaffPage() {
   if (loading) {
     return (
       <div>
-        <PageHeader
-          title="Staff & coach roster"
-          description="View staff assignments and track links."
-        />
-        <Skeleton className="h-64 w-full rounded-lg" />
+        <PageHeaderSkeleton actionCount={2} />
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="min-w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <th key={i} className="px-4 py-3">
+                    <Skeleton className="h-3 w-16" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i}>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" rounded="full" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-10" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-14 ml-auto" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }

@@ -7,7 +7,6 @@ export const STUDENT_DRAWER_TABS = [
   "milestones",
   "notes",
   "incidents",
-  "journey",
   "onboarding",
   "demographics",
   "activity",

@@ -2,6 +2,7 @@ export interface BobRosterSchemaField {
   name: string;
   type: string;
   linkedTableId?: string | null;
+  choices?: string[];
 }
 
 export interface BobRosterSchemaResponse {

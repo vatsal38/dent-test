@@ -15,7 +15,10 @@ export interface BobPod {
   syncedAt?: string | null;
   airtableRecordId?: string | null;
   coachId: string | null;
+  /** Up to two coaches per track (from Airtable Staff links). */
+  coachIds?: string[];
   siteSupporterId: string | null;
+  staffLabels?: string[];
   students: string[];
   createdAt: string;
   updatedAt: string;

@@ -46,6 +46,7 @@ import {
 import { curatedInboxListColumns } from "@/features/bob/inbox/curatedListColumns";
 import {
   getIntakeQueue,
+  DEFAULT_INTAKE_QUEUE_ID,
   type IntakeQueueId,
 } from "@/features/bob/inbox/queues";
 import {
@@ -118,7 +119,8 @@ export function IntakeInboxPage({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const queueId = (searchParams.get("queue") || "all") as IntakeQueueId;
+  const queueId = (searchParams.get("queue") ||
+    DEFAULT_INTAKE_QUEUE_ID) as IntakeQueueId;
   const queue = getIntakeQueue(queueId);
   const selectedId = searchParams.get("id");
 

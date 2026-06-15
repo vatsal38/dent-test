@@ -46,22 +46,50 @@ export function formatWhen(iso: string) {
   });
 }
 
+export function formatLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  const s = String(value).trim();
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function cardTitle(s: BobSubmission) {
-  if (s.type === "incident")
-    return s.incidentType ? `Incident · ${s.incidentType}` : "Incident";
-  if (s.type === "wellness_check")
-    return s.wellnessLevel
-      ? `Wellness · ${s.wellnessLevel}`
-      : "Wellness check";
-  if (s.type === "blitz_points")
-    return s.team ? `Blitz points · ${s.team}` : "Blitz points";
+  const student = s.student?.trim();
+  if (s.type === "incident") {
+    const kind = formatLabel(s.incidentType) || "Incident";
+    return student ? `${student} · ${kind}` : kind === "Incident" ? "Behavior incident" : `Behavior incident · ${kind}`;
+  }
+  if (s.type === "wellness_check") {
+    const level = formatLabel(s.wellnessLevel);
+    return student
+      ? `${student} · Wellness${level ? ` · ${level}` : ""}`
+      : level
+        ? `Wellness · ${level}`
+        : "Wellness check";
+  }
+  if (s.type === "blitz_points") {
+    return student
+      ? `${student} · Blitz points${s.team ? ` · ${s.team}` : ""}`
+      : s.team
+        ? `Blitz points · ${s.team}`
+        : "Blitz points";
+  }
   if (s.type === "anonymous_feedback")
-    return s.category ? `Feedback · ${s.category}` : "Anonymous feedback";
+    return s.category ? `Feedback · ${formatLabel(s.category)}` : "Anonymous feedback";
   if (s.type === "progress_update")
-    return s.milestone ? `Progress · ${s.milestone}` : "Progress update";
+    return student
+      ? `${student} · Progress update`
+      : s.milestone
+        ? `Progress · ${s.milestone}`
+        : "Progress update";
   if (s.type === "parent_contact")
-    return s.parentName ? `Parent contact · ${s.parentName}` : "Parent contact";
-  return SUBMISSION_TYPE_LABELS[s.type] || s.type;
+    return student
+      ? `${student} · Parent contact`
+      : s.parentName
+        ? `Parent contact · ${s.parentName}`
+        : "Parent contact";
+  const base = SUBMISSION_TYPE_LABELS[s.type] || s.type;
+  return student ? `${student} · ${base}` : base;
 }
 
 export function cardSummary(s: BobSubmission) {

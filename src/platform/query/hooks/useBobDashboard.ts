@@ -11,7 +11,8 @@ export function useBobDashboard(scope: DashboardScope) {
   return useQuery({
     queryKey: bobKeys.dashboard(params),
     queryFn: () => getBobDashboard(params),
-    staleTime: 60_000,
+    staleTime: 90_000,
+    refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });
 }

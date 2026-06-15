@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Skeleton } from "@/components/Skeleton";
+import { AttendanceHubSkeleton } from "./components/AttendancePageSkeletons";
 import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
 import { getDaysInRange, getWeekMonday, getWeekSunday } from "./weekDates";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
@@ -188,18 +188,7 @@ export function AttendanceHubPage() {
   }, [tableDays, workspace]);
 
   if (loading) {
-    return (
-      <div className="p-6 sm:p-8 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-72" />
-        <div className="flex gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 flex-1" rounded="lg" />
-          ))}
-        </div>
-        <Skeleton className="h-64 w-full" rounded="lg" />
-      </div>
-    );
+    return <AttendanceHubSkeleton />;
   }
 
   if (error) {

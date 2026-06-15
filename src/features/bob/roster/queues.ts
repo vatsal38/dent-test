@@ -1,18 +1,26 @@
-import type {
-  BobInterviewStage,
-  BobStudentStatus,
-  BobStudentsListParams,
-} from "@/platform/api/bob/students";
+import type { BobStudentsListParams } from "@/platform/api/bob/students";
 import type { BobStudentsFacetsResponse } from "@/platform/api/bob/students";
+
+/** Canonical BoB '26 track labels for roster queue tabs. */
+export const ROSTER_TRACK_TAB_FILTERS = [
+  { id: "track_made_at_dent", label: "Made@Dent", track: "Made@Dent" },
+  { id: "track_denternship", label: "Denternship", track: "Denternship" },
+  { id: "track_ayd", label: "AYD", track: "Accelerate Your Dent" },
+  {
+    id: "track_content_creation",
+    label: "Content Creation",
+    track: "Content Creation",
+  },
+] as const;
 
 export type RosterQueueId =
   | "bob_cohort"
   | "onboarding_pending"
-  | "all"
-  | "active"
-  | "inactive"
-  | "placed"
-  | "interview";
+  | "track_made_at_dent"
+  | "track_denternship"
+  | "track_ayd"
+  | "track_content_creation"
+  | "dropped_out";
 
 export interface RosterQueueDef {
   id: RosterQueueId;
@@ -24,10 +32,16 @@ export interface RosterQueueDef {
 export const ROSTER_QUEUES: RosterQueueDef[] = [
   {
     id: "bob_cohort",
-    label: "BoB cohort",
-    description: "BoB '26 Student Roster (track assigned)",
+    label: "All BoB",
+    description: "BoB '26 active cohort (track assigned)",
     listParams: { bobCohort: "active" },
   },
+  ...ROSTER_TRACK_TAB_FILTERS.map((t) => ({
+    id: t.id as RosterQueueId,
+    label: t.label,
+    description: `${t.label} track roster`,
+    listParams: { bobCohort: "active" as const, track: t.track },
+  })),
   {
     id: "onboarding_pending",
     label: "Onboarding",
@@ -35,65 +49,15 @@ export const ROSTER_QUEUES: RosterQueueDef[] = [
     listParams: { bobCohort: "active", onboardingReady: "no" },
   },
   {
-    id: "all",
-    label: "All students",
-    description: "Full Students & Alums sync",
-    listParams: {},
-  },
-  {
-    id: "active",
-    label: "Active",
-    description: "Currently enrolled",
-    listParams: { status: "active" as BobStudentStatus },
-  },
-  {
-    id: "inactive",
-    label: "Inactive",
-    description: "Not currently active in program",
-    listParams: { status: "inactive" as BobStudentStatus },
-  },
-  {
-    id: "interview",
-    label: "In interview",
-    description: "Interview pipeline in progress",
-    listParams: { interviewStage: "interview" as BobInterviewStage },
-  },
-  {
-    id: "placed",
-    label: "Placed",
-    description: "Placed in program sites",
-    listParams: { interviewStage: "placed" as BobInterviewStage },
+    id: "dropped_out",
+    label: "Dropped out",
+    description: "BoB '26 Active Status dropouts and withdrawn students",
+    listParams: { bobActiveStatus: "dropped" },
   },
 ];
 
 export function getRosterQueue(id: string | null | undefined): RosterQueueDef {
   return ROSTER_QUEUES.find((q) => q.id === id) ?? ROSTER_QUEUES[0];
-}
-
-export function rosterQueueCount(
-  queueId: RosterQueueId,
-  facets: BobStudentsFacetsResponse | null | undefined,
-): number | null {
-  if (!facets) return null;
-  const total = facets.pipeline?.total;
-  switch (queueId) {
-    case "bob_cohort":
-      return facets.bobCohort?.active ?? null;
-    case "onboarding_pending":
-      return facets.onboarding?.incomplete ?? null;
-    case "all":
-      return total ?? null;
-    case "active":
-      return facetCount(facets.statuses, "active");
-    case "inactive":
-      return facetCount(facets.statuses, "inactive");
-    case "interview":
-      return facetCount(facets.interviewStages, "interview");
-    case "placed":
-      return facetCount(facets.interviewStages, "placed");
-    default:
-      return null;
-  }
 }
 
 function facetCount(
@@ -104,4 +68,42 @@ function facetCount(
     (o) => o.value.toLowerCase() === value.toLowerCase(),
   );
   return row?.count ?? null;
+}
+
+function trackFacetCount(
+  facets: BobStudentsFacetsResponse | null | undefined,
+  trackMatch: string,
+): number | null {
+  if (!facets?.tracks?.length) return null;
+  const needle = trackMatch.toLowerCase();
+  const row = facets.tracks.find((t) => {
+    const v = t.value.toLowerCase();
+    return v.includes(needle) || needle.includes(v);
+  });
+  return row?.count ?? null;
+}
+
+export function rosterQueueCount(
+  queueId: RosterQueueId,
+  facets: BobStudentsFacetsResponse | null | undefined,
+): number | null {
+  if (!facets) return null;
+  switch (queueId) {
+    case "bob_cohort":
+      return facets.bobCohort?.active ?? null;
+    case "onboarding_pending":
+      return facets.onboarding?.incomplete ?? null;
+    case "dropped_out":
+      return facets.droppedOut?.count ?? facetCount(facets.statuses, "withdrawn");
+    case "track_made_at_dent":
+      return trackFacetCount(facets, "Made@Dent");
+    case "track_denternship":
+      return trackFacetCount(facets, "Denternship");
+    case "track_ayd":
+      return trackFacetCount(facets, "Accelerate Your Dent");
+    case "track_content_creation":
+      return trackFacetCount(facets, "Content Creation");
+    default:
+      return null;
+  }
 }

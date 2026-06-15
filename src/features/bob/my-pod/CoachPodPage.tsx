@@ -13,23 +13,31 @@ import {
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { useBobPodDetail } from "@/platform/query/hooks/useBobPods";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
-import { Skeleton } from "@/components/Skeleton";
+import { CoachPodPageSkeleton } from "@/features/bob/attendance/components/AttendancePageSkeletons";
 
 export function CoachPodPage() {
   const { data: me, isLoading: meLoading } = useBobMe();
   const podId = me?.primaryPod?.id ?? null;
   const { data: pod, isLoading: podLoading } = useBobPodDetail(podId);
 
-  const { data: studentsRes, isLoading: studentsLoading } = useBobStudentsList({
-    limit: 500,
-    includeAirtableFields: true,
-  });
+  const podStudentIds = useMemo((): string[] | undefined => {
+    if (!pod) return undefined;
+    return pod.students ?? [];
+  }, [pod]);
+
+  const { data: studentsRes, isLoading: studentsLoading } = useBobStudentsList(
+    {
+      ids: podStudentIds?.length ? podStudentIds.join(",") : undefined,
+      limit: podStudentIds?.length || 1,
+      includeStats: true,
+    },
+    { enabled: Boolean(pod && (podStudentIds?.length ?? 0) > 0) },
+  );
 
   const students = useMemo(() => {
-    if (!pod?.students?.length) return [];
-    const ids = new Set(pod.students);
-    return (studentsRes?.students ?? []).filter((s) => ids.has(s.id));
-  }, [pod?.students, studentsRes?.students]);
+    if (!podStudentIds?.length) return [];
+    return studentsRes?.students ?? [];
+  }, [podStudentIds, studentsRes?.students]);
 
   const needsAttention = students.filter(
     (s) =>
@@ -52,7 +60,7 @@ export function CoachPodPage() {
     },
     {
       id: "attendance",
-      label: "Mark attendance",
+      label: "Update attendance",
       value: "→",
       href: pod
         ? `/app/bob/attendance/mark?pod=${encodeURIComponent(pod.id)}`
@@ -69,12 +77,7 @@ export function CoachPodPage() {
   const loading = meLoading || podLoading || studentsLoading;
 
   if (loading && !pod) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
+    return <CoachPodPageSkeleton />;
   }
 
   if (!pod) {
@@ -110,7 +113,7 @@ export function CoachPodPage() {
               href={`/app/bob/attendance/mark?pod=${encodeURIComponent(pod.id)}`}
               className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
             >
-              Mark attendance
+              Update attendance
             </Link>
             <Link
               href={`/app/bob/pods/${pod.id}`}

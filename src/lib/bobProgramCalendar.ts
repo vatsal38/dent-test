@@ -78,6 +78,12 @@ export function isAttendanceExpectedOn(iso: string, now = new Date()) {
   return String(iso).slice(0, 10) <= now.toISOString().slice(0, 10);
 }
 
+export function expectedHoursForDate(iso: string): number {
+  if (!isProgramDay(iso)) return 0;
+  if (isShowcaseDay(iso)) return 6;
+  return 5;
+}
+
 export function getDaySchedule(iso: string) {
   if (!isProgramDay(iso)) {
     return { kind: "off" as const, sessions: [] as Array<{ label: string; start: string; end: string; punches: PunchType[] }> };

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { StatusBadge } from "@/components/bob/RecruitmentUi";
+import { StudentHeadshot } from "./StudentHeadshot";
 import {
   attendanceSummary,
-  initialsOf,
   milestoneSummary,
   studentDisplayName,
 } from "@/features/bob/roster/recordDisplay";
@@ -14,6 +14,7 @@ import { useStudentDrawerContext } from "../context/StudentDrawerContext";
 import {
   computeEngagementRating,
   computeWellnessSignals,
+  hasIndustryCredential,
 } from "../lib/profileSignals";
 import { useStudentSubmissions } from "../hooks/useStudentTabQueries";
 
@@ -51,17 +52,13 @@ export function StudentDrawerHeader() {
   const stageLabel = student.interviewStage
     ? STAGE_LABELS[student.interviewStage] || student.interviewStage
     : null;
+  const industryCredential = hasIndustryCredential(student);
 
   return (
     <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200">
       <div className="px-5 pt-4 pb-3">
         <div className="flex gap-3">
-          <div
-            className="shrink-0 h-12 w-12 rounded-xl bg-linear-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center text-sm font-bold shadow-sm"
-            aria-hidden
-          >
-            {initialsOf(name)}
-          </div>
+          <StudentHeadshot student={student} name={name} />
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-600">
               Student command center
@@ -73,6 +70,9 @@ export function StudentDrawerHeader() {
               ) : null}
               {stageLabel ? (
                 <StatusBadge label={stageLabel} variant="airtable" />
+              ) : null}
+              {industryCredential ? (
+                <StatusBadge label="Industry credential" variant="app" />
               ) : null}
             </div>
           </div>
@@ -105,10 +105,10 @@ export function StudentDrawerHeader() {
 
       <div className="px-5 pb-3 flex flex-wrap gap-2">
         <Link
-          href={`/app/bob/attendance/mark?podId=${encodeURIComponent(student.podId || "")}`}
+          href={`/app/bob/attendance/mark?pod=${encodeURIComponent(student.podId || "")}${student.track ? `&track=${encodeURIComponent(student.track)}` : ""}`}
           className="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 transition-colors"
         >
-          Mark attendance
+          Update attendance
         </Link>
         <Link
           href={`/app/bob/submit?studentId=${encodeURIComponent(student.id)}`}

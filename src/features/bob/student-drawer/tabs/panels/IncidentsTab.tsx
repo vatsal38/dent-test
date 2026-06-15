@@ -9,7 +9,7 @@ import {
 } from "@/features/bob/submissions/display";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentSubmissions } from "../../hooks/useStudentTabQueries";
-import { TabPanelSkeleton } from "../../widgets/TabPanelSkeleton";
+import { IncidentsTabSkeleton } from "../../widgets/TabPanelSkeleton";
 
 export function IncidentsTab() {
   const { student, tab } = useStudentDrawerContext();
@@ -23,7 +23,7 @@ export function IncidentsTab() {
   );
 
   if (!student) return null;
-  if (isLoading) return <TabPanelSkeleton rows={4} />;
+  if (isLoading) return <IncidentsTabSkeleton />;
 
   return (
     <div className="p-5 space-y-4">
@@ -48,7 +48,7 @@ export function IncidentsTab() {
           incidents.map((s) => (
             <li key={s.id}>
               <Link
-                href={`/app/bob/workflow?id=${encodeURIComponent(s.id)}`}
+                href={`/app/bob/inbox?id=${encodeURIComponent(s.id)}`}
                 className="block rounded-xl border border-gray-200 p-3 hover:border-orange-300 hover:shadow-sm transition-all"
               >
                 <div className="flex flex-wrap gap-2 items-center">

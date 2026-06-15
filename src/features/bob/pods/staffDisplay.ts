@@ -25,6 +25,25 @@ export function resolveStaffLabel(
   return "Unassigned user";
 }
 
+/** All coach refs for a track (up to two from Airtable Staff links). */
+export function podCoachIds(pod: {
+  coachIds?: string[];
+  coachId?: string | null;
+}): string[] {
+  const fromArray = (pod.coachIds || []).map((id) => String(id).trim()).filter(Boolean);
+  if (fromArray.length) return fromArray;
+  const single = (pod.coachId || "").trim();
+  return single ? [single] : [];
+}
+
+export function resolveStaffLabels(
+  staff: BobStaffMember[],
+  refs: string[],
+): string {
+  const labels = refs.map((ref) => resolveStaffLabel(staff, ref)).filter((l) => l !== "—");
+  return labels.length ? labels.join(", ") : "—";
+}
+
 export function staffForRole(
   staff: BobStaffMember[],
   role: "coach" | "site_supporter",

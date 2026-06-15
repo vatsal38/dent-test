@@ -11,7 +11,7 @@ export function WeeklyMilestoneProgressWidget({
   placement,
 }: WidgetRenderProps) {
   const title = placement.title ?? "Weekly Deliverable Progress";
-  if (loading) return <DashboardWidgetSkeleton variant="chart" />;
+  if (loading) return <DashboardWidgetSkeleton variant="weekChart" titleWidth="w-52" />;
 
   const weeks = snapshot?.weeklyMilestoneProgress?.weeks ?? [];
   const eligible = snapshot?.weeklyMilestoneProgress?.eligibleCount ?? 0;

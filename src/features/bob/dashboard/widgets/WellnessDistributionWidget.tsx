@@ -74,7 +74,7 @@ export function WellnessDistributionWidget({
   placement,
 }: WidgetRenderProps) {
   const title = placement.title ?? "Wellness Distribution";
-  if (loading) return <DashboardWidgetSkeleton variant="chart" />;
+  if (loading) return <DashboardWidgetSkeleton variant="donut" titleWidth="w-44" />;
 
   const dist = snapshot?.wellnessDistribution;
   const slices: Slice[] = dist

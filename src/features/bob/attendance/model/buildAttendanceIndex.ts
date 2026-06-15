@@ -14,6 +14,8 @@ import {
 import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
   expectedPunchTypes,
+  isAttendanceExpectedOn,
+  isProgramDay,
   isShowcaseDay,
 } from "@/lib/bobProgramCalendar";
 import {
@@ -180,6 +182,10 @@ function deriveHealth(
   dailyStatus?: BobAttendanceStatus,
   date?: string,
 ): { health: DayHealth; missingPunchCount: number; isLate: boolean } {
+  if (date && isProgramDay(date) && !isAttendanceExpectedOn(date)) {
+    return { health: "future", missingPunchCount: 0, isLate: false };
+  }
+
   const required = date ? expectedPunchTypes(date) : [...PUNCH_TYPES];
   const states = required.map((t) => punches[t].state);
   const missingPunchCount = states.filter((s) => s === "missing").length;

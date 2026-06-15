@@ -31,6 +31,13 @@ export function AttendanceStatusBadge({
   if (attendanceState) {
     return <AttendanceStateBadge state={attendanceState} />;
   }
+  if (health === "future") {
+    return (
+      <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-sky-50 text-sky-700">
+        Future
+      </span>
+    );
+  }
   const map: Record<string, AttendanceState> = {
     complete: "present",
     partial: "missing_punch",

@@ -95,4 +95,5 @@ export const DAY_HEALTH_STYLES: Record<
   excused: { badge: "bg-gray-100 text-gray-700", label: "Excused" },
   absent: { badge: "bg-red-100 text-red-800", label: "Absent" },
   auto_filled: { badge: "bg-blue-100 text-blue-800", label: "Auto filled" },
+  future: { badge: "bg-sky-50 text-sky-700", label: "Future" },
 };

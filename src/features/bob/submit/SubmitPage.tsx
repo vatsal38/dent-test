@@ -28,7 +28,7 @@ export function SubmitPage() {
         submissionType === "progress_update" ||
         submissionType === "parent_contact";
     const studentsQuery = useBobStudentsList(
-        { limit: 500 },
+        { limit: 500, includeStats: false },
         { enabled: needStudents },
     );
     const students = studentsQuery.data?.students ?? [];

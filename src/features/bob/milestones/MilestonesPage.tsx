@@ -26,6 +26,8 @@ import {
   pendingUploadCount,
   progressStatusBadge,
   reviewStatusBadge,
+  computeDeliverableTrackStats,
+  computeOverallDeliverableStats,
 } from './deliverableDisplay';
 import { formatBobTrackDisplayLabel } from '@/lib/bobDisplayTerminology';
 
@@ -69,6 +71,16 @@ export function MilestonesPage() {
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [data]);
+
+  const overallStats = useMemo(
+    () => computeOverallDeliverableStats(data),
+    [data],
+  );
+
+  const trackStats = useMemo(
+    () => computeDeliverableTrackStats(data),
+    [data],
+  );
 
   function applyOptimisticDeliverable(
     item: BobDeliverable,
@@ -190,6 +202,63 @@ export function MilestonesPage() {
         <p className="text-xs text-gray-500 -mt-2 mb-4">
           Last synced {new Date(milestonesQuery.data.syncedAt).toLocaleString()}
         </p>
+      ) : null}
+
+      {data.length > 0 ? (
+        <section className="mb-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+              Due deliverables progress
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Percentages count only deliverables past their target completion
+              date.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                All tracks
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">
+                {overallStats.pctDueCompleted}%
+              </p>
+              <p className="text-sm text-gray-600">completed (due)</p>
+              <p className="text-xs text-gray-500 mt-2 tabular-nums">
+                {overallStats.completedCount}/{overallStats.dueCount} due ·{' '}
+                {overallStats.pctDueSubmitted}% submitted
+              </p>
+              {overallStats.overdueCount > 0 ? (
+                <p className="text-xs text-red-700 mt-1">
+                  {overallStats.overdueCount} overdue
+                </p>
+              ) : null}
+            </div>
+            {trackStats.map((t) => (
+              <div
+                key={t.trackName}
+                className="rounded-xl border border-gray-200 bg-white p-4"
+              >
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider truncate">
+                  {formatBobTrackDisplayLabel(t.trackName)}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">
+                  {t.pctDueCompleted}%
+                </p>
+                <p className="text-sm text-gray-600">completed (due)</p>
+                <p className="text-xs text-gray-500 mt-2 tabular-nums">
+                  {t.completedCount}/{t.dueCount} due · {t.pctDueSubmitted}%
+                  submitted
+                </p>
+                {t.overdueCount > 0 ? (
+                  <p className="text-xs text-red-700 mt-1">
+                    {t.overdueCount} overdue
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 pb-3">

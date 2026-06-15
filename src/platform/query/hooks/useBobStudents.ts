@@ -25,6 +25,8 @@ export function useBobStudentsList(
     queryFn: () => getBobStudents(params),
     placeholderData: keepPreviousData,
     enabled: options?.enabled ?? true,
+    staleTime: params.includeStats ? 45_000 : 90_000,
+    refetchOnWindowFocus: Boolean(params.includeStats),
   });
 }
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Skeleton } from "@/components/Skeleton";
+import { AttendanceDiscrepanciesSkeleton } from "./components/AttendancePageSkeletons";
 import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect";
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
@@ -22,6 +22,7 @@ export function AttendanceDiscrepanciesPage() {
   const [weekOf, setWeekOf] = useState(() => getWeekMonday(new Date(initialDate + "T12:00:00")));
   const [trackFilter, setTrackFilter] = useState(initialTrack);
   const [detailDay, setDetailDay] = useState<StudentDayAttendance | null>(null);
+  const [fixedThisSession, setFixedThisSession] = useState(0);
 
   const focusDate = weekOf;
   const { workspace, loading, error, refetch } = useAttendanceWorkspace({
@@ -43,6 +44,7 @@ export function AttendanceDiscrepanciesPage() {
   );
 
   const resolvedCount = workspace.discrepancies.length - openItems.length;
+  const fixedCount = fixedThisSession + resolvedCount;
 
   function handleViewDetails(item: AttendanceDiscrepancy) {
     const day = workspace.days.find(
@@ -55,18 +57,7 @@ export function AttendanceDiscrepanciesPage() {
   }
 
   if (loading) {
-    return (
-      <div className="p-8 space-y-4">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" rounded="lg" />
-          ))}
-        </div>
-        <Skeleton className="h-64 w-full" rounded="lg" />
-      </div>
-    );
+    return <AttendanceDiscrepanciesSkeleton />;
   }
 
   if (error) {
@@ -129,8 +120,13 @@ export function AttendanceDiscrepanciesPage() {
           <p className="text-2xl font-bold text-orange-600 tabular-nums">{openItems.length}</p>
         </div>
         <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <p className="text-xs font-medium text-gray-500 uppercase">Resolved</p>
-          <p className="text-2xl font-bold text-emerald-600 tabular-nums">{resolvedCount}</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Fixed this session</p>
+          <p className="text-2xl font-bold text-emerald-600 tabular-nums">{fixedCount}</p>
+          {fixedThisSession > 0 ? (
+            <p className="text-xs text-gray-500 mt-1">
+              {fixedThisSession} saved in this visit
+            </p>
+          ) : null}
         </div>
         <div className="p-4 bg-white border border-gray-200 rounded-lg">
           <p className="text-xs font-medium text-gray-500 uppercase">Week range</p>
@@ -151,7 +147,10 @@ export function AttendanceDiscrepanciesPage() {
           day={detailDay}
           workspace={workspace}
           onClose={() => setDetailDay(null)}
-          onSaved={() => refetch()}
+          onSaved={() => {
+            setFixedThisSession((n) => n + 1);
+            refetch();
+          }}
         />
       ) : null}
     </div>

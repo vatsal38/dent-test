@@ -26,6 +26,7 @@ function pickBooleanField(fields: Record<string, unknown>, pattern: RegExp): boo
 function percentFromAttendance(s: BobStudent): number | null {
   const a = s.attendanceStats;
   if (!a) return null;
+  if (typeof a.hoursPct === "number") return a.hoursPct;
   const present = a.present ?? 0;
   const absent = a.absent ?? 0;
   const total = present + absent;
@@ -33,9 +34,12 @@ function percentFromAttendance(s: BobStudent): number | null {
   return Math.round((present / total) * 100);
 }
 
-function formatMilestones(s: BobStudent): string | null {
+function formatDeliverables(s: BobStudent): string | null {
   const m = s.milestoneStats;
   if (!m) return null;
+  if (typeof m.pctDueSubmitted === "number" && m.total) {
+    return `${m.pctDueSubmitted}% due`;
+  }
   const submitted = m.submitted ?? 0;
   const total = m.total ?? 0;
   if (!total) return `${submitted} submitted`;
@@ -106,7 +110,7 @@ export function RosterGridView({
       const photoUrl = attachments?.[0]?.url || "";
 
       const attendancePct = percentFromAttendance(s);
-      const milestone = formatMilestones(s);
+      const milestone = formatDeliverables(s);
       return {
         id: s.id,
         name,
@@ -189,8 +193,8 @@ export function RosterGridView({
 
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-gray-600">
               <div className="min-w-0">
-                <div className="text-[11px] text-gray-400">Coach</div>
-                <div className="truncate font-medium text-gray-800">{c.coach || "—"}</div>
+                <div className="text-[11px] text-gray-400">Track</div>
+                <div className="truncate font-medium text-gray-800">{c.track || "—"}</div>
               </div>
               <div className="min-w-0 text-right">
                 <div className="text-[11px] text-gray-400">Attendance</div>

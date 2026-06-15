@@ -38,9 +38,16 @@ export function buildStaffRows(
   }
 
   for (const p of pods) {
-    if (p.coachId) {
-      const row = getOrCreate(p.coachId, p.coachId, "Coach");
-      row.podIdsAsCoach.push(p.id);
+    const coaches = p.coachIds?.length
+      ? p.coachIds
+      : p.coachId
+        ? [p.coachId]
+        : [];
+    for (const coachId of coaches) {
+      const row = getOrCreate(coachId, coachId, "Coach");
+      if (!row.podIdsAsCoach.includes(p.id)) {
+        row.podIdsAsCoach.push(p.id);
+      }
     }
     if (p.siteSupporterId && p.siteSupporterId !== p.coachId) {
       const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Track supporter");

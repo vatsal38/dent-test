@@ -38,11 +38,27 @@ export function useAttendanceWorkspace({
   const podsQuery = useBobPodsList({ limit: 100 });
   const pods = filterPodsByAccess(podsQuery.data?.pods ?? [], access);
 
-  const studentsQuery = useBobStudentsList({
-    bobCohort: "active",
-    track: effectiveTrack || undefined,
-    limit: 500,
-  });
+  const scopedStudentIds = useMemo((): string[] | null | undefined => {
+    if (!effectivePod) return undefined;
+    const pod = pods.find((p) => p.id === effectivePod);
+    if (!pod) return null;
+    return pod.students ?? [];
+  }, [effectivePod, pods]);
+
+  const studentsQuery = useBobStudentsList(
+    {
+      bobCohort: effectivePod ? undefined : "active",
+      track: effectiveTrack || undefined,
+      ids: scopedStudentIds?.length ? scopedStudentIds.join(",") : undefined,
+      limit: scopedStudentIds?.length || 500,
+      includeStats: false,
+    },
+    {
+      enabled:
+        scopedStudentIds !== null &&
+        !(effectivePod && scopedStudentIds?.length === 0),
+    },
+  );
   const students = studentsQuery.data?.students ?? [];
 
   const enrollmentCount = useMemo(() => {

@@ -1,5 +1,116 @@
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 
+export type DeliverableTrackStats = {
+  trackName: string;
+  dueCount: number;
+  submittedCount: number;
+  completedCount: number;
+  overdueCount: number;
+  pctDueSubmitted: number;
+  pctDueCompleted: number;
+};
+
+export function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function isDeliverableDue(
+  deliverable: BobDeliverable,
+  today: string = todayIso(),
+): boolean {
+  const due = String(deliverable.targetCompletionDate || "").slice(0, 10);
+  if (!due) return false;
+  return due <= today;
+}
+
+export function isDeliverableCompleted(deliverable: BobDeliverable): boolean {
+  if (deliverable.milestoneComplete) return true;
+  if (deliverable.reviewStatus === "approved") return true;
+  return (deliverable.trackerRecords || []).some(
+    (t) => String(t.deliverableStatus || "") === "Completed",
+  );
+}
+
+export function isDeliverableSubmitted(deliverable: BobDeliverable): boolean {
+  if (isDeliverableCompleted(deliverable)) return true;
+  if (
+    deliverable.reviewStatus &&
+    !["not_started", "pending_review"].includes(deliverable.reviewStatus)
+  ) {
+    return true;
+  }
+  return (deliverable.trackerRecords || []).some((t) => {
+    const status = String(t.deliverableStatus || "");
+    return status && status !== "Not Started";
+  });
+}
+
+export function isDeliverableOverdue(
+  deliverable: BobDeliverable,
+  today: string = todayIso(),
+): boolean {
+  const due = String(deliverable.targetCompletionDate || "").slice(0, 10);
+  if (!due || due >= today) return false;
+  return !isDeliverableCompleted(deliverable);
+}
+
+function pct(numerator: number, denominator: number): number {
+  if (!denominator) return 0;
+  return Math.round((numerator / denominator) * 100);
+}
+
+export function computeDeliverableTrackStats(
+  deliverables: BobDeliverable[],
+  today: string = todayIso(),
+): DeliverableTrackStats[] {
+  const byTrack = new Map<string, BobDeliverable[]>();
+  for (const d of deliverables) {
+    const key = d.trackName || "Other";
+    if (!byTrack.has(key)) byTrack.set(key, []);
+    byTrack.get(key)!.push(d);
+  }
+
+  return [...byTrack.entries()]
+    .map(([trackName, items]) => {
+      const dueItems = items.filter((d) => isDeliverableDue(d, today));
+      const submittedCount = dueItems.filter(isDeliverableSubmitted).length;
+      const completedCount = dueItems.filter(isDeliverableCompleted).length;
+      const overdueCount = dueItems.filter((d) =>
+        isDeliverableOverdue(d, today),
+      ).length;
+      return {
+        trackName,
+        dueCount: dueItems.length,
+        submittedCount,
+        completedCount,
+        overdueCount,
+        pctDueSubmitted: pct(submittedCount, dueItems.length),
+        pctDueCompleted: pct(completedCount, dueItems.length),
+      };
+    })
+    .sort((a, b) => a.trackName.localeCompare(b.trackName));
+}
+
+export function computeOverallDeliverableStats(
+  deliverables: BobDeliverable[],
+  today: string = todayIso(),
+): Omit<DeliverableTrackStats, "trackName"> {
+  const dueItems = deliverables.filter((d) => isDeliverableDue(d, today));
+  const submittedCount = dueItems.filter(isDeliverableSubmitted).length;
+  const completedCount = dueItems.filter(isDeliverableCompleted).length;
+  const overdueCount = dueItems.filter((d) =>
+    isDeliverableOverdue(d, today),
+  ).length;
+  return {
+    dueCount: dueItems.length,
+    submittedCount,
+    completedCount,
+    overdueCount,
+    pctDueSubmitted: pct(submittedCount, dueItems.length),
+    pctDueCompleted: pct(completedCount, dueItems.length),
+  };
+}
+
 export const TRACK_FILTERS = [
   { id: "", label: "All tracks" },
   { id: "Made@Dent", label: "Made@Dent" },

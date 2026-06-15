@@ -8,7 +8,7 @@ import {
   ywRegistrationLabel,
 } from "@/features/bob/onboarding/statusLabels";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
-import { TabPanelSkeleton } from "../../widgets/TabPanelSkeleton";
+import { OnboardingTabSkeleton } from "../../widgets/TabPanelSkeleton";
 
 function StatusCard({
   title,
@@ -38,7 +38,7 @@ export function OnboardingTab() {
   });
 
   if (!student) return null;
-  if (isLoading) return <TabPanelSkeleton rows={4} />;
+  if (isLoading) return <OnboardingTabSkeleton />;
 
   const tasks = data?.tasks ?? [];
   const done = tasks.filter((t) => t.status === "done").length;

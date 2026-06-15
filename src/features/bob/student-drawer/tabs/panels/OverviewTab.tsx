@@ -10,11 +10,41 @@ import { CoachNoteCard } from "../../widgets/CoachNoteCard";
 import { ActivityTimeline } from "../../widgets/ActivityTimeline";
 import { extractCoachNotes } from "../../lib/profileSignals";
 import { useStudentActivityFeed } from "../../hooks/useStudentTabQueries";
-import {
-  extractAirtableRecordIds,
-  isAirtableRecordId,
-} from "@/lib/bobAirtableDisplay";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
+
+function attendancePercent(student: {
+  attendanceStats?: {
+    hoursPct?: number;
+    present?: number;
+    absent?: number;
+  } | null;
+}): string {
+  const a = student.attendanceStats;
+  if (!a) return "—";
+  if (typeof a.hoursPct === "number") return `${a.hoursPct}%`;
+  const present = a.present ?? 0;
+  const absent = a.absent ?? 0;
+  const total = present + absent;
+  if (!total) return "—";
+  return `${Math.round((present / total) * 100)}%`;
+}
+
+function deliverablePercent(student: {
+  milestoneStats?: {
+    pctDueSubmitted?: number;
+    submitted?: number;
+    total?: number;
+  } | null;
+}): string {
+  const m = student.milestoneStats;
+  if (!m) return "—";
+  if (typeof m.pctDueSubmitted === "number" && m.total) {
+    return `${m.pctDueSubmitted}%`;
+  }
+  if (!m.total) return "—";
+  const submitted = m.submitted ?? 0;
+  return `${Math.round((submitted / m.total) * 100)}%`;
+}
 
 export function OverviewTab() {
   const { student, tab, setTab } = useStudentDrawerContext();
@@ -23,26 +53,41 @@ export function OverviewTab() {
     tab,
     student?.podId,
   );
-  const { coachField, fields, resolving, school, track, coach } =
-    useStudentLinkedFieldDisplay(student);
+  const { fields, school, track } = useStudentLinkedFieldDisplay(student);
 
   if (!student) return null;
 
   const notes = extractCoachNotes(student).slice(0, 2);
-  const rows = studentSummaryRows(student).map((r) => {
-    if (r.label === "School") return { ...r, value: school };
-    if (r.label === "Track") return { ...r, value: track };
-    if (r.label === "Coach") return { ...r, value: coach };
-    return r;
-  });
+  const pronouns = String(fields.Pronouns ?? fields.pronouns ?? "").trim();
+  const rows = studentSummaryRows(student)
+    .filter((r) => r.label !== "Coach" && r.label !== "Track")
+    .map((r) => {
+      if (r.label === "School") return { ...r, value: school };
+      return r;
+    });
+  if (pronouns) {
+    rows.unshift({ label: "Pronouns", value: pronouns });
+  }
+  if (track && track !== "—") {
+    rows.push({ label: "Track", value: track });
+  }
+  for (const key of ["Project", "Team", "Blitz Team", "Program Team"]) {
+    const raw = fields[key];
+    const val = raw != null ? String(raw).trim() : "";
+    if (val) rows.push({ label: key, value: val });
+  }
 
   return (
     <div className="p-5 space-y-6">
       <DetailCardGrid>
         <DetailCard
           label="Attendance"
-          value={student.attendanceStats?.present ?? 0}
-          hint={`${student.attendanceStats?.absent ?? 0} absences`}
+          value={attendancePercent(student)}
+          hint={
+            student.attendanceStats?.hoursAttended != null
+              ? `${student.attendanceStats.hoursAttended}h of ${student.attendanceStats.hoursPotential ?? "—"}h · ${student.attendanceStats?.absent ?? 0} absences`
+              : `${student.attendanceStats?.absent ?? 0} absences`
+          }
           action={
             <button
               type="button"
@@ -55,10 +100,11 @@ export function OverviewTab() {
         />
         <DetailCard
           label="Deliverables"
-          value={
+          value={deliverablePercent(student)}
+          hint={
             student.milestoneStats?.total
-              ? `${student.milestoneStats?.submitted ?? 0}/${student.milestoneStats.total}`
-              : "—"
+              ? `${student.milestoneStats.completed ?? student.milestoneStats.submitted ?? 0} of ${student.milestoneStats.total} due · ${student.milestoneStats.overdue ?? 0} overdue`
+              : "No due deliverables yet"
           }
           action={
             <button
@@ -70,17 +116,6 @@ export function OverviewTab() {
             </button>
           }
         />
-        <DetailCard
-          label="Coach"
-          value={
-            coach && coach !== "—"
-              ? coach
-              : isAirtableRecordId(String(student.coach || "")) || extractAirtableRecordIds(fields[coachField]).length
-                ? "Loading…"
-                : "Unassigned"
-          }
-        />
-        <DetailCard label="Track" value={track || "—"} />
       </DetailCardGrid>
 
       <section>

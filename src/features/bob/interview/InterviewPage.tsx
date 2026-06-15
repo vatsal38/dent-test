@@ -21,7 +21,7 @@ const STAGE_ORDER: BobInterviewStage[] = ['applied', 'screening', 'interview', '
 
 export function InterviewPage() {
     const [stageFilter, setStageFilter] = useState<BobInterviewStage | ''>('');
-    const { data, isLoading: loading, error: loadError } = useBobStudentsList({ limit: 500 });
+    const { data, isLoading: loading, error: loadError } = useBobStudentsList({ limit: 500, includeStats: false });
     const students = data?.students ?? [];
     const error = loadError ? parseApiError(loadError) : null;
 
@@ -44,31 +44,51 @@ export function InterviewPage() {
 
     if (loading) {
         return (
-            <div className="p-8">
+            <div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div>
-                        <Skeleton className="h-7 w-44 mb-2" />
+                        <Skeleton className="h-8 w-52 mb-2" />
                         <Skeleton className="h-4 w-72" />
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Skeleton className="h-10 w-48" rounded="lg" />
-                        <Skeleton className="h-10 w-32" rounded="lg" />
+                        <Skeleton className="h-10 w-36 rounded-lg" rounded="lg" />
+                        <Skeleton className="h-10 w-24 rounded-lg" rounded="lg" />
                     </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {Array.from({ length: 3 }).map((_, col) => (
-                        <div key={col} className="p-4 rounded-lg border border-gray-200 bg-white">
-                            <Skeleton className="h-5 w-32 mb-4" />
-                            <div className="space-y-3">
-                                {Array.from({ length: 6 }).map((__, i) => (
-                                    <div key={i} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
-                                        <Skeleton className="h-4 w-44 mb-2" />
-                                        <Skeleton className="h-3 w-28" />
-                                    </div>
-                                ))}
-                            </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="p-3 rounded-lg border border-gray-200 bg-white">
+                            <Skeleton className="h-3 w-16 mb-2" />
+                            <Skeleton className="h-7 w-8" />
                         </div>
                     ))}
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                        <Skeleton className="h-4 w-48" />
+                    </div>
+                    <table className="min-w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <th key={i} className="px-4 py-3">
+                                        <Skeleton className="h-3 w-16" />
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <tr key={i}>
+                                    <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                                    <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                                    <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" rounded="full" /></td>
+                                    <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
+                                    <td className="px-4 py-3"><Skeleton className="h-4 w-14 ml-auto" /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         );

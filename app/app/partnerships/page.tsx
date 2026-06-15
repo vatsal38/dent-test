@@ -118,6 +118,10 @@ export default function PartnershipsPage() {
   const [rolesOpen, setRolesOpen] = useState(false);
   const rolesPopoverRef = useRef<HTMLDivElement | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [movingPartnershipId, setMovingPartnershipId] = useState<string | null>(
+    null,
+  );
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   const loadTotals = useCallback(async () => {
     try {
@@ -231,6 +235,28 @@ export default function PartnershipsPage() {
         t.partnershipType.toLowerCase().includes(q),
     );
   }, [allRoleOptions, roleQuery]);
+
+  async function handleKanbanStageMove(
+    partnershipId: string,
+    fromStage: string,
+    toStage: string,
+  ) {
+    if (!toStage || fromStage === toStage) return;
+    setMovingPartnershipId(partnershipId);
+    try {
+      await updatePartnershipStage(partnershipId, toStage);
+      await loadData(false);
+      setSuccessToast("Partnership stage updated");
+    } catch (err) {
+      console.error("Failed to move partnership:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to update partnership stage",
+      );
+    } finally {
+      setMovingPartnershipId(null);
+      setDragOverStage(null);
+    }
+  }
 
   if (loading) {
     return <PartnershipsPageSkeleton />;
@@ -590,6 +616,21 @@ export default function PartnershipsPage() {
                     <div
                       key={column.stage}
                       className="flex flex-col min-w-[320px] w-[320px]"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        setDragOverStage(column.stage);
+                      }}
+                      onDragLeave={() => setDragOverStage(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverStage(null);
+                        const id = e.dataTransfer.getData("text/partnership-id");
+                        const from = e.dataTransfer.getData("text/from-stage");
+                        if (id && from !== column.stage) {
+                          void handleKanbanStageMove(id, from, column.stage);
+                        }
+                      }}
                     >
                       {(() => {
                         const columnPartnerships = column.partnerships;
@@ -603,11 +644,19 @@ export default function PartnershipsPage() {
                                 {columnPartnerships.length} partnerships
                               </p>
                             </div>
-                            <div className="space-y-3 flex-1 overflow-y-auto min-h-0 pr-2">
+                            <div
+                              className={`space-y-3 flex-1 overflow-y-auto min-h-0 pr-2 min-h-[120px] rounded-lg transition-colors ${
+                                dragOverStage === column.stage
+                                  ? "bg-blue-50/60 ring-2 ring-blue-200"
+                                  : ""
+                              }`}
+                            >
                               {columnPartnerships.length === 0 ? (
-                                <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="p-8 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
                                   <p className="text-sm text-gray-500">
-                                    No partnerships
+                                    {dragOverStage === column.stage
+                                      ? "Drop here"
+                                      : "No partnerships"}
                                   </p>
                                 </div>
                               ) : (
@@ -631,10 +680,26 @@ export default function PartnershipsPage() {
                                   return (
                                     <div
                                       key={partnership.id}
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData(
+                                          "text/partnership-id",
+                                          partnership.id,
+                                        );
+                                        e.dataTransfer.setData(
+                                          "text/from-stage",
+                                          partnership.stage,
+                                        );
+                                        e.dataTransfer.effectAllowed = "move";
+                                      }}
                                       onClick={() =>
                                         setSelectedPartnership(partnership.id)
                                       }
                                       className={`p-4 rounded-lg bg-white border cursor-pointer transition-all hover:shadow-md ${
+                                        movingPartnershipId === partnership.id
+                                          ? "opacity-50 pointer-events-none"
+                                          : ""
+                                      } ${
                                         isSelected
                                           ? "border-[#3b82f6] shadow-lg ring-2 ring-blue-100"
                                           : isStuck

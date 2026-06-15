@@ -16,7 +16,7 @@ import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
 import { useBobStaffList } from "../../../platform/query/hooks/useBobStaff";
 import { StaffMemberSelect } from "./StaffMemberSelect";
-import { staffForRole, resolveStaffLabel } from "./staffDisplay";
+import { staffForRole, resolveStaffLabel, podCoachIds, resolveStaffLabels } from "./staffDisplay";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
 export function PodDetailPage() {
@@ -25,7 +25,7 @@ export function PodDetailPage() {
   const params = useParams();
   const id = params?.id as string;
   const podQuery = useBobPodDetail(id);
-  const studentsQuery = useBobStudentsList({ limit: 500 });
+  const studentsQuery = useBobStudentsList({ limit: 500, includeStats: false });
   const staffQuery = useBobStaffList();
   const updatePod = useUpdateBobPod();
 
@@ -266,10 +266,16 @@ export function PodDetailPage() {
           />
         </div>
 
-        {!canEditPod && (pod.coachId || pod.siteSupporterId) ? (
+        {!canEditPod && (podCoachIds(pod).length || pod.siteSupporterId) ? (
           <p className="text-sm text-gray-600">
-            Coach: {resolve(pod.coachId)} · Track supporter:{" "}
-            {resolve(pod.siteSupporterId)}
+            Coaches: {resolveStaffLabels(staff, podCoachIds(pod))} · Track
+            supporter: {resolve(pod.siteSupporterId)}
+          </p>
+        ) : null}
+
+        {pod.staffLabels?.length ? (
+          <p className="text-xs text-gray-500">
+            Airtable staff: {pod.staffLabels.join(", ")}
           </p>
         ) : null}
 
