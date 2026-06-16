@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import {
   BOB_SUBMISSION_STATUSES,
@@ -11,8 +12,10 @@ import {
   badgeClassesForType,
   cardTitle,
   eventTypeLabel,
+  formatEventSummary,
   formatWhen,
   formatLabel,
+  resolveActorLabel,
   severityBadge,
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
@@ -92,7 +95,16 @@ export function SubmissionDetailPanel({
             <h2 className="mt-2 text-lg font-semibold text-gray-900">
               {cardTitle(data)}
             </h2>
-            <p className="text-sm text-gray-600">{data.student || "—"}</p>
+            {data.studentId ? (
+              <Link
+                href={`/app/bob/roster?id=${encodeURIComponent(data.studentId)}`}
+                className="text-sm text-orange-600 hover:underline font-medium"
+              >
+                {data.student || "Open student profile"} →
+              </Link>
+            ) : (
+              <p className="text-sm text-gray-600">{data.student || "—"}</p>
+            )}
             {data.routingReason ? (
               <p className="text-xs text-gray-500 mt-1">
                 Routed: {data.routingReason.replace(/_/g, " ")}
@@ -258,6 +270,34 @@ export function SubmissionDetailPanel({
 
         <div>
           <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+            Add comment
+          </h3>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            placeholder="Add a comment…"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
+          />
+          <button
+            type="button"
+            disabled={commentMutation.isPending || !comment.trim()}
+            onClick={() => {
+              const c = comment.trim();
+              if (!c) return;
+              commentMutation.mutate(
+                { id: data.id, content: c },
+                { onSuccess: () => setComment("") },
+              );
+            }}
+            className="mt-2 w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-50"
+          >
+            Post comment
+          </button>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
             Resolution
           </h3>
           <textarea
@@ -358,61 +398,45 @@ export function SubmissionDetailPanel({
 
         <div>
           <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
-            Add comment
-          </h3>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-            placeholder="Add a comment…"
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
-          />
-          <button
-            type="button"
-            disabled={commentMutation.isPending || !comment.trim()}
-            onClick={() => {
-              const c = comment.trim();
-              if (!c) return;
-              commentMutation.mutate(
-                { id: data.id, content: c },
-                { onSuccess: () => setComment("") },
-              );
-            }}
-            className="mt-2 w-full py-2 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-50"
-          >
-            Post comment
-          </button>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
             Activity
           </h3>
           <div className="space-y-2">
-            {events.map((e) => (
-              <div
-                key={e.id}
-                className={`p-3 border rounded-lg ${
-                  e.type === "comment"
-                    ? "border-blue-100 bg-blue-50/30"
-                    : "border-gray-200"
-                }`}
-              >
-                <div className="flex justify-between gap-2">
-                  <span className="text-[10px] font-semibold uppercase text-gray-500">
-                    {eventTypeLabel(e.type)}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {formatWhen(e.createdAt)}
-                  </span>
-                </div>
-                {e.content ? (
-                  <p className="mt-1 whitespace-pre-wrap text-gray-800">
-                    {e.content}
-                  </p>
-                ) : null}
-              </div>
-            ))}
+            {events.length === 0 ? (
+              <p className="text-xs text-gray-400">No activity yet.</p>
+            ) : (
+              events.map((e) => {
+                const summary = formatEventSummary(e.type, e.content, e.meta);
+                const actor = resolveActorLabel(e.actorId, staff);
+                return (
+                  <div
+                    key={e.id}
+                    className={`p-3 border rounded-lg ${
+                      e.type === "comment"
+                        ? "border-blue-100 bg-blue-50/30"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <div className="flex justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase text-gray-500">
+                        {eventTypeLabel(e.type)}
+                        <span className="font-normal normal-case text-gray-400">
+                          {" "}
+                          · {actor}
+                        </span>
+                      </span>
+                      <span className="text-xs text-gray-400 shrink-0">
+                        {formatWhen(e.createdAt)}
+                      </span>
+                    </div>
+                    {summary ? (
+                      <p className="mt-1 whitespace-pre-wrap text-gray-800">
+                        {summary}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 

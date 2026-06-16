@@ -111,6 +111,7 @@ export interface BobSubmissionsListParams {
   severity?: string;
   excludeArchived?: boolean;
   archivedOnly?: boolean;
+  excludeTypes?: BobSubmissionType[];
   limit?: number;
   offset?: number;
 }
@@ -171,6 +172,9 @@ function buildSubmissionsQuery(params?: BobSubmissionsListParams) {
   if (params?.severity) sp.set("severity", params.severity);
   if (params?.excludeArchived) sp.set("excludeArchived", "true");
   if (params?.archivedOnly) sp.set("archivedOnly", "true");
+  if (params?.excludeTypes?.length) {
+    sp.set("excludeTypes", params.excludeTypes.join(","));
+  }
   if (params?.limit != null) sp.set("limit", String(params.limit));
   if (params?.offset != null) sp.set("offset", String(params.offset));
   return sp.toString();
@@ -188,13 +192,16 @@ export async function getBobSubmissions(
 export async function getBobSubmissionFacets(
   params?: Pick<
     BobSubmissionsListParams,
-    "assignedTo" | "search" | "excludeArchived"
+    "assignedTo" | "search" | "excludeArchived" | "excludeTypes"
   >,
 ): Promise<BobSubmissionFacets> {
   const sp = new URLSearchParams();
   if (params?.assignedTo) sp.set("assignedTo", params.assignedTo);
   if (params?.search) sp.set("search", params.search);
   if (params?.excludeArchived) sp.set("excludeArchived", "true");
+  if (params?.excludeTypes?.length) {
+    sp.set("excludeTypes", params.excludeTypes.join(","));
+  }
   const qs = sp.toString();
   return apiRequest<BobSubmissionFacets>(
     `/api/bob/submissions/facets${qs ? `?${qs}` : ""}`,

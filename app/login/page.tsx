@@ -35,6 +35,8 @@ function firebaseAuthErrorMessage(error: unknown): string {
       return 'This account has been disabled.';
     case 'auth/invalid-email':
       return 'Enter a valid email address.';
+    case 'auth/unauthorized-domain':
+      return 'This web address is not authorized for sign-in. Ask an admin to add it in Firebase Authorized domains.';
     default:
       return error instanceof Error ? error.message : 'Sign in failed.';
   }

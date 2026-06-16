@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { BobStudent } from "@/platform/api/bob/students";
-import { extractAirtableAttachments } from "@/lib/bobAirtableDisplay";
-import { curatedRosterListColumns } from "@/features/bob/roster/curatedListColumns";
+import { resolveStudentHeadshotUrl } from "@/lib/bobStudentHeadshot";
 import { useBobRosterSchema } from "@/platform/query/hooks/useBobStudents";
 import { initialsOf } from "@/features/bob/roster/recordDisplay";
 
@@ -16,14 +15,12 @@ export function StudentHeadshot({
 }) {
   const { data: schemaRes } = useBobRosterSchema();
   const [expanded, setExpanded] = useState(false);
+  const [broken, setBroken] = useState(false);
 
   const photoUrl = useMemo(() => {
-    const { headshot } = curatedRosterListColumns(schemaRes?.fields ?? null);
-    if (!headshot) return "";
-    const fields = (student.airtableFields || {}) as Record<string, unknown>;
-    const attachments = extractAirtableAttachments(fields[headshot.name]);
-    return attachments?.[0]?.url || "";
-  }, [schemaRes?.fields, student.airtableFields]);
+    if (broken) return "";
+    return resolveStudentHeadshotUrl(student, schemaRes?.fields ?? null);
+  }, [broken, schemaRes?.fields, student]);
 
   const initials = initialsOf(name);
 
@@ -47,6 +44,7 @@ export function StudentHeadshot({
             alt=""
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
           />
         ) : (
           <span aria-hidden>{initials}</span>

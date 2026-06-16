@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import type { BobStudent } from "@/platform/api/bob/students";
 import {
   getBlitzTeamOptions,
@@ -9,6 +10,7 @@ import {
   type BlitzTeamOptionsResponse,
 } from "@/platform/api/bob/submit";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
+import { decodeBobReturnTo } from "@/lib/bobReturnUrl";
 
 type SubmissionType = 'incident' | 'wellness_check' | 'blitz_points' | 'anonymous_feedback' | 'progress_update' | 'parent_contact';
 
@@ -17,6 +19,10 @@ function studentLabel(s: BobStudent) {
 }
 
 export function SubmitPage() {
+    const searchParams = useSearchParams();
+    const returnHref = decodeBobReturnTo(searchParams?.get("returnTo"));
+    const prefilledStudentId = searchParams?.get("studentId") || '';
+
     const [submissionType, setSubmissionType] = useState<SubmissionType>('incident');
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -97,6 +103,18 @@ export function SubmitPage() {
         setStudentDropdownOpen(false);
     }
 
+    useEffect(() => {
+        if (!prefilledStudentId || form.studentId || !students.length) return;
+        const match = students.find((s) => s.id === prefilledStudentId);
+        if (match) {
+            setForm((f) => ({
+                ...f,
+                studentId: match.id,
+                student: studentLabel(match),
+            }));
+        }
+    }, [prefilledStudentId, students, form.studentId]);
+
     const studentDropdown = (
         <div className="relative" ref={studentDropdownRef}>
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
@@ -164,7 +182,14 @@ export function SubmitPage() {
                     </div>
                     <h1 className="text-xl font-bold text-gray-900 mb-2">Submitted</h1>
                     <p className="text-gray-600 mb-6">Your submission has been received.</p>
-                    <button type="button" onClick={() => setSubmitted(false)} className="text-orange-600 hover:underline font-medium">Submit another</button>
+                    <div className="flex flex-col gap-2 items-center">
+                        {returnHref ? (
+                            <Link href={returnHref} className="text-orange-600 hover:underline font-medium">
+                                Back to student
+                            </Link>
+                        ) : null}
+                        <button type="button" onClick={() => setSubmitted(false)} className="text-gray-600 hover:underline font-medium">Submit another</button>
+                    </div>
                 </div>
             </div>
         );
@@ -174,8 +199,17 @@ export function SubmitPage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
             <div className="max-w-lg w-full bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-200 bg-orange-50">
-                    <h1 className="text-xl font-bold text-gray-900">BoB One-Stop Submit</h1>
-                    <p className="text-sm text-gray-600 mt-1">Incidents, wellness checks, Blitz points, feedback, progress updates, parent contact.</p>
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900">BoB One-Stop Submit</h1>
+                            <p className="text-sm text-gray-600 mt-1">Incidents, wellness checks, Blitz points, feedback, progress updates, parent contact.</p>
+                        </div>
+                        {returnHref ? (
+                            <Link href={returnHref} className="text-sm text-orange-600 hover:underline shrink-0">
+                                ← Back
+                            </Link>
+                        ) : null}
+                    </div>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     {error && (

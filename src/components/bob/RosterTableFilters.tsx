@@ -187,14 +187,21 @@ function AirtableFilterBuilder({
   facets,
   facetsLoading,
   onChange,
+  includeAirtableFields,
+  onIncludeAirtableFieldsChange,
 }: {
   draft: RosterTableFilterState;
   schema: BobRosterSchemaField[] | null;
   facets: BobStudentsFacetsResponse | null;
   facetsLoading?: boolean;
   onChange: (next: RosterTableFilterState) => void;
+  includeAirtableFields: boolean;
+  onIncludeAirtableFieldsChange: (next: boolean) => void;
 }) {
-  const fieldCatalog = useMemo(() => buildFilterFieldCatalog(schema), [schema]);
+  const fieldCatalog = useMemo(
+    () => buildFilterFieldCatalog(schema, { includeAirtableFields }),
+    [schema, includeAirtableFields],
+  );
 
   const conditions =
     draft.conditions.length > 0 ? draft.conditions : [createEmptyCondition()];
@@ -219,6 +226,16 @@ function AirtableFilterBuilder({
       <p className="text-sm text-gray-600">
         In this view, show records
       </p>
+
+      <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+        <input
+          type="checkbox"
+          checked={includeAirtableFields}
+          onChange={(e) => onIncludeAirtableFieldsChange(e.target.checked)}
+          className="rounded border-gray-300 text-orange-600"
+        />
+        Include Airtable field filters (advanced)
+      </label>
 
       {facetsLoading ? (
         <p className="text-xs text-gray-500">Loading field options…</p>
@@ -289,8 +306,19 @@ export function RosterRecordsToolbar({
   onClearDrawerFilters: () => void;
 }) {
   const [draft, setDraft] = useState(filters);
+  const [includeAirtableFields, setIncludeAirtableFields] = useState(() =>
+    filters.conditions.some((c) => c.field.startsWith("airtable:")),
+  );
   const drawerActive = countDrawerRosterFilters(filters);
-  const fieldCatalog = useMemo(() => buildFilterFieldCatalog(schema), [schema]);
+  const fieldCatalog = useMemo(
+    () =>
+      buildFilterFieldCatalog(schema, {
+        includeAirtableFields:
+          includeAirtableFields ||
+          filters.conditions.some((c) => c.field.startsWith("airtable:")),
+      }),
+    [schema, includeAirtableFields, filters.conditions],
+  );
   const trackOptions = useMemo(
     () => rosterTrackFilterOptions(facets),
     [facets],
@@ -475,6 +503,8 @@ export function RosterRecordsToolbar({
               facets={facets}
               facetsLoading={facetsLoading}
               onChange={setDraft}
+              includeAirtableFields={includeAirtableFields}
+              onIncludeAirtableFieldsChange={setIncludeAirtableFields}
             />
           </div>
 

@@ -4,6 +4,14 @@ import type {
   BobSubmissionsListParams,
 } from "@/platform/api/bob/submissions";
 
+/** Hidden from the default operations inbox (incidents + wellness focus). */
+export const OPS_INBOX_EXCLUDED_TYPES: BobSubmissionType[] = [
+  "blitz_points",
+  "progress_update",
+  "anonymous_feedback",
+  "parent_contact",
+];
+
 export interface SubmissionFilterState {
   type: BobSubmissionType | "";
   status: BobSubmissionStatus | "";
@@ -13,6 +21,8 @@ export interface SubmissionFilterState {
   search: string;
   excludeArchived: boolean;
   archivedOnly: boolean;
+  /** When false (default), blitz / progress / feedback types are excluded unless a type filter is set. */
+  includeAllTypes: boolean;
 }
 
 export const DEFAULT_SUBMISSION_FILTERS: SubmissionFilterState = {
@@ -24,13 +34,15 @@ export const DEFAULT_SUBMISSION_FILTERS: SubmissionFilterState = {
   search: "",
   excludeArchived: true,
   archivedOnly: false,
+  includeAllTypes: false,
 };
 
 export function parseFiltersFromSearchParams(
   sp: URLSearchParams,
 ): SubmissionFilterState {
+  const type = (sp.get("type") as BobSubmissionType) || "";
   return {
-    type: (sp.get("type") as BobSubmissionType) || "",
+    type,
     status: (sp.get("status") as BobSubmissionStatus) || "",
     priority: sp.get("priority") || "",
     severity: sp.get("severity") || "",
@@ -38,6 +50,7 @@ export function parseFiltersFromSearchParams(
     search: sp.get("q") || "",
     excludeArchived: sp.get("archived") !== "1" && sp.get("archivedOnly") !== "1",
     archivedOnly: sp.get("archivedOnly") === "1",
+    includeAllTypes: sp.get("allTypes") === "1" || Boolean(type),
   };
 }
 
@@ -53,6 +66,7 @@ export function filtersToSearchParams(
   if (filters.search.trim()) sp.set("q", filters.search.trim());
   if (filters.archivedOnly) sp.set("archivedOnly", "1");
   else if (!filters.excludeArchived) sp.set("archived", "1");
+  if (filters.includeAllTypes) sp.set("allTypes", "1");
   return sp;
 }
 
@@ -61,6 +75,11 @@ export function filtersToListParams(
   debouncedSearch: string,
   myUserId: string | null,
 ): BobSubmissionsListParams {
+  const excludeTypes =
+    !filters.type && !filters.includeAllTypes
+      ? OPS_INBOX_EXCLUDED_TYPES
+      : undefined;
+
   return {
     type: filters.type || undefined,
     status: filters.status || undefined,
@@ -71,6 +90,7 @@ export function filtersToListParams(
     search: debouncedSearch.trim() || undefined,
     excludeArchived: filters.archivedOnly ? false : filters.excludeArchived,
     archivedOnly: filters.archivedOnly || undefined,
+    excludeTypes,
     limit: 300,
   };
 }

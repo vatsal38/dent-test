@@ -38,7 +38,7 @@ export function useBobSubmissionNotifications(orgWide = false) {
 export function useBobSubmissionFacets(
   params?: Pick<
     BobSubmissionsListParams,
-    "assignedTo" | "search" | "excludeArchived" | "archivedOnly"
+    "assignedTo" | "search" | "excludeArchived" | "excludeTypes"
   >,
 ) {
   return useQuery({

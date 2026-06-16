@@ -3,7 +3,27 @@
 import { KEY_LINK_SECTIONS } from './keyLinksConfig';
 import { PageHeader } from '@/design-system/patterns/PageHeader';
 
+const PLACEHOLDER_HOSTS = new Set([
+  'drive.google.com',
+  'photos.google.com',
+  'slack.com',
+  'mail.google.com',
+]);
+
+function isPlaceholderUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return PLACEHOLDER_HOSTS.has(host) && !url.includes('/folders/') && !url.includes('/drive/');
+  } catch {
+    return true;
+  }
+}
+
 export function KeyLinksPage() {
+  const needsConfig = KEY_LINK_SECTIONS.some((section) =>
+    section.links.some((link) => isPlaceholderUrl(link.url)),
+  );
+
   return (
     <div className="max-w-3xl">
       <PageHeader
@@ -11,6 +31,15 @@ export function KeyLinksPage() {
         title="Key Links"
         description="Quick access to drives, albums, and communication tools used across the program."
       />
+
+      {needsConfig ? (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Some links still use generic placeholders. Program ops should set your
+          team&apos;s URLs in Vercel as{' '}
+          <code className="text-amber-950">NEXT_PUBLIC_BOB_KEY_LINK_*</code> (see{' '}
+          <code className="text-amber-950">env.example</code>).
+        </div>
+      ) : null}
 
       <div className="space-y-8">
         {KEY_LINK_SECTIONS.map((section) => (
@@ -45,13 +74,6 @@ export function KeyLinksPage() {
           </section>
         ))}
       </div>
-
-      <p className="mt-10 text-xs text-gray-500">
-        Link URLs are configured via{' '}
-        <code className="text-gray-700">NEXT_PUBLIC_BOB_KEY_LINK_*</code> env
-        vars (see <code className="text-gray-700">env.example</code>). Ask
-        program ops to update with your team&apos;s folders.
-      </p>
     </div>
   );
 }

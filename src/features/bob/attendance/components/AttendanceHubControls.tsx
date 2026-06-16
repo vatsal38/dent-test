@@ -61,12 +61,14 @@ function Segmented({
 function MetricPill({
   label,
   value,
+  total,
   active,
   tone,
   onClick,
 }: {
   label: string;
   value: number;
+  total?: number;
   active?: boolean;
   tone?: "good" | "warn" | "bad";
   onClick?: () => void;
@@ -79,6 +81,8 @@ function MetricPill({
         : tone === "bad"
           ? "text-red-700"
           : "text-gray-700";
+  const pct =
+    total != null && total > 0 ? Math.round((value / total) * 100) : null;
   const Tag = onClick ? "button" : "span";
   return (
     <Tag
@@ -90,7 +94,10 @@ function MetricPill({
           : "bg-white text-gray-600 ring-1 ring-gray-200"
       } ${onClick ? "hover:bg-orange-50" : ""}`}
     >
-      <span className={active ? undefined : toneClass}>{value}</span>
+      <span className={active ? undefined : toneClass}>
+        {value}
+        {pct != null ? ` (${pct}%)` : ""}
+      </span>
       <span className="text-gray-500">{label}</span>
     </Tag>
   );
@@ -228,6 +235,7 @@ export function AttendanceHubControls({
         <MetricPill
           label="present"
           value={summary.present}
+          total={summary.expected}
           tone="good"
           active={healthFilter === "complete"}
           onClick={() => onHealthFilterChange("complete")}
@@ -235,6 +243,7 @@ export function AttendanceHubControls({
         <MetricPill
           label="missing"
           value={summary.missingPunches}
+          total={summary.expected}
           tone="bad"
           active={healthFilter === "missing"}
           onClick={() => onHealthFilterChange("missing")}
@@ -242,6 +251,7 @@ export function AttendanceHubControls({
         <MetricPill
           label="late"
           value={summary.late}
+          total={summary.expected}
           tone="warn"
           active={healthFilter === "late"}
           onClick={() => onHealthFilterChange("late")}

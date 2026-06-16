@@ -13,7 +13,10 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     key: "studentsEnrolled",
     label: "Active BoB students",
     format: (v) => v,
-    href: () => "/app/bob/roster?bobCohort=active",
+    href: ({ podId }) =>
+      podId
+        ? `/app/bob/roster?pod=${encodeURIComponent(podId)}`
+        : "/app/bob/roster?bobCohort=active",
   },
   youthWorksSynced: {
     key: "youthWorksSynced",
@@ -43,7 +46,10 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     key: "checkedInPctToday",
     label: "Checked in today",
     format: (v) => `${v}%`,
-    href: () => "/app/bob/attendance",
+    href: ({ podId }) =>
+      podId
+        ? `/app/bob/attendance?podId=${encodeURIComponent(podId)}`
+        : "/app/bob/attendance",
   },
   deliverablesSubmitted: {
     key: "deliverablesSubmitted",
@@ -79,13 +85,19 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     key: "noShowsToday",
     label: "No-shows today",
     format: (v) => v,
-    href: () => "/app/bob/attendance",
+    href: ({ podId }) =>
+      podId
+        ? `/app/bob/attendance/mark?pod=${encodeURIComponent(podId)}`
+        : "/app/bob/attendance/mark",
   },
   atRiskCount: {
     key: "atRiskCount",
     label: "At-risk students",
     format: (v) => v,
-    href: () => "/app/bob/roster",
+    href: ({ podId }) =>
+      podId
+        ? `/app/bob/roster?pod=${encodeURIComponent(podId)}`
+        : "/app/bob/roster",
   },
   escalationCount: {
     key: "escalationCount",
@@ -129,4 +141,13 @@ export const POD_OPS_KPIS: BobDashboardMetricKey[] = [
   "noShowsToday",
   "atRiskCount",
   "escalationCount",
+];
+
+/** Coach / track supporter home — daily track operations. */
+export const COACH_HOME_KPIS: BobDashboardMetricKey[] = [
+  "studentsEnrolled",
+  "checkedInPctToday",
+  "noShowsToday",
+  "openIncidents",
+  "atRiskCount",
 ];

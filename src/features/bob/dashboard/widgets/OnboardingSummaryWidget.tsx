@@ -102,6 +102,11 @@ export function OnboardingSummaryWidget({
         >
           {pending > 0 ? "Review onboarding queue →" : "Review cohort roster →"}
         </Link>
+        <p className="text-[11px] text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
+          Counts use active BoB &apos;26 roster students in scope. Contract from
+          enrollment/contract fields; pre-survey from BoB &apos;25 Pre-Survey Done
+          when email matches BoB All Students. Refresh via Settings → Airtable sync.
+        </p>
       </div>
     </DashboardCard>
   );

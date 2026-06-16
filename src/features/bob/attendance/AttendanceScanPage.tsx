@@ -19,6 +19,7 @@ import type { StudentDayAttendance } from "./types";
 import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useUpsertBobAttendanceDay } from "@/platform/query/hooks/useBobAttendance";
+import { decodeBobReturnTo } from "@/lib/bobReturnUrl";
 import { parseApiError } from "@/platform/api/errors";
 
 export function AttendanceScanPage() {
@@ -28,6 +29,7 @@ export function AttendanceScanPage() {
   const podFromUrl =
     searchParams?.get("pod") || searchParams?.get("podId") || "";
   const dateFromUrl = searchParams?.get("date") || "";
+  const returnHref = decodeBobReturnTo(searchParams?.get("returnTo"));
 
   const [trackFilter, setTrackFilter] = useState(trackFromUrl);
   const [podId, setPodId] = useState(podFromUrl);
@@ -150,10 +152,10 @@ export function AttendanceScanPage() {
   return (
     <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto pb-12">
       <Link
-        href="/app/bob/attendance"
+        href={returnHref || "/app/bob/attendance"}
         className="text-sm text-orange-600 hover:underline"
       >
-        ← Attendance dashboard
+        {returnHref ? "← Back to student" : "← Attendance dashboard"}
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 mt-4 mb-1">Issue triage</h1>
       <p className="text-gray-600 text-sm mb-6">

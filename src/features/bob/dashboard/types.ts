@@ -23,6 +23,7 @@ export interface DashboardScope {
 export type DashboardLayoutId =
   | "command_center"
   | "command_center_reports"
+  | "coach_home"
   | "pod_ops"
   | "student_ops";
 

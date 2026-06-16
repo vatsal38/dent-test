@@ -12,13 +12,8 @@ import {
   type BobStudent,
 } from "@/platform/api/bob/students";
 import { bobKeys } from "@/platform/query/queryKeys";
-import {
-  pickField,
-  GUARDIAN_NAME_KEYS,
-  GUARDIAN_PHONE_KEYS,
-  GUARDIAN_EMAIL_KEYS,
-  EMERGENCY_KEYS,
-} from "@/features/bob/student-drawer/lib/personalFieldDisplay";
+import { pickField, DOB_KEYS, computeAgeFromDob, GUARDIAN_NAME_KEYS, GUARDIAN_PHONE_KEYS, GUARDIAN_EMAIL_KEYS, EMERGENCY_KEYS } from "@/features/bob/student-drawer/lib/personalFieldDisplay";
+import { StudentHeadshot } from "@/features/bob/student-drawer/header/StudentHeadshot";
 import { cellDisplayValue, isAirtableRecordId } from "@/lib/bobAirtableDisplay";
 import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
 import { Skeleton } from "@/components/Skeleton";
@@ -283,19 +278,48 @@ function Section({
   defaultOpen?: boolean;
 }) {
   return (
-    <details className="bg-white border border-gray-200 rounded-lg overflow-hidden" open={defaultOpen}>
-      <summary className="cursor-pointer select-none px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between gap-4">
+    <details
+      className="group bg-white border border-gray-200 rounded-lg overflow-hidden"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer select-none px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between gap-4 list-none [&::-webkit-details-marker]:hidden">
         <div>
           <div className="text-sm font-semibold text-gray-900">{title}</div>
           {subtitle && <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>}
         </div>
-        <div className="text-xs text-gray-500 pt-0.5" aria-hidden>
+        <div
+          className="text-xs text-gray-500 pt-0.5 transition-transform group-open:rotate-180"
+          aria-hidden
+        >
           ▾
         </div>
       </summary>
       <div className="px-4">{children}</div>
     </details>
   );
+}
+
+function countPrograms(value: unknown): number | null {
+  if (Array.isArray(value)) {
+    const n = value.filter((v) => v != null && String(v).trim()).length;
+    return n > 0 ? n : null;
+  }
+  if (typeof value === "string" && value.trim()) return 1;
+  return null;
+}
+
+function programsList(
+  value: unknown,
+  labelsByRecordId?: Record<string, string>,
+): string[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((v) => cellDisplayValue(v, labelsByRecordId))
+      .filter((s) => s && s !== "—");
+  }
+  const one = cellDisplayValue(value, labelsByRecordId);
+  return one && one !== "—" ? [one] : [];
 }
 
 function FamilyGuardianSummary({
@@ -357,6 +381,7 @@ export function RosterStudentDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [showEmpty, setShowEmpty] = useState(false);
+  const [showAdvancedAirtable, setShowAdvancedAirtable] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -550,7 +575,6 @@ export function RosterStudentDetailPage() {
     (airtableFields["Student Email"] as string | undefined) ||
     student.email ||
     null;
-  const avatar = initialsOf(title);
   const studentPhone =
     (airtableFields["Student Cell Phone Number"] as string | undefined) ||
     (airtableFields["Phone"] as string | undefined) ||
@@ -567,6 +591,39 @@ export function RosterStudentDetailPage() {
         null;
   const startDate =
     (airtableFields["Start Date @ Dent"] as string | undefined) || null;
+  const dobField = pickField(airtableFields, DOB_KEYS);
+  const age = dobField ? computeAgeFromDob(dobField.value) : null;
+  const returnerField = pickField(airtableFields, ["Returner"]);
+  const returnerLabel = returnerField
+    ? formatValue(returnerField.value, labelsForField(returnerField.key))
+    : null;
+  const programCount =
+    countPrograms(airtableFields["Programs"]) ??
+    countPrograms(airtableFields["Dent Programs"]);
+  const programsRaw =
+    airtableFields["Programs"] ?? airtableFields["Dent Programs"];
+  const programLabels = labelsForField(
+    Object.prototype.hasOwnProperty.call(airtableFields, "Programs")
+      ? "Programs"
+      : "Dent Programs",
+  );
+  const programHistory = programsList(programsRaw, programLabels);
+  const pronounsField = pickField(airtableFields, [
+    "Pronouns",
+    "Preferred Pronouns",
+  ]);
+  const pronounsLabel = pronounsField
+    ? formatValue(pronounsField.value, labelsForField(pronounsField.key))
+    : null;
+  const trackLabel =
+    student.track ||
+    formatValue(
+      airtableFields["Track"] ??
+        airtableFields["Track - Site (from BoB '26 Track)"],
+      labelsForField("Track"),
+    );
+  const trackDisplay =
+    trackLabel && trackLabel !== "—" ? String(trackLabel) : null;
 
   function setDraftField(name: string, value: unknown) {
     setDraft((d) => ({ ...d, [name]: value }));
@@ -755,12 +812,15 @@ export function RosterStudentDetailPage() {
       <div className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-semibold">
-              {avatar}
-            </div>
+            <StudentHeadshot student={student} name={title} />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
+                {pronounsLabel && pronounsLabel !== "—" ? (
+                  <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-sky-50 text-sky-800 border border-sky-100">
+                    {pronounsLabel}
+                  </span>
+                ) : null}
                 {student.status && (
                   <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200">
                     {student.status}
@@ -771,11 +831,11 @@ export function RosterStudentDetailPage() {
                     {student.stage}
                   </span>
                 )}
-                {student.track && (
+                {trackDisplay ? (
                   <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
-                    {student.track}
+                    {trackDisplay}
                   </span>
-                )}
+                ) : null}
               </div>
               <div className="mt-1 text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
                 {subtitle && (
@@ -864,22 +924,36 @@ export function RosterStudentDetailPage() {
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="bg-white border border-gray-200 rounded-lg p-3">
             <div className="text-xs text-gray-500">Start date @ Dent</div>
             <div className="text-sm font-semibold text-gray-900 mt-1">{startDate || "—"}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3">
-            <div className="text-xs text-gray-500">Interview stage</div>
-            <div className="text-sm font-semibold text-gray-900 mt-1">{student.interviewStage || "—"}</div>
+            <div className="text-xs text-gray-500">Age</div>
+            <div className="text-sm font-semibold text-gray-900 mt-1">
+              {age != null ? age : "—"}
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500">Returner</div>
+            <div className="text-sm font-semibold text-gray-900 mt-1">
+              {returnerLabel && returnerLabel !== "—" ? returnerLabel : "—"}
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500">Programs</div>
+            <div className="text-sm font-semibold text-gray-900 mt-1">
+              {programCount != null ? programCount : "—"}
+            </div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3">
             <div className="text-xs text-gray-500">Coach</div>
             <div className="text-sm font-semibold text-gray-900 mt-1">{student.coach || "—"}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3">
-            <div className="text-xs text-gray-500">YouthWorks</div>
-            <div className="text-sm font-semibold text-gray-900 mt-1">{student.ywStatus || "—"}</div>
+            <div className="text-xs text-gray-500">Interview stage</div>
+            <div className="text-sm font-semibold text-gray-900 mt-1">{student.interviewStage || "—"}</div>
           </div>
         </div>
       </div>
@@ -906,6 +980,15 @@ export function RosterStudentDetailPage() {
               className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
             />
             Show empty fields too
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 select-none sm:ml-4">
+            <input
+              type="checkbox"
+              checked={showAdvancedAirtable}
+              onChange={(e) => setShowAdvancedAirtable(e.target.checked)}
+              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+            />
+            Show all Airtable fields
           </label>
         </div>
       </div>
@@ -992,6 +1075,25 @@ export function RosterStudentDetailPage() {
           )}
         </Section>
 
+        {programHistory.length > 0 ? (
+          <Section
+            title={`Dent programs (${programHistory.length})`}
+            subtitle="Past and current program participation"
+            defaultOpen={false}
+          >
+            <ul className="py-3 space-y-1.5">
+              {programHistory.map((name) => (
+                <li
+                  key={name}
+                  className="text-sm text-gray-800 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100"
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+
         <Section
           title={`Program (${grouped.Program.length})`}
           subtitle="Dent program, stage, track, coach, etc."
@@ -1031,15 +1133,13 @@ export function RosterStudentDetailPage() {
           — not duplicated on this page.
         </div>
 
-        <Section
-          title={`Other information (${grouped.Other.length})`}
-          subtitle="Everything else from Airtable"
-          defaultOpen={false}
-        >
-          {grouped.Other.length === 0 ? (
-            <div className="py-6 text-sm text-gray-500">No other fields found.</div>
-          ) : (
-            grouped.Other.map((f) =>
+        {showAdvancedAirtable && grouped.Other.length > 0 ? (
+          <Section
+            title={`Other Airtable fields (${grouped.Other.length})`}
+            subtitle="Advanced — rarely needed day to day"
+            defaultOpen={false}
+          >
+            {grouped.Other.map((f) =>
               editing ? (
                 <FieldRow
                   key={f.name}
@@ -1055,9 +1155,9 @@ export function RosterStudentDetailPage() {
                   labelsByRecordId={labelsForField(f.name)}
                 />
               ),
-            )
-          )}
-        </Section>
+            )}
+          </Section>
+        ) : null}
       </div>
 
       <div className="mt-6 text-xs text-gray-500">

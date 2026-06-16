@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { DashboardEngine } from "@/features/bob/dashboard";
+import { resolveDashboardLayoutId } from "@/features/bob/dashboard/resolveDashboardLayout";
 import { useBobAirtableSync } from "@/platform/query/hooks/useBobAirtableStatus";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { bobRoleLabel } from "@/platform/rbac/roles";
@@ -11,16 +12,20 @@ import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
 export function BobCommandCenterPage() {
   const { data: me, role, caps, access } = useBobAccess();
   const syncMutation = useBobAirtableSync();
+  const layoutId = resolveDashboardLayoutId(role);
+  const isCoachHome = layoutId === "coach_home";
 
   return (
     <div>
       <PageHeader
         eyebrow="Bet on Baltimore"
-        title="Command Center"
+        title={isCoachHome ? "Track dashboard" : "Command Center"}
         description={
-          access.isScoped && me?.primaryPod
-            ? `${bobRoleLabel(role)} · ${me.primaryPod.name}`
-            : "Operational overview — what needs attention, who is blocked, what is late."
+          isCoachHome && me?.primaryPod
+            ? `${bobRoleLabel(role)} · ${me.primaryPod.name} — today's attendance, students who need you, and open incidents.`
+            : isCoachHome
+              ? `${bobRoleLabel(role)} — scoped to your assigned tracks.`
+              : "Operational overview — what needs attention, who is blocked, what is late."
         }
         actions={
           <>
@@ -59,23 +64,23 @@ export function BobCommandCenterPage() {
         }
       />
 
-      {access.isScoped && access.role === "coach" && me?.primaryPod && (
-        <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p className="text-sm text-orange-900">
-            Metrics below are scoped to{" "}
-            <span className="font-semibold">{me.primaryPod.name}</span>.
+      {isCoachHome && access.role === "coach" && me?.primaryPod ? (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-sm text-gray-700">
+            Prefer a simple student list? Open{" "}
+            <span className="font-semibold">{me.primaryPod.name}</span> workspace.
           </p>
           <Link
             href="/app/bob/my-pod"
-            className="text-sm font-medium text-orange-700 hover:text-orange-800"
+            className="text-sm font-medium text-orange-600 hover:text-orange-700"
           >
-            Open My Track →
+            Student list view →
           </Link>
         </div>
-      )}
+      ) : null}
 
       <BobPermissionGuard permission="dashboard.view">
-        <DashboardEngine layoutId="command_center" />
+        <DashboardEngine layoutId={layoutId} />
       </BobPermissionGuard>
     </div>
   );

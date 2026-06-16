@@ -18,7 +18,8 @@ export function AtRiskListWidget({
 
   const students = snapshot?.atRiskStudents ?? [];
 
-  const isCommandCenterToday = placement.id === "cc-at-risk";
+  const isCommandCenterToday =
+    placement.id === "cc-at-risk" || placement.id === "coach-at-risk";
 
   return (
     <DashboardCard
@@ -31,7 +32,11 @@ export function AtRiskListWidget({
       }
       action={
         <Link
-          href="/app/bob/roster"
+          href={
+            snapshot?.scope.podId
+              ? `/app/bob/roster?pod=${encodeURIComponent(snapshot.scope.podId)}`
+              : "/app/bob/roster"
+          }
           className="text-sm font-medium text-gray-600 hover:text-gray-900"
         >
           View all →
@@ -55,7 +60,7 @@ export function AtRiskListWidget({
                 <span className="ml-2 text-xs text-gray-500">({s.status})</span>
               </span>
               <Link
-                href={`/app/bob/roster/${s.id}`}
+                href={`/app/bob/roster?id=${encodeURIComponent(s.id)}`}
                 className="text-orange-600 hover:text-orange-700 shrink-0 text-xs font-medium"
               >
                 View →

@@ -17,7 +17,7 @@ export function curatedRosterListColumns(
   const all = importantRosterTableColumns(schema);
   const headshot =
     all.find((f) => f.type === "multipleAttachments" && /headshot/i.test(f.name)) ??
-    all.find((f) => /headshot/i.test(f.name)) ??
+    all.find((f) => /headshot|student\s*photo|profile\s*photo|^photo$/i.test(f.name)) ??
     null;
 
   const withoutHeadshot = all.filter((f) => f !== headshot);

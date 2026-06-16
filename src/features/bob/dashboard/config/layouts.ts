@@ -1,5 +1,5 @@
 import type { DashboardLayoutConfig } from "../types";
-import { COMMAND_CENTER_KPIS, POD_OPS_KPIS } from "./metrics";
+import { COACH_HOME_KPIS, COMMAND_CENTER_KPIS, POD_OPS_KPIS } from "./metrics";
 
 export const DASHBOARD_LAYOUTS: Record<
   import("../types").DashboardLayoutId,
@@ -108,6 +108,84 @@ export const DASHBOARD_LAYOUTS: Record<
             title: "Blitz Teams",
             colSpan: 4,
             permissions: ["dashboard.view"],
+          },
+        ],
+      },
+    ],
+  },
+  coach_home: {
+    id: "coach_home",
+    sections: [
+      {
+        id: "kpis",
+        widgets: [
+          {
+            id: "coach-kpis",
+            kind: "kpi_row",
+            metrics: COACH_HOME_KPIS,
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "attention",
+        widgets: [
+          {
+            id: "coach-escalation",
+            kind: "attention_summary",
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "quick",
+        widgets: [
+          {
+            id: "coach-quick-actions",
+            kind: "quick_actions",
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "today",
+        title: "Today on your track",
+        columns: 3,
+        widgets: [
+          {
+            id: "coach-attendance",
+            kind: "attendance_summary",
+            title: "Attendance today",
+            colSpan: 8,
+            permissions: ["dashboard.view", "attendance.view"],
+          },
+          {
+            id: "coach-at-risk",
+            kind: "at_risk_list",
+            title: "Students needing attention",
+            colSpan: 4,
+            permissions: ["dashboard.view", "roster.view"],
+          },
+        ],
+      },
+      {
+        id: "work",
+        title: "Your queues",
+        columns: 2,
+        widgets: [
+          {
+            id: "coach-queues",
+            kind: "action_queues",
+            title: "Action queues",
+            colSpan: 6,
+            permissions: ["dashboard.view"],
+          },
+          {
+            id: "coach-milestones",
+            kind: "milestone_summary",
+            title: "Deliverables on your track",
+            colSpan: 6,
+            permissions: ["dashboard.view", "milestones.view"],
           },
         ],
       },

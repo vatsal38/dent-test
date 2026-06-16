@@ -41,9 +41,13 @@ export function SubmissionFilters({
       <div className="md:col-span-2">
         <select
           value={filters.type}
-          onChange={(e) =>
-            set({ type: e.target.value as BobSubmissionType | "" })
-          }
+          onChange={(e) => {
+            const nextType = e.target.value as BobSubmissionType | "";
+            set({
+              type: nextType,
+              includeAllTypes: nextType ? true : filters.includeAllTypes,
+            });
+          }}
           className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
         >
           <option value="">All types</option>
@@ -110,6 +114,16 @@ export function SubmissionFilters({
             className="rounded border-gray-300 text-orange-600"
           />
           Mine
+        </label>
+        <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={filters.includeAllTypes}
+            disabled={Boolean(filters.type)}
+            onChange={(e) => set({ includeAllTypes: e.target.checked })}
+            className="rounded border-gray-300 text-orange-600"
+          />
+          All submission types
         </label>
         <label className="inline-flex items-center gap-2 text-xs text-gray-600">
           <input

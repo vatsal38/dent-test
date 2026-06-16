@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { buildBobReturnTo } from "@/lib/bobReturnUrl";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentAttendanceHistory } from "../../hooks/useStudentTabQueries";
 import { DetailCard, DetailCardGrid } from "../../widgets/DetailCard";
@@ -23,6 +25,8 @@ function statusLabel(date: string, status?: string | null): string {
 
 export function AttendanceTab() {
   const { student, tab } = useStudentDrawerContext();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data, isLoading, isFetching } = useStudentAttendanceHistory(
     student?.id ?? null,
     student?.podId,
@@ -97,12 +101,23 @@ export function AttendanceTab() {
       </div>
 
       <div className="flex justify-end">
-        <Link
-          href={`/app/bob/attendance/mark?pod=${encodeURIComponent(student.podId || "")}${student.track ? `&track=${encodeURIComponent(student.track)}` : ""}`}
-          className="text-sm font-medium text-orange-600"
-        >
-          Open issue triage →
-        </Link>
+        {(() => {
+          const markParams = new URLSearchParams();
+          if (student.podId) markParams.set("pod", student.podId);
+          if (student.track) markParams.set("track", student.track);
+          markParams.set(
+            "returnTo",
+            buildBobReturnTo(pathname, searchParams.toString()),
+          );
+          return (
+            <Link
+              href={`/app/bob/attendance/mark?${markParams.toString()}`}
+              className="text-sm font-medium text-orange-600"
+            >
+              Open issue triage →
+            </Link>
+          );
+        })()}
       </div>
 
       {isFetching && !isLoading ? (

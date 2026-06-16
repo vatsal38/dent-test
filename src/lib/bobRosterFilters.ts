@@ -54,7 +54,9 @@ export function createEmptyCondition(fieldId?: string): RosterFilterCondition {
 
 export function buildFilterFieldCatalog(
   schema: BobRosterSchemaField[] | null | undefined,
+  options?: { includeAirtableFields?: boolean },
 ): RosterFilterFieldDef[] {
+  const includeAirtableFields = options?.includeAirtableFields ?? false;
   const system: RosterFilterFieldDef[] = [
     {
       id: "sys:status",
@@ -142,17 +144,19 @@ export function buildFilterFieldCatalog(
     },
   ];
 
-  const airtable = importantRosterTableColumns(schema)
-    .filter((f) => !isSystemFilterRosterField(f.name))
-    .map((f) => ({
-    id: `airtable:${f.name}`,
-    label: f.name,
-    group: "Airtable fields",
-    kind: (/status|stage|grade|school|track|coach|pod|pronoun/i.test(f.name)
-      ? "select"
-      : "text") as "text" | "select",
-    path: `airtableFields.${f.name}`,
-  }));
+  const airtable = includeAirtableFields
+    ? importantRosterTableColumns(schema)
+        .filter((f) => !isSystemFilterRosterField(f.name))
+        .map((f) => ({
+          id: `airtable:${f.name}`,
+          label: f.name,
+          group: "Airtable fields",
+          kind: (/status|stage|grade|school|track|coach|pod|pronoun/i.test(f.name)
+            ? "select"
+            : "text") as "text" | "select",
+          path: `airtableFields.${f.name}`,
+        }))
+    : [];
 
   const seen = new Set<string>();
   return [...system, ...airtable].filter((f) => {

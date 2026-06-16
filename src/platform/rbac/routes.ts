@@ -64,6 +64,7 @@ export const BOB_ROUTES: BobRouteDef[] = [
   { path: "/app/bob/workflow", permission: "inbox.view" },
   { path: "/app/bob/interview", permission: "roster.view" },
   { path: "/app/bob/submit", permission: "submit.view" },
+  { path: "/app/bob/home", permission: "submit.view" },
   { path: "/app/bob/reports", permission: "dashboard.reports", fallback: "/app/bob" },
   { path: "/app/bob", permission: "dashboard.view" },
 ];
@@ -88,7 +89,7 @@ export function matchBobRoute(pathname: string): BobRouteDef | null {
 /** First allowed landing page for this access context (used when URL is forbidden). */
 export function getBobHomeHref(access: BobAccessContext): string {
   if (access.role === "student" && canAccess(access, "submit.view")) {
-    return "/app/bob/submit";
+    return "/app/bob/home";
   }
   if (canAccess(access, "myPod.view") && access.primaryPod) {
     return "/app/bob/my-pod";

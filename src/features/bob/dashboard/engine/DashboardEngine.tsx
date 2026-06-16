@@ -43,7 +43,7 @@ export function DashboardEngine({
     <div className={className}>
       {headerSlot}
 
-      {layoutId === "command_center" ? (
+      {layoutId === "command_center" || layoutId === "coach_home" ? (
         <div className="-mt-2 mb-2 flex justify-end">
           {renderWidget("alerts_dropdown", {
             snapshot: data,

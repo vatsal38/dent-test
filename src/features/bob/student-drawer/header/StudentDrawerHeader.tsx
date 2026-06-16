@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { StatusBadge } from "@/components/bob/RecruitmentUi";
 import { StudentHeadshot } from "./StudentHeadshot";
 import {
@@ -17,6 +18,7 @@ import {
   hasIndustryCredential,
 } from "../lib/profileSignals";
 import { useStudentSubmissions } from "../hooks/useStudentTabQueries";
+import { buildBobReturnTo } from "@/lib/bobReturnUrl";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "Active",
@@ -36,12 +38,24 @@ const STAGE_LABELS: Record<string, string> = {
 
 export function StudentDrawerHeader() {
   const { student, onClose, tab, setTab } = useStudentDrawerContext();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data: submissions = [] } = useStudentSubmissions(
     student?.id ?? null,
     tab,
   );
 
   if (!student) return null;
+
+  const returnTo = buildBobReturnTo(pathname, searchParams.toString());
+  const markParams = new URLSearchParams();
+  if (student.podId) markParams.set("pod", student.podId);
+  if (student.track) markParams.set("track", student.track);
+  markParams.set("returnTo", returnTo);
+  const submitParams = new URLSearchParams({
+    studentId: student.id,
+    returnTo,
+  });
 
   const name = studentDisplayName(student);
   const wellness = computeWellnessSignals(student, submissions);
@@ -105,13 +119,13 @@ export function StudentDrawerHeader() {
 
       <div className="px-5 pb-3 flex flex-wrap gap-2">
         <Link
-          href={`/app/bob/attendance/mark?pod=${encodeURIComponent(student.podId || "")}${student.track ? `&track=${encodeURIComponent(student.track)}` : ""}`}
+          href={`/app/bob/attendance/mark?${markParams.toString()}`}
           className="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 transition-colors"
         >
           Update attendance
         </Link>
         <Link
-          href={`/app/bob/submit?studentId=${encodeURIComponent(student.id)}`}
+          href={`/app/bob/submit?${submitParams.toString()}`}
           className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50"
         >
           Log incident

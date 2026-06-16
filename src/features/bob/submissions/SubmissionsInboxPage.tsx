@@ -77,7 +77,7 @@ export function SubmissionsInboxPage() {
     assignedTo: listParams.assignedTo,
     search: listParams.search,
     excludeArchived: listParams.excludeArchived,
-    archivedOnly: listParams.archivedOnly,
+    excludeTypes: listParams.excludeTypes,
   });
   const { data: staffData } = useBobStaffList();
   const items = data?.submissions ?? [];
@@ -156,7 +156,7 @@ export function SubmissionsInboxPage() {
       <PageHeader
         eyebrow="Workflow engine"
         title="Submissions"
-        description="Kanban triage for incidents, wellness, parent contacts, and feedback — drag cards to update status, bulk actions, and routed assignments."
+        description="Incidents and wellness checks by default. Check “All submission types” to include Blitz points and weekly progress."
         actions={
           <>
             <Link

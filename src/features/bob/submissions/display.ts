@@ -56,8 +56,18 @@ export function formatLabel(value: string | null | undefined): string {
 export function cardTitle(s: BobSubmission) {
   const student = s.student?.trim();
   if (s.type === "incident") {
-    const kind = formatLabel(s.incidentType) || "Incident";
-    return student ? `${student} · ${kind}` : kind === "Incident" ? "Behavior incident" : `Behavior incident · ${kind}`;
+    const raw = s.incidentType?.trim().toLowerCase();
+    const kind =
+      raw === "behavior"
+        ? "Behavior incident"
+        : raw === "safety"
+          ? "Safety incident"
+          : raw === "medical"
+            ? "Medical incident"
+            : raw === "parent_contact"
+              ? "Parent contact incident"
+              : formatLabel(s.incidentType) || "Incident";
+    return student ? `${student} · ${kind}` : kind;
   }
   if (s.type === "wellness_check") {
     const level = formatLabel(s.wellnessLevel);
@@ -115,7 +125,7 @@ export function cardSummary(s: BobSubmission) {
 export function eventTypeLabel(type: string) {
   switch (type) {
     case "status_change":
-      return "Status";
+      return "Status change";
     case "assignment":
       return "Assignment";
     case "routing":
@@ -128,7 +138,44 @@ export function eventTypeLabel(type: string) {
       return "Comment";
     case "created":
       return "Created";
+    case "updated":
+      return "Updated";
     default:
       return "Update";
   }
+}
+
+export function resolveActorLabel(
+  actorId: string | null | undefined,
+  staff: Array<{ id: string; name?: string | null; email?: string | null }>,
+): string {
+  if (!actorId) return "System";
+  const person = staff.find((s) => s.id === actorId);
+  if (person?.name?.trim()) return person.name.trim();
+  if (person?.email?.trim()) return person.email.trim();
+  return "Staff";
+}
+
+export function formatEventSummary(
+  type: string,
+  content: string | null | undefined,
+  meta?: Record<string, unknown> | null,
+): string | null {
+  if (content?.trim()) return content.trim();
+  if (type === "status_change" && meta) {
+    const from = meta.from != null ? String(meta.from) : "—";
+    const to = meta.to != null ? String(meta.to) : "—";
+    const source = meta.source ? ` (${String(meta.source)})` : "";
+    return `${from} → ${to}${source}`;
+  }
+  if (type === "assignment" && meta?.assignedTo) {
+    return `Assigned to ${String(meta.assignedTo)}`;
+  }
+  if (type === "routing" && meta?.routingReason) {
+    return String(meta.routingReason).replace(/_/g, " ");
+  }
+  if (type === "attachment" && meta?.filename) {
+    return `Added ${String(meta.filename)}`;
+  }
+  return null;
 }
