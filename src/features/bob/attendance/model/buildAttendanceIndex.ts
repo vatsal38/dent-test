@@ -233,6 +233,27 @@ export function isAirtableSourcedAttendance(record: BobAttendance): boolean {
   return Boolean(record.airtableRecordId && String(record.airtableRecordId).trim());
 }
 
+function dailyRecordPriority(record: BobAttendance): number {
+  if (isBaselineDailyRecord(record)) return 0;
+  if (isAirtableSourcedAttendance(record)) return 4;
+  if (isDailyAttendanceRecord(record)) return 3;
+  if (record.status) return 2;
+  return 1;
+}
+
+function shouldPreferDailyRecord(
+  existing: BobAttendance | undefined,
+  incoming: BobAttendance,
+): boolean {
+  if (!existing) return true;
+  const existingScore = dailyRecordPriority(existing);
+  const incomingScore = dailyRecordPriority(incoming);
+  if (incomingScore !== existingScore) return incomingScore > existingScore;
+  return Boolean(incoming.updatedAt && existing.updatedAt
+    ? incoming.updatedAt > existing.updatedAt
+    : false);
+}
+
 export function listExpectedEnrollments(
   pods: BobPod[],
   podFilter?: string,
@@ -327,7 +348,10 @@ export function buildStudentDayAttendance(
       r.podId || studentById.get(studentId)?.podId || UNASSIGNED_POD_ID;
     const dayKey = `${podId}|${studentId}|${r.date}`;
     if (isDailyAttendanceRecord(r) || r.status || isBaselineDailyRecord(r)) {
-      dailyByKey.set(dayKey, r);
+      const prev = dailyByKey.get(dayKey);
+      if (shouldPreferDailyRecord(prev, r)) {
+        dailyByKey.set(dayKey, r);
+      }
     }
   }
 
@@ -367,11 +391,18 @@ export function buildStudentDayAttendance(
 
       const requiredPunches = expectedPunchTypes(date);
       if (isShowcaseDay(date)) {
-        punches.am_in = { ...punches.am_in, state: "na" };
-        punches.am_out = { ...punches.am_out, state: "na" };
+        if (punches.am_in.state === "missing") {
+          punches.am_in = { ...punches.am_in, state: "na" };
+        }
+        if (punches.am_out.state === "missing") {
+          punches.am_out = { ...punches.am_out, state: "na" };
+        }
       } else if (requiredPunches.length === 0) {
+        // Outside program calendar — only gray out empty slots; keep synced punch times green.
         for (const pt of PUNCH_TYPES) {
-          punches[pt] = { ...punches[pt], state: "na" };
+          if (punches[pt].state === "missing") {
+            punches[pt] = { ...punches[pt], state: "na" };
+          }
         }
       }
 
