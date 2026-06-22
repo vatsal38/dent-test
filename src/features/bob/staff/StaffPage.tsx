@@ -9,6 +9,7 @@ import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
 import { PageHeaderSkeleton } from "@/design-system/patterns/PageHeaderSkeleton";
 import { Skeleton } from "@/components/Skeleton";
 import { parseApiError } from "@/platform/api/errors";
+import { BOB_POD_PLURAL, BOB_SITE_SUPPORTER } from "@/lib/bobDisplayTerminology";
 
 export function StaffPage() {
   const podsQuery = useBobPodsList({ limit: 200 });
@@ -72,14 +73,14 @@ export function StaffPage() {
     <div>
       <PageHeader
         title="Staff & coach roster"
-        description="View staff assignments and who is assigned to which tracks and students."
+        description="View staff assignments and who is assigned to which pods and students."
         actions={
           <>
             <Link
               href="/app/bob/pods"
               className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
             >
-              Tracks
+              {BOB_POD_PLURAL}
             </Link>
             <Link
               href="/app/bob/roster"
@@ -94,7 +95,7 @@ export function StaffPage() {
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {staffRows.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No staff found. Assign coaches on tracks or set coach names on students.
+            No staff found. Assign coaches on pods or set coach names on students.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -108,10 +109,10 @@ export function StaffPage() {
                     Role(s)
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tracks (coach)
+                    {BOB_POD_PLURAL} (coach)
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tracks (track supporter)
+                    {BOB_POD_PLURAL} ({BOB_SITE_SUPPORTER.toLowerCase()})
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Students

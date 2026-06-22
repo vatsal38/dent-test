@@ -5,13 +5,16 @@ import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { DashboardEngine } from "@/features/bob/dashboard";
 import { resolveDashboardLayoutId } from "@/features/bob/dashboard/resolveDashboardLayout";
 import { useBobAirtableSync } from "@/platform/query/hooks/useBobAirtableStatus";
+import { useBobSyncDataRefresh } from "@/platform/query/hooks/useBobSyncDataRefresh";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { bobRoleLabel } from "@/platform/rbac/roles";
+import { BOB_POD_PLURAL, BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
 
 export function BobCommandCenterPage() {
   const { data: me, role, caps, access } = useBobAccess();
   const syncMutation = useBobAirtableSync();
+  useBobSyncDataRefresh();
   const layoutId = resolveDashboardLayoutId(role);
   const isCoachHome = layoutId === "coach_home";
 
@@ -19,12 +22,12 @@ export function BobCommandCenterPage() {
     <div>
       <PageHeader
         eyebrow="Bet on Baltimore"
-        title={isCoachHome ? "Track dashboard" : "Command Center"}
+        title={isCoachHome ? `${BOB_POD_SINGULAR} dashboard` : "Command Center"}
         description={
           isCoachHome && me?.primaryPod
             ? `${bobRoleLabel(role)} · ${me.primaryPod.name} — today's attendance, students who need you, and open incidents.`
             : isCoachHome
-              ? `${bobRoleLabel(role)} — scoped to your assigned tracks.`
+              ? `${bobRoleLabel(role)} — scoped to your assigned ${BOB_POD_PLURAL.toLowerCase()}.`
               : "Operational overview — what needs attention, who is blocked, what is late."
         }
         actions={

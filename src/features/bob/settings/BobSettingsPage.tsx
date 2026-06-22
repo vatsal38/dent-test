@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 import { useState } from "react";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { BobSyncStatusBadge } from "@/features/bob/sync/BobSyncStatusBadge";
@@ -66,7 +67,7 @@ export function BobSettingsPage() {
 
   async function handlePipelineReset() {
     const ok = window.confirm(
-      'Type OK to wipe bob_recruitment and bob_students in Mongo. This cannot be undone.',
+      "Type OK to wipe bob_recruitment and bob_students in Mongo. This cannot be undone.",
     );
     if (!ok) return;
     setResetBusy(true);
@@ -158,7 +159,7 @@ export function BobSettingsPage() {
                 href="/app/bob/pods"
                 className="text-orange-600 hover:underline"
               >
-                Track assignments →
+                {BOB_POD_SINGULAR} assignments →
               </Link>
             </li>
           </ul>
@@ -170,8 +171,8 @@ export function BobSettingsPage() {
               Danger zone
             </h2>
             <p className="text-sm text-red-700 mb-3">
-              Clears recruitment and student collections in Mongo (not Airtable).
-              Requires confirm token on the API.
+              Clears recruitment and student collections in Mongo (not
+              Airtable). Requires confirm token on the API.
             </p>
             <button
               type="button"

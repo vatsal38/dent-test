@@ -149,7 +149,7 @@ export const DASHBOARD_LAYOUTS: Record<
       },
       {
         id: "today",
-        title: "Today on your track",
+        title: "Today on your pod",
         columns: 3,
         widgets: [
           {
@@ -183,7 +183,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "coach-milestones",
             kind: "milestone_summary",
-            title: "Deliverables on your track",
+            title: "Deliverables on your pod",
             colSpan: 6,
             permissions: ["dashboard.view", "milestones.view"],
           },

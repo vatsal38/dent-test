@@ -232,8 +232,8 @@ function buildAlerts(
     alerts.push({
       id: "open-discrepancies",
       severity: "warning",
-      title: `${openDiscrepancies} open issue${openDiscrepancies === 1 ? "" : "s"} to resolve`,
-      body: "Review in the issues queue or issue triage.",
+      title: `${openDiscrepancies} attendance correction${openDiscrepancies === 1 ? "" : "s"} to resolve`,
+      body: "Review in attendance corrections.",
       href: "/app/bob/attendance/discrepancies",
       count: openDiscrepancies,
     });

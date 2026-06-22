@@ -14,7 +14,6 @@ import { getBobHomeHref } from "@/platform/rbac/routes";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { Skeleton } from "@/components/Skeleton";
 import { AppLogo } from "@/components/AppLogo";
-import { UserAvatar } from "@/components/UserAvatar";
 import { APP_NAME, PARTNERSHIPS_SECTION } from "@/platform/brand";
 import { useNotifications } from "@/components/NotificationDrawer";
 import {
@@ -34,6 +33,7 @@ import {
   HiOutlineMenu,
   HiOutlineX,
   HiOutlineLink,
+  HiOutlineLogout,
 } from "react-icons/hi";
 
 function AirtableStatusBadge() {
@@ -139,7 +139,7 @@ function AirtableStatusBadge() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user, logout, firebaseUser } = useAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [bobMoreOpen, setBobMoreOpen] = useState(false);
@@ -436,17 +436,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <AirtableStatusBadge />
             )}
           </div>
-          <div className="flex items-center gap-2 pt-2">
-            <UserAvatar
-              name={user?.name}
-              photoURL={firebaseUser?.photoURL ?? user?.photoURL}
-              size="sm"
-            />
+          <div className="pt-2">
+            {user?.name ? (
+              <p className="mb-2 truncate px-1 text-sm font-medium text-gray-900">
+                {user.name}
+              </p>
+            ) : null}
             <button
+              type="button"
               onClick={logout}
-              className="text-sm text-gray-600 hover:text-gray-900 text-left"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 hover:text-red-800"
             >
-              Sign Out
+              <HiOutlineLogout className="h-4 w-4 shrink-0" />
+              Sign out
             </button>
           </div>
         </div>
@@ -467,11 +469,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="flex items-center gap-1">
           {notifications.bell}
-          <UserAvatar
-            name={user?.name}
-            photoURL={firebaseUser?.photoURL ?? user?.photoURL}
-            size="sm"
-          />
         </div>
       </header>
 
@@ -479,19 +476,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-w-0 pt-14 md:pt-0 md:ml-64">
         <div className="hidden md:flex items-center justify-end gap-2 px-6 py-3 border-b border-gray-100 bg-white sticky top-0 z-20">
           {notifications.bell}
-          <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-            <UserAvatar
-              name={user?.name}
-              photoURL={firebaseUser?.photoURL ?? user?.photoURL}
-              size="sm"
-            />
-            <button
-              onClick={logout}
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              Sign out
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 hover:text-red-800"
+          >
+            <HiOutlineLogout className="h-4 w-4 shrink-0" />
+            Sign out
+          </button>
         </div>
         <div className="min-h-screen md:min-h-0 px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 bg-white">
           <DentOpsRouteGuard>{children}</DentOpsRouteGuard>

@@ -319,7 +319,7 @@ export function AttendanceHubPage() {
           />
           <BobActionButton
             href="/app/bob/attendance/discrepancies"
-            label={`Correction triage (${workspace.summary.openDiscrepancies})`}
+            label={`Attendance corrections (${workspace.summary.openDiscrepancies})`}
             icon={<FiAlertTriangle />}
             variant={
               workspace.summary.openDiscrepancies ? "warning" : "outline"

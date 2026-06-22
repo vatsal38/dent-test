@@ -20,10 +20,14 @@ function kpiToneClasses(id: string) {
     case "checkedInToday":
       return "bg-orange-50 border-orange-200 hover:border-orange-300";
     case "deliverablesCompleted":
+    case "deliverablesSubmittedPctThisWeek":
+    case "deliverablesCompletedPctThisWeek":
     case "milestonesThisWeek":
       return "bg-teal-50 border-teal-200 hover:border-teal-300";
     case "openDiscrepancies":
       return "bg-yellow-50 border-yellow-200 hover:border-yellow-300";
+    case "openIncidents":
+      return "bg-red-50 border-red-200 hover:border-red-300";
     default:
       return "bg-white border-gray-200 hover:border-orange-200";
   }

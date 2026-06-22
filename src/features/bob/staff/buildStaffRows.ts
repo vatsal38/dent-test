@@ -1,10 +1,11 @@
 import type { BobPod } from "@/platform/api/bob/pods";
 import type { BobStudent } from "@/platform/api/bob/students";
+import { BOB_SITE_SUPPORTER } from "@/lib/bobDisplayTerminology";
 
 export type StaffRow = {
   id: string;
   label: string;
-  roles: ("Coach" | "Track supporter" | "Coach (student)")[];
+  roles: ("Coach" | typeof BOB_SITE_SUPPORTER | "Coach (student)")[];
   podIdsAsCoach: string[];
   podIdsAsSiteSupporter: string[];
   studentIds: string[];
@@ -19,7 +20,7 @@ export function buildStaffRows(
   function getOrCreate(
     id: string,
     label: string,
-    role: "Coach" | "Track supporter" | "Coach (student)",
+    role: "Coach" | typeof BOB_SITE_SUPPORTER | "Coach (student)",
   ) {
     let row = byId.get(id);
     if (!row) {
@@ -50,10 +51,10 @@ export function buildStaffRows(
       }
     }
     if (p.siteSupporterId && p.siteSupporterId !== p.coachId) {
-      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Track supporter");
+      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, BOB_SITE_SUPPORTER);
       row.podIdsAsSiteSupporter.push(p.id);
     } else if (p.siteSupporterId) {
-      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, "Track supporter");
+      const row = getOrCreate(p.siteSupporterId, p.siteSupporterId, BOB_SITE_SUPPORTER);
       if (!row.podIdsAsSiteSupporter.includes(p.id)) {
         row.podIdsAsSiteSupporter.push(p.id);
       }

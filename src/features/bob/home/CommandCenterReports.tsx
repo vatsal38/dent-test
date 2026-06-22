@@ -243,7 +243,7 @@ export function CommandCenterReports({ stats, loading }: Props) {
       <section className="rounded-lg border border-gray-200 bg-white p-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
           <HiOutlineClipboardCheck className="w-4 h-4 text-orange-500" />
-          Discrepancies
+          Attendance corrections
         </p>
         <p className="text-2xl font-bold text-gray-900">
           {stats.cards.openDiscrepancies}
@@ -252,7 +252,7 @@ export function CommandCenterReports({ stats, loading }: Props) {
           href="/app/bob/attendance/discrepancies"
           className="text-sm text-orange-600 hover:underline mt-1 inline-block"
         >
-          View discrepancies →
+          View attendance corrections →
         </Link>
       </section>
     </div>

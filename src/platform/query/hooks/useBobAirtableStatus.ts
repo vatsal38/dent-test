@@ -27,6 +27,7 @@ export function useBobAirtableSync() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: bobKeys.airtable.status() });
       qc.invalidateQueries({ queryKey: bobKeys.stats() });
+      qc.invalidateQueries({ queryKey: bobKeys.dashboard() });
     },
   });
 }

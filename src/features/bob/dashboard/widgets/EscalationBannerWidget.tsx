@@ -39,7 +39,7 @@ export function EscalationBannerWidget({
       >
         {(att.openIncidents ?? 0) > 0
           ? "Open operations inbox →"
-          : "Review discrepancies →"}
+          : "Review attendance corrections →"}
       </Link>
     </div>
   );

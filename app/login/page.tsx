@@ -14,7 +14,7 @@ import { resolveBobAccess } from '@/platform/rbac/resolveBobAccess';
 
 const DEMO_ROLES: { role: DemoLoginRole; label: string }[] = [
   { role: 'admin', label: 'Admin' },
-  { role: 'site_supporter', label: 'Track Supporter' },
+  { role: 'site_supporter', label: 'Site Supporter' },
   { role: 'coach', label: 'Coach' },
   { role: 'student', label: 'Student' },
 ];

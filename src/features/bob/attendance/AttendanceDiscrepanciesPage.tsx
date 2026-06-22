@@ -80,7 +80,7 @@ export function AttendanceDiscrepanciesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mt-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Correction triage
+            Attendance corrections
           </h1>
           <p className="text-gray-600 text-sm mt-1">
             Youth submit absence and time corrections through One Stop. Review
@@ -90,7 +90,7 @@ export function AttendanceDiscrepanciesPage() {
           </p>
           {isBeforeProgramStart(new Date().toISOString().slice(0, 10)) ? (
             <p className="text-sm text-amber-800 mt-2">
-              Program has not started yet — discrepancy counts will stay at zero
+              Program has not started yet — attendance correction counts will stay at zero
               until Mon {PROGRAM_START_DATE}.
             </p>
           ) : null}

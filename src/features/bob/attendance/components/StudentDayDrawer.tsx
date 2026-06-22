@@ -67,7 +67,7 @@ export function StudentDayDrawer({
                 href="/app/bob/attendance/discrepancies"
                 className="text-orange-600 hover:underline font-medium"
               >
-                correction triage
+                attendance corrections
               </Link>
               .
             </div>
@@ -79,7 +79,7 @@ export function StudentDayDrawer({
             href={`/app/bob/attendance/discrepancies?date=${day.date}`}
             className="flex-1 min-w-[140px] text-center px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50"
           >
-            Correction triage
+            Attendance corrections
           </Link>
           <button
             type="button"

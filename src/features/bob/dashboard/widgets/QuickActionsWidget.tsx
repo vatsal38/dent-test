@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BOB_MY_POD } from "@/lib/bobDisplayTerminology";
 import type { BobPermissionId } from "@/platform/rbac/permissions";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
@@ -32,7 +33,7 @@ const LEADERSHIP_LINKS: QuickLink[] = [
     perm: "inbox.view",
   },
   {
-    label: "My track",
+    label: BOB_MY_POD,
     desc: "Your students",
     href: "/app/bob/my-pod",
     perm: "myPod.view",
@@ -61,7 +62,7 @@ function coachLinks(podId: string | null): QuickLink[] {
 
   return [
     {
-      label: "My track",
+      label: BOB_MY_POD,
       desc: "Student list & shortcuts",
       href: "/app/bob/my-pod",
       perm: "myPod.view",

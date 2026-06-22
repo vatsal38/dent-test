@@ -32,6 +32,8 @@ export type BobDashboardMetricKey =
   | "checkedInPctToday"
   | "deliverablesSubmitted"
   | "deliverablesCompleted"
+  | "deliverablesSubmittedPctThisWeek"
+  | "deliverablesCompletedPctThisWeek"
   | "milestonesThisWeek"
   | "openDiscrepancies"
   | "openIncidents"
@@ -173,6 +175,8 @@ export interface BobDashboardSnapshot {
     checkedInPctToday?: number;
     deliverablesSubmitted?: number;
     deliverablesCompleted?: number;
+    deliverablesSubmittedPctThisWeek?: number;
+    deliverablesCompletedPctThisWeek?: number;
     milestonesThisWeek: number;
     openDiscrepancies: number;
     openIncidents?: number;

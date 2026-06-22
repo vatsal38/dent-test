@@ -36,6 +36,14 @@ export function commandCenterToKpis(stats: BobCommandCenterStats) {
         value: stats.cards.deliverablesCompleted ?? 0,
         unit: "count" as const,
       },
+      deliverablesSubmittedPctThisWeek: {
+        value: stats.cards.deliverablesSubmittedPctThisWeek ?? 0,
+        unit: "percent" as const,
+      },
+      deliverablesCompletedPctThisWeek: {
+        value: stats.cards.deliverablesCompletedPctThisWeek ?? 0,
+        unit: "percent" as const,
+      },
       milestonesThisWeek: { value: stats.cards.milestonesThisWeek, unit: "percent" as const },
       openDiscrepancies: { value: stats.cards.openDiscrepancies, unit: "count" as const },
       openIncidents: { value: 0, unit: "count" as const },

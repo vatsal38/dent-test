@@ -22,7 +22,7 @@ export function AppLogo({
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <Image
-        src="/brand/dent-logo.svg"
+        src="/brand/dent-logo.png"
         alt=""
         width={s.box}
         height={s.box}

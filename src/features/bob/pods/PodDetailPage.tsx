@@ -17,7 +17,13 @@ import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
 import { useBobStaffList } from "../../../platform/query/hooks/useBobStaff";
 import { StaffMemberSelect } from "./StaffMemberSelect";
 import { staffForRole, resolveStaffLabel, podCoachIds, resolveStaffLabels } from "./staffDisplay";
-import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
+import {
+  BOB_MY_POD,
+  BOB_POD_PLURAL,
+  BOB_POD_SINGULAR,
+  BOB_SITE_SUPPORTER,
+  formatBobTrackDisplayLabel,
+} from "@/lib/bobDisplayTerminology";
 
 export function PodDetailPage() {
   const { can } = useBobAccess();
@@ -119,7 +125,7 @@ export function PodDetailPage() {
   if (loading) {
     return (
       <div>
-        <PageHeader title="Manage track" description="Loading track…" />
+        <PageHeader title={`Manage ${BOB_POD_SINGULAR.toLowerCase()}`} description={`Loading ${BOB_POD_SINGULAR.toLowerCase()}…`} />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
@@ -128,15 +134,15 @@ export function PodDetailPage() {
   if (error || !pod) {
     return (
       <div>
-        <PageHeader title="Manage track" />
+        <PageHeader title={`Manage ${BOB_POD_SINGULAR.toLowerCase()}`} />
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error || "Track not found"}
+          {error || `${BOB_POD_SINGULAR} not found`}
         </div>
         <Link
           href="/app/bob/pods"
           className="mt-4 inline-block text-sm text-orange-600 hover:underline"
         >
-          ← Back to tracks
+          ← Back to {BOB_POD_PLURAL.toLowerCase()}
         </Link>
       </div>
     );
@@ -165,13 +171,13 @@ export function PodDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={displayName}
-        description="Assign coach, track supporter, and students. Changes sync to Airtable Programs."
+        description={`Assign coach, ${BOB_SITE_SUPPORTER.toLowerCase()}, and students. Changes sync to Airtable Programs.`}
         actions={
           <Link
             href="/app/bob/pods"
             className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
           >
-            ← All tracks
+            ← All {BOB_POD_PLURAL.toLowerCase()}
           </Link>
         }
       />
@@ -220,7 +226,7 @@ export function PodDetailPage() {
       ) : null}
 
       <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
-        <h2 className="text-lg font-semibold text-gray-900">Track details</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{BOB_POD_SINGULAR} details</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -250,15 +256,15 @@ export function PodDetailPage() {
           </div>
           <StaffMemberSelect
             label="Coach"
-            hint="Controls My Track access and coach-scoped views."
+            hint={`Controls ${BOB_MY_POD} access and coach-scoped views.`}
             value={editCoachId}
             onChange={setEditCoachId}
             staff={coachOptions.length ? coachOptions : staff}
             disabled={!canEditPod}
           />
           <StaffMemberSelect
-            label="Track supporter"
-            hint="Can mark attendance for this track."
+            label={BOB_SITE_SUPPORTER}
+            hint={`Can mark attendance for this ${BOB_POD_SINGULAR.toLowerCase()}.`}
             value={editSiteSupporterId}
             onChange={setEditSiteSupporterId}
             staff={supporterOptions.length ? supporterOptions : staff}

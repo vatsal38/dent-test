@@ -1,3 +1,4 @@
+import { BOB_MY_POD, BOB_POD_PLURAL } from "@/lib/bobDisplayTerminology";
 import type { BobPermissionId } from "./permissions";
 
 export type BobNavConfigItem = {
@@ -34,7 +35,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
   },
   {
     href: "/app/bob/my-pod",
-    label: "My Track",
+    label: BOB_MY_POD,
     iconKey: "myPod",
     permission: "myPod.view",
     section: "primary",
@@ -56,7 +57,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
   },
   {
     href: "/app/bob/pods",
-    label: "Tracks",
+    label: BOB_POD_PLURAL,
     iconKey: "pods",
     permission: "pods.view",
     section: "primary",

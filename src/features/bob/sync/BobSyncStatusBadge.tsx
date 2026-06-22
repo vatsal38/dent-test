@@ -5,6 +5,7 @@ import {
   useBobAirtableStatus,
   useBobAirtableSync,
 } from "@/platform/query/hooks/useBobAirtableStatus";
+import { useBobSyncDataRefresh } from "@/platform/query/hooks/useBobSyncDataRefresh";
 import { parseApiError } from "@/platform/api/errors";
 
 function formatRelativeTime(dateStr: string | null | undefined) {
@@ -21,6 +22,7 @@ function formatRelativeTime(dateStr: string | null | undefined) {
 export function BobSyncStatusBadge() {
   const { data: status, isLoading, error, refetch } = useBobAirtableStatus();
   const syncMutation = useBobAirtableSync();
+  useBobSyncDataRefresh();
 
   const syncing = syncMutation.isPending || Boolean(status?.running);
 
@@ -104,7 +106,9 @@ export function BobSyncStatusBadge() {
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-green-800">Airtable</p>
         <p className="text-xs text-green-700 truncate">
-          {syncing ? "Syncing…" : `Synced ${formatRelativeTime(lastSync)}`}
+          {syncing
+            ? status?.progress?.message || "Syncing FY26 roster…"
+            : `Synced ${formatRelativeTime(lastSync)}`}
         </p>
       </div>
       <button

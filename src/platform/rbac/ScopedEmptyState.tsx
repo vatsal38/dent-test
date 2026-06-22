@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { BobAccessContext } from "./types";
 import { bobRoleLabel } from "./roles";
+import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 
 type ScopedEmptyStateProps = {
   access: BobAccessContext;
@@ -22,9 +23,9 @@ export function ScopedEmptyState({
 }: ScopedEmptyStateProps) {
   const scopeHint =
     access.scopeType === "pod" && access.primaryPod
-      ? `your track (${access.primaryPod.name})`
+      ? `your ${BOB_POD_SINGULAR.toLowerCase()} (${access.primaryPod.name})`
       : access.scopeType === "site" && access.siteNames.length
-        ? `your track${access.siteNames.length > 1 ? "s" : ""} (${access.siteNames.join(", ")})`
+        ? `your ${BOB_POD_SINGULAR.toLowerCase()}${access.siteNames.length > 1 ? "s" : ""} (${access.siteNames.join(", ")})`
         : `your ${bobRoleLabel(access.role).toLowerCase()} scope`;
 
   return (
@@ -32,7 +33,7 @@ export function ScopedEmptyState({
       <p>No {resource} found for {scopeHint}.</p>
       {access.role === "coach" && !access.primaryPod && (
         <p className="mt-2 text-sm">
-          Ask a program manager to assign you to a track.
+          Ask a program manager to assign you to a {BOB_POD_SINGULAR.toLowerCase()}.
         </p>
       )}
       {actionHref && actionLabel && (

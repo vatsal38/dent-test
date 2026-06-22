@@ -18,7 +18,13 @@ import {
   getBobPodsImportStatus,
   startBobPodsImport,
 } from "@/platform/api/bob/pods";
-import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
+import {
+  BOB_MY_POD,
+  BOB_POD_PLURAL,
+  BOB_POD_SINGULAR,
+  BOB_SITE_SUPPORTER,
+  formatBobTrackDisplayLabel,
+} from "@/lib/bobDisplayTerminology";
 
 export function PodsListPage() {
   const { access, can } = useBobAccess();
@@ -35,8 +41,8 @@ export function PodsListPage() {
     return (
       <div>
         <PageHeader
-          title="Tracks"
-          description="FY26 program tracks from Airtable Programs."
+          title={BOB_POD_PLURAL}
+          description="FY26 program pods from Airtable Programs."
         />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
@@ -56,20 +62,20 @@ export function PodsListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tracks"
-        description="Tracks sync with Airtable Programs. Create new tracks here or re-import to refresh from Airtable."
+        title={BOB_POD_PLURAL}
+        description="Pods sync with Airtable Programs. Create new pods here or re-import to refresh from Airtable."
         actions={
           <>
             <BobActionButton
               href="/app/bob/my-pod"
-              label="My Track"
+              label={BOB_MY_POD}
               icon={<FiUsers />}
               variant="outline"
             />
             <BobPermissionGuard permission="pods.create" silent>
               <BobActionButton
                 href="/app/bob/pods/new"
-                label="Create track"
+                label={`Create ${BOB_POD_SINGULAR.toLowerCase()}`}
                 icon={<FiPlus />}
                 variant="primary"
               />
@@ -111,7 +117,7 @@ export function PodsListPage() {
               access={access}
               resource="pods"
               actionHref={can("pods.create") ? "/app/bob/pods/new" : undefined}
-              actionLabel={can("pods.create") ? "Create track" : undefined}
+              actionLabel={can("pods.create") ? `Create ${BOB_POD_SINGULAR.toLowerCase()}` : undefined}
             />
             <p className="mt-3 text-sm text-gray-500 max-w-md mx-auto">
               No tracks yet. Create a track or import from Airtable Programs.
@@ -135,7 +141,7 @@ export function PodsListPage() {
                     Coaches
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Track supporter
+                    {BOB_SITE_SUPPORTER}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Students

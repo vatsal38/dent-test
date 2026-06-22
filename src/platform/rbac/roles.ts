@@ -1,5 +1,6 @@
 import type { BobRole } from "@/platform/api/bob/me";
 import type { BobOpsRole } from "./types";
+import { BOB_SITE_SUPPORTER } from "@/lib/bobDisplayTerminology";
 
 export function bobRoleLabel(role: BobOpsRole): string {
   switch (role) {
@@ -8,7 +9,7 @@ export function bobRoleLabel(role: BobOpsRole): string {
     case "program_manager":
       return "Program Manager";
     case "site_supporter":
-      return "Track Supporter";
+      return BOB_SITE_SUPPORTER;
     case "coach":
       return "Coach";
     case "student":

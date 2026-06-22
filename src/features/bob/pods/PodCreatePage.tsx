@@ -11,6 +11,10 @@ import { staffForRole } from "@/features/bob/pods/staffDisplay";
 import { parseApiError } from "@/platform/api/errors";
 import { getBobTrackFormOptions } from "@/platform/api/bob/pods";
 import { Skeleton } from "@/components/Skeleton";
+import {
+  BOB_POD_SINGULAR,
+  BOB_SITE_SUPPORTER,
+} from "@/lib/bobDisplayTerminology";
 
 export function PodCreatePage() {
   const router = useRouter();
@@ -79,7 +83,7 @@ export function PodCreatePage() {
   if (optionsLoading) {
     return (
       <div>
-        <PageHeader title="Create track" description="Adds a row to Airtable Programs and Dent." />
+        <PageHeader title={`Create ${BOB_POD_SINGULAR.toLowerCase()}`} description="Adds a row to Airtable Programs and Dent." />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
@@ -88,8 +92,8 @@ export function PodCreatePage() {
   return (
     <div className="max-w-xl">
       <PageHeader
-        title="Create track"
-        description="Creates the track in Airtable Programs and in Dent. Assign coach and students on the next screen."
+        title={`Create ${BOB_POD_SINGULAR.toLowerCase()}`}
+        description={`Creates the ${BOB_POD_SINGULAR.toLowerCase()} in Airtable Programs and in Dent. Assign coach and students on the next screen.`}
       />
       <form
         onSubmit={(e) => void handleSubmit(e)}
@@ -97,7 +101,7 @@ export function PodCreatePage() {
       >
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Track name
+            Pod name
           </label>
           <input
             type="text"
@@ -173,7 +177,7 @@ export function PodCreatePage() {
           staff={coachOptions.length ? coachOptions : staff}
         />
         <StaffMemberSelect
-          label="Track supporter (optional)"
+          label={`${BOB_SITE_SUPPORTER} (optional)`}
           value={siteSupporterId}
           onChange={setSiteSupporterId}
           staff={supporterOptions.length ? supporterOptions : staff}
@@ -191,7 +195,7 @@ export function PodCreatePage() {
             disabled={createPod.isPending}
             className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60"
           >
-            {createPod.isPending ? "Creating…" : "Create track"}
+            {createPod.isPending ? "Creating…" : `Create ${BOB_POD_SINGULAR.toLowerCase()}`}
           </button>
           <Link
             href="/app/bob/pods"

@@ -1,4 +1,4 @@
-"use client";
+import { BOB_POD_PLURAL, BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 
 import { useMemo } from "react";
 import type { AttendanceWorkspaceData, StudentDayAttendance } from "../types";
@@ -85,7 +85,7 @@ export function DailyAttendanceTable({
       <div className="p-8 text-center text-gray-500 text-sm bg-white border border-gray-200 rounded-lg">
         {search.trim()
           ? "No students match your search."
-          : "No students in scope. Select a track or assign students from the Tracks page."}
+          : `No students in scope. Select a ${BOB_POD_SINGULAR.toLowerCase()} or assign students from the ${BOB_POD_PLURAL} page.`}
       </div>
     );
   }

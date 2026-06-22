@@ -11,7 +11,7 @@ export interface MetricDefinition {
 export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   studentsEnrolled: {
     key: "studentsEnrolled",
-    label: "Active BoB students",
+    label: "Active BoB students (FY26)",
     format: (v) => v,
     href: ({ podId }) =>
       podId
@@ -63,6 +63,18 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
     format: (v) => v,
     href: () => "/app/bob/deliverables",
   },
+  deliverablesSubmittedPctThisWeek: {
+    key: "deliverablesSubmittedPctThisWeek",
+    label: "% of deliverables submitted this week",
+    format: (v) => `${v}%`,
+    href: () => "/app/bob/deliverables",
+  },
+  deliverablesCompletedPctThisWeek: {
+    key: "deliverablesCompletedPctThisWeek",
+    label: "% of deliverables completed this week",
+    format: (v) => `${v}%`,
+    href: () => "/app/bob/deliverables",
+  },
   milestonesThisWeek: {
     key: "milestonesThisWeek",
     label: "Deliverables logged",
@@ -71,7 +83,7 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   },
   openDiscrepancies: {
     key: "openDiscrepancies",
-    label: "Open discrepancies",
+    label: "Attendance corrections",
     format: (v) => v,
     href: () => "/app/bob/attendance/discrepancies",
   },
@@ -147,7 +159,10 @@ export const POD_OPS_KPIS: BobDashboardMetricKey[] = [
 export const COACH_HOME_KPIS: BobDashboardMetricKey[] = [
   "studentsEnrolled",
   "checkedInPctToday",
-  "noShowsToday",
+  "deliverablesSubmittedPctThisWeek",
+  "deliverablesCompletedPctThisWeek",
+  "openDiscrepancies",
   "openIncidents",
+  "noShowsToday",
   "atRiskCount",
 ];

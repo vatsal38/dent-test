@@ -1,5 +1,6 @@
 "use client";
 
+import { BOB_POD_PLURAL } from "@/lib/bobDisplayTerminology";
 import type { DashboardScope } from "../types";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
@@ -53,7 +54,7 @@ export function DashboardFilters({
               scope.level === "organization" && !scope.podId,
             )}
           >
-            All my tracks
+            All my {BOB_POD_PLURAL.toLowerCase()}
           </button>
         ) : null}
         {assignedPods.map((pod) => (

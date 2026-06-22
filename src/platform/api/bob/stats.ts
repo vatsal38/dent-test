@@ -8,6 +8,8 @@ export interface BobCommandCenterStats {
     checkedInToday: number;
     checkedInPctToday?: number;
     deliverablesCompleted?: number;
+    deliverablesSubmittedPctThisWeek?: number;
+    deliverablesCompletedPctThisWeek?: number;
     milestonesThisWeek: number;
     openDiscrepancies: number;
   };

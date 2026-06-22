@@ -16,7 +16,7 @@ export function DiscrepancyList({
   if (!items.length) {
     return (
       <div className="p-8 text-center text-gray-500 text-sm bg-white border border-gray-200 rounded-lg">
-        No open discrepancies in this range. Proactive alerts will appear when punches are missing.
+        No open attendance corrections in this range. Proactive alerts will appear when punches are missing.
       </div>
     );
   }

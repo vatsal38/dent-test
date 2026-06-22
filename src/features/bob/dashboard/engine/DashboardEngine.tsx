@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DashboardEngineProps, DashboardScope } from "../types";
 import { useBobDashboard } from "../../../../platform/query/hooks/useBobDashboard";
+import { BOB_POD_PLURAL } from "@/lib/bobDisplayTerminology";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import {
   defaultScopeFromAccess,
@@ -69,7 +70,7 @@ export function DashboardEngine({
           {data?.scope.coachScoped ? (
             <span className="text-orange-800">
               {" "}
-              · Active BoB cohort on your tracks
+              · Active BoB cohort on your {BOB_POD_PLURAL.toLowerCase()}
             </span>
           ) : null}
           {data?.cohort?.activeCount != null ? (
