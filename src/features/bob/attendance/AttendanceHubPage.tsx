@@ -11,6 +11,7 @@ import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { filterDaysByHealth } from "./model/computeWorkspace";
 import { ATTENDANCE_PAGE_SIZE } from "./model/scale";
 import { AttendanceHubControls } from "./components/AttendanceHubControls";
+import { AttendanceHoursRollup } from "./components/AttendanceHoursRollup";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
 import { DailyAttendanceTable } from "./components/DailyAttendanceTable";
 import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
@@ -33,6 +34,7 @@ import {
 import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttendance";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
+import { buildHoursAttendanceRollup } from "./model/hoursRollup";
 
 export function AttendanceHubPage() {
   const searchParams = useSearchParams();
@@ -86,6 +88,7 @@ export function AttendanceHubPage() {
 
   const {
     workspace,
+    weekRecordsForRollup,
     loading,
     error,
     isRefreshing,
@@ -96,6 +99,17 @@ export function AttendanceHubPage() {
     weekMode: viewMode === "week",
     trackFilter,
   });
+
+  const hoursRollup = useMemo(
+    () =>
+      buildHoursAttendanceRollup({
+        students: workspace.students,
+        focusDate,
+        todayDays: workspace.days.filter((d) => d.date === focusDate),
+        weekRecords: weekRecordsForRollup,
+      }),
+    [workspace.students, workspace.days, focusDate, weekRecordsForRollup],
+  );
 
   const { data: rosterFacets, isLoading: rosterFacetsLoading } =
     useBobStudentsFacets();
@@ -399,6 +413,12 @@ export function AttendanceHubPage() {
         trackSelectRef={trackSelectRef}
       />
 
+      <AttendanceHoursRollup
+        rollup={hoursRollup}
+        focusDate={focusDate}
+        trackFilter={trackFilter}
+      />
+
       <DailyAttendanceTable
         days={tableDays}
         workspace={workspace}
@@ -410,9 +430,13 @@ export function AttendanceHubPage() {
       />
 
       <section className="mt-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">
-          Track analytics
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">
+          Pod check-in today
         </h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Punch completion by pod for {focusDate} — use the hours rollup above for
+          BoB and track totals.
+        </p>
         <PodSiteAnalytics podStats={workspace.podStats} />
       </section>
 

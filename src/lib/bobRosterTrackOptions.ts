@@ -3,6 +3,7 @@ import {
   BOB26_TRACK_SITE_LOOKUP_FIELDS,
   ROSTER_TRACK_PLACEMENT_2026_FIELD,
 } from "@/lib/bobRosterFieldConstants";
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
 export interface RosterTrackOption {
   value: string;
@@ -77,4 +78,35 @@ export function studentMatchesRosterTrack(
   }
 
   return labels.some((label) => rosterTrackLabelMatches(want, label));
+}
+
+/** Canonical FY26 track label for rollups and analytics. */
+export function resolveStudentTrackLabel(student: {
+  track?: string | null;
+  airtableFields?: Record<string, unknown> | null;
+}): string {
+  const labels: string[] = [];
+
+  if (student.track) {
+    const t = String(student.track).trim();
+    if (t && !/^rec[a-zA-Z0-9]+$/i.test(t)) labels.push(t);
+  }
+
+  const af = student.airtableFields;
+  if (af && typeof af === "object") {
+    for (const key of [
+      ...BOB26_TRACK_SITE_LOOKUP_FIELDS,
+      ROSTER_TRACK_PLACEMENT_2026_FIELD,
+    ]) {
+      const raw = af[key];
+      const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+      for (const v of arr) {
+        const s = String(v ?? "").trim();
+        if (s && !/^rec[a-zA-Z0-9]+$/i.test(s)) labels.push(s);
+      }
+    }
+  }
+
+  const first = labels.find(Boolean);
+  return first ? formatBobTrackDisplayLabel(first) : "Unassigned";
 }

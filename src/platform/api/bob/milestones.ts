@@ -18,6 +18,8 @@ export interface BobDeliverableTrackerRecord {
   projectDeliverable: string | null;
   amountEarned: number | null;
   uploads: BobDeliverableAttachment[];
+  teamAirtableIds?: string[];
+  teamNames?: string[];
 }
 
 export interface BobDeliverable {
@@ -107,6 +109,8 @@ export async function updateBobMilestone(
     progressStatus: string;
     milestoneComplete: boolean;
     trackerId: string;
+    teamName?: string;
+    teamAirtableId?: string;
   }>,
 ): Promise<BobDeliverable> {
   return apiRequest<BobDeliverable>(`/api/bob/deliverables/${milestoneId}`, {

@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { BobAttendanceStatus, CreateBobAttendanceInput } from "@/platform/api/bob/attendance";
+import { useEffect, useMemo, useState } from "react";
+import type {
+  BobAttendanceStatus,
+  CreateBobAttendanceInput,
+} from "@/platform/api/bob/attendance";
 import {
   BOB_ATTENDANCE_DEFAULT_PAID_AMOUNT,
   BOB_ATTENDANCE_STATUSES,
@@ -15,6 +18,14 @@ import {
   clearableIso,
   toTimeInputValue,
 } from "../model/attendanceRecordTime";
+import {
+  computeHoursPresentFromStaffTimes,
+  computeSessionHours,
+  deriveAttendanceStatusLabel,
+  formatHoursValue,
+  syncedPunchLabel,
+} from "../model/staffRecordDerived";
+import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
 import { parseApiError } from "@/platform/api/errors";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -47,6 +58,47 @@ function TimeField({
   );
 }
 
+function ReadOnlyField({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="h-9 px-2 flex items-center rounded-md border border-gray-200 bg-gray-50 text-sm text-gray-800 tabular-nums">
+        {value}
+      </div>
+      {hint ? <p className="text-[10px] text-gray-500 mt-0.5">{hint}</p> : null}
+    </div>
+  );
+}
+
+function PunchGrid({ day }: { day: StudentDayAttendance }) {
+  const rows = [
+    { label: "Morning sign in", value: syncedPunchLabel(day, "am_in") },
+    { label: "Morning sign out", value: syncedPunchLabel(day, "am_out") },
+    { label: "Afternoon sign in", value: syncedPunchLabel(day, "pm_in") },
+    { label: "Afternoon sign out", value: syncedPunchLabel(day, "pm_out") },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {rows.map((row) => (
+        <ReadOnlyField
+          key={row.label}
+          label={row.label}
+          value={row.value}
+          hint="From youth sign-in / Airtable"
+        />
+      ))}
+    </div>
+  );
+}
+
 export function StaffAttendanceRecordEditor({
   day,
   onSaved,
@@ -62,15 +114,10 @@ export function StaffAttendanceRecordEditor({
   const source = record ?? null;
 
   const [status, setStatus] = useState<BobAttendanceStatus | "">("");
-  const [attendanceStatus, setAttendanceStatus] = useState("");
-  const [excusedAbsence, setExcusedAbsence] = useState(false);
-  const [hoursPresent, setHoursPresent] = useState("");
-  const [signIn, setSignIn] = useState("");
-  const [signOut, setSignOut] = useState("");
-  const [staffIn, setStaffIn] = useState("");
-  const [staffOut, setStaffOut] = useState("");
-  const [manualStart, setManualStart] = useState("");
-  const [manualEnd, setManualEnd] = useState("");
+  const [morningIn, setMorningIn] = useState("");
+  const [morningOut, setMorningOut] = useState("");
+  const [afternoonIn, setAfternoonIn] = useState("");
+  const [afternoonOut, setAfternoonOut] = useState("");
   const [notes, setNotes] = useState("");
   const [paid, setPaid] = useState(false);
   const [paidAmount, setPaidAmount] = useState("");
@@ -82,32 +129,63 @@ export function StaffAttendanceRecordEditor({
   useEffect(() => {
     const r = source;
     setStatus((r?.status as BobAttendanceStatus) || day.dailyStatus || "");
-    setAttendanceStatus(r?.attendanceStatus || r?.attendanceStatusHours || "");
-    setExcusedAbsence(Boolean(r?.excusedAbsence));
-    setHoursPresent(
-      r?.hoursPresent != null
-        ? String(r.hoursPresent)
-        : day.totalHoursLabel?.replace(/[^\d.]/g, "") || "",
+    setMorningIn(
+      toTimeInputValue(
+        r?.signInTime || r?.adjustedSignIn || day.punches.am_in.timeLabel,
+      ),
     );
-    setSignIn(toTimeInputValue(r?.signInTime || r?.adjustedSignIn));
-    setSignOut(toTimeInputValue(r?.signOutTime || r?.adjustedSignOut));
-    setStaffIn(
-      toTimeInputValue(r?.staffCorrectionSignIn || day.staffCorrectionSignIn),
+    setMorningOut(
+      toTimeInputValue(
+        r?.staffCorrectionSignOut ||
+          r?.manualEndTime ||
+          day.punches.am_out.timeLabel,
+      ),
     );
-    setStaffOut(
-      toTimeInputValue(r?.staffCorrectionSignOut || day.staffCorrectionSignOut),
+    setAfternoonIn(
+      toTimeInputValue(
+        r?.staffCorrectionSignIn ||
+          r?.manualStartTime ||
+          day.punches.pm_in.timeLabel,
+      ),
     );
-    setManualStart(toTimeInputValue(r?.manualStartTime));
-    setManualEnd(toTimeInputValue(r?.manualEndTime));
+    setAfternoonOut(
+      toTimeInputValue(
+        r?.signOutTime || r?.adjustedSignOut || day.punches.pm_out.timeLabel,
+      ),
+    );
     setNotes(r?.notes || day.notes || "");
     setPaid(Boolean(r?.paid));
-    setPaidAmount(
-      r?.paidAmount != null ? String(r.paidAmount) : "",
-    );
+    setPaidAmount(r?.paidAmount != null ? String(r.paidAmount) : "");
     setYouthWorksBatch(r?.youthWorksBatch || "");
     setSaved(false);
     setSyncMessage(null);
   }, [recordQuery.dataUpdatedAt, recordId, day]);
+
+  const attendanceStatusLabel = useMemo(
+    () => deriveAttendanceStatusLabel(status, day),
+    [status, day],
+  );
+
+  const morningHours = useMemo(
+    () => computeSessionHours(day.date, morningIn, morningOut),
+    [day.date, morningIn, morningOut],
+  );
+  const afternoonHours = useMemo(
+    () => computeSessionHours(day.date, afternoonIn, afternoonOut),
+    [day.date, afternoonIn, afternoonOut],
+  );
+  const hoursPresent = useMemo(
+    () =>
+      computeHoursPresentFromStaffTimes(
+        day.date,
+        morningIn,
+        morningOut,
+        afternoonIn,
+        afternoonOut,
+      ),
+    [day.date, morningIn, morningOut, afternoonIn, afternoonOut],
+  );
+  const expectedHours = expectedHoursForDate(day.date);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -120,39 +198,45 @@ export function StaffAttendanceRecordEditor({
       podId: day.podId,
       date: day.date,
     };
+
     if (status) payload.status = status;
-    if (attendanceStatus.trim()) payload.attendanceStatus = attendanceStatus.trim();
-    else if (source?.attendanceStatus) payload.attendanceStatus = null;
-    payload.excusedAbsence = excusedAbsence;
-    if (hoursPresent.trim()) payload.hoursPresent = hoursPresent.trim();
-    else if (source?.hoursPresent) payload.hoursPresent = null;
+    payload.excusedAbsence = status === "excused";
+    payload.attendanceStatus = attendanceStatusLabel;
+    payload.hoursPresent = formatHoursValue(hoursPresent);
+
     if (notes.trim()) payload.notes = notes.trim();
     else if (source?.notes) payload.notes = null;
 
-    const signInIso = clearableIso(day.date, signIn, source?.signInTime);
-    if (signInIso !== undefined) payload.signInTime = signInIso;
-    const signOutIso = clearableIso(day.date, signOut, source?.signOutTime);
-    if (signOutIso !== undefined) payload.signOutTime = signOutIso;
-    const staffInIso = clearableIso(
+    const morningInIso = clearableIso(day.date, morningIn, source?.signInTime);
+    if (morningInIso !== undefined) payload.signInTime = morningInIso;
+
+    const morningOutIso = clearableIso(
       day.date,
-      staffIn,
-      source?.staffCorrectionSignIn,
-    );
-    if (staffInIso !== undefined) payload.staffCorrectionSignIn = staffInIso;
-    const staffOutIso = clearableIso(
-      day.date,
-      staffOut,
+      morningOut,
       source?.staffCorrectionSignOut,
     );
-    if (staffOutIso !== undefined) payload.staffCorrectionSignOut = staffOutIso;
-    const manualStartIso = clearableIso(
+    if (morningOutIso !== undefined) {
+      payload.staffCorrectionSignOut = morningOutIso;
+    }
+
+    const afternoonInIso = clearableIso(
       day.date,
-      manualStart,
-      source?.manualStartTime,
+      afternoonIn,
+      source?.staffCorrectionSignIn,
     );
-    if (manualStartIso !== undefined) payload.manualStartTime = manualStartIso;
-    const manualEndIso = clearableIso(day.date, manualEnd, source?.manualEndTime);
-    if (manualEndIso !== undefined) payload.manualEndTime = manualEndIso;
+    if (afternoonInIso !== undefined) {
+      payload.staffCorrectionSignIn = afternoonInIso;
+    }
+
+    const afternoonOutIso = clearableIso(
+      day.date,
+      afternoonOut,
+      source?.signOutTime,
+    );
+    if (afternoonOutIso !== undefined) payload.signOutTime = afternoonOutIso;
+
+    if (source?.manualStartTime) payload.manualStartTime = null;
+    if (source?.manualEndTime) payload.manualEndTime = null;
 
     payload.paid = paid;
     if (paidAmount.trim()) {
@@ -190,11 +274,11 @@ export function StaffAttendanceRecordEditor({
     <form onSubmit={handleSave} className="space-y-4">
       <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Attendance record
+          Staff corrections
         </p>
         <p className="text-xs text-gray-600 mt-0.5">
-          Edit like Airtable — youth submit corrections via One Stop; staff
-          resolve here after triage.
+          Youth sign-in times are shown below for reference. Edit staff
+          correction times — morning and afternoon hours calculate automatically.
         </p>
       </div>
 
@@ -202,84 +286,89 @@ export function StaffAttendanceRecordEditor({
         <p className="text-sm text-gray-500">Loading record…</p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <FieldLabel>Status</FieldLabel>
-          <select
-            value={status}
-            onChange={(e) =>
-              setStatus(e.target.value as BobAttendanceStatus | "")
-            }
-            className="w-full h-9 px-2 border border-gray-300 rounded-md text-sm bg-white"
-          >
-            <option value="">—</option>
-            {BOB_ATTENDANCE_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end pb-1">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-800">
-            <input
-              type="checkbox"
-              checked={excusedAbsence}
-              onChange={(e) => setExcusedAbsence(e.target.checked)}
-              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-            />
-            Excused absence
-          </label>
-        </div>
-      </div>
-
       <div>
-        <FieldLabel>Attendance status</FieldLabel>
-        <input
-          type="text"
-          value={attendanceStatus}
-          onChange={(e) => setAttendanceStatus(e.target.value)}
-          placeholder="e.g. Present, Missing punch"
-          className="w-full h-9 px-2 border border-gray-300 rounded-md text-sm"
-        />
-      </div>
-
-      <div>
-        <FieldLabel>Hours present</FieldLabel>
-        <input
-          type="text"
-          value={hoursPresent}
-          onChange={(e) => setHoursPresent(e.target.value)}
-          placeholder="e.g. 6.5"
-          className="w-full h-9 px-2 border border-gray-300 rounded-md text-sm"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <TimeField label="Sign in" value={signIn} onChange={setSignIn} />
-        <TimeField label="Sign out" value={signOut} onChange={setSignOut} />
+        <FieldLabel>Status</FieldLabel>
+        <select
+          value={status}
+          onChange={(e) =>
+            setStatus(e.target.value as BobAttendanceStatus | "")
+          }
+          className="w-full h-9 px-2 border border-gray-300 rounded-md text-sm bg-white"
+        >
+          <option value="">—</option>
+          {BOB_ATTENDANCE_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </option>
+          ))}
+        </select>
+        <p className="text-[10px] text-gray-500 mt-1">
+          Use Excused or Absent here instead of a separate excused toggle.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <TimeField
-          label="Staff correction sign in"
-          value={staffIn}
-          onChange={setStaffIn}
+        <ReadOnlyField
+          label="Attendance status"
+          value={attendanceStatusLabel}
+          hint="Derived from status"
         />
-        <TimeField
-          label="Staff correction sign out"
-          value={staffOut}
-          onChange={setStaffOut}
+        <ReadOnlyField
+          label="Hours present"
+          value={`${hoursPresent}h`}
+          hint={
+            expectedHours > 0
+              ? `Auto-calculated · ${expectedHours}h expected today`
+              : "Auto-calculated"
+          }
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <TimeField
-          label="Manual start"
-          value={manualStart}
-          onChange={setManualStart}
-        />
-        <TimeField label="Manual end" value={manualEnd} onChange={setManualEnd} />
+      <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Synced sign-in / sign-out
+        </p>
+        <PunchGrid day={day} />
+      </div>
+
+      <div className="rounded-lg border border-orange-200 bg-orange-50/40 p-3 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-orange-800">
+          Staff corrections
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <TimeField
+            label="Morning sign in"
+            value={morningIn}
+            onChange={setMorningIn}
+          />
+          <TimeField
+            label="Morning sign out"
+            value={morningOut}
+            onChange={setMorningOut}
+          />
+          <TimeField
+            label="Afternoon sign in"
+            value={afternoonIn}
+            onChange={setAfternoonIn}
+          />
+          <TimeField
+            label="Afternoon sign out"
+            value={afternoonOut}
+            onChange={setAfternoonOut}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-orange-100">
+          <ReadOnlyField
+            label="Morning session"
+            value={`${morningHours}h`}
+            hint="From staff correction times"
+          />
+          <ReadOnlyField
+            label="Afternoon session"
+            value={`${afternoonHours}h`}
+            hint="From staff correction times"
+          />
+        </div>
       </div>
 
       <div>
@@ -360,7 +449,7 @@ export function StaffAttendanceRecordEditor({
         disabled={saveMutation.isPending || loading}
         className="w-full h-10 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
       >
-        {saveMutation.isPending ? "Saving…" : "Save attendance record"}
+        {saveMutation.isPending ? "Saving…" : "Save staff corrections"}
       </button>
     </form>
   );

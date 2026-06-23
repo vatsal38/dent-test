@@ -20,11 +20,15 @@ import {
 } from "@/platform/api/bob/attendance";
 import { bobKeys } from "@/platform/query/queryKeys";
 
-export function useBobAttendanceList(params: BobAttendanceListParams) {
+export function useBobAttendanceList(
+  params: BobAttendanceListParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: bobKeys.attendance.list(params),
     queryFn: () => getBobAttendance(params),
     placeholderData: keepPreviousData,
+    enabled: options?.enabled ?? true,
   });
 }
 

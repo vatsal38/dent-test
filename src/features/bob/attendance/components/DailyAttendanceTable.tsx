@@ -9,6 +9,11 @@ import { AttendanceStatusBadge } from "./AttendanceStatusBadge";
 import { SessionSummary } from "./SessionSummary";
 import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
 import { studentMatchesSearch } from "../model/filterRows";
+import {
+  formatDayHoursPresent,
+  formatHoursTotal,
+  sumDayHours,
+} from "../model/dayHours";
 
 export function DailyAttendanceTable({
   days,
@@ -108,12 +113,19 @@ export function DailyAttendanceTable({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Status
                 </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                  Hours today
+                </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                  Program hrs
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[280px]">
                   Sessions
                 </th>
               </>
             ) : null}
-            {columns.map((d) => {
+            {isWeek
+              ? columns.map((d) => {
               const missing = days.filter(
                 (x) =>
                   x.date === d &&
@@ -135,7 +147,18 @@ export function DailyAttendanceTable({
                   ) : null}
                 </th>
               );
-            })}
+            })
+              : null}
+            {isWeek ? (
+              <>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                  Week hrs
+                </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap pr-4">
+                  Program hrs
+                </th>
+              </>
+            ) : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -146,6 +169,12 @@ export function DailyAttendanceTable({
             );
             const podName = resolvePodName(row.podId, workspace.podById);
             const today = row.byDate.get(focusDate);
+            const student = workspace.studentById.get(row.studentId);
+            const programHours = student?.attendanceStats?.hoursAttended;
+            const weekDays = isWeek
+              ? Array.from(row.byDate.values())
+              : [];
+            const weekHoursTotal = sumDayHours(weekDays);
             return (
               <tr
                 key={`${row.podId}-${row.studentId}`}
@@ -182,6 +211,11 @@ export function DailyAttendanceTable({
                       <p className="text-xs text-gray-500 truncate">
                         {podName}
                       </p>
+                      {today?.notes ? (
+                        <p className="text-[10px] text-gray-500 truncate mt-0.5 italic">
+                          {today.notes}
+                        </p>
+                      ) : null}
                     </div>
                   </button>
                 </td>
@@ -192,6 +226,12 @@ export function DailyAttendanceTable({
                         health={today.health}
                         attendanceState={today.attendanceState}
                       />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-sm font-medium text-gray-900">
+                      {formatDayHoursPresent(today)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-sm text-gray-700">
+                      {programHours != null ? `${programHours}h` : "—"}
                     </td>
                     <td className="px-4 py-2">
                       <button
@@ -204,7 +244,8 @@ export function DailyAttendanceTable({
                     </td>
                   </>
                 ) : null}
-                {columns.map((d) => {
+                {isWeek
+                  ? columns.map((d) => {
                   const cell = row.byDate.get(d);
                   if (!cell) {
                     return (
@@ -224,13 +265,24 @@ export function DailyAttendanceTable({
                     >
                       <div className="flex flex-col items-center gap-1">
                         <AttendanceStatusBadge attendanceState={cell.attendanceState} />
-                        {cell.totalHoursLabel ? (
-                          <span className="text-[10px] text-gray-500">{cell.totalHoursLabel}</span>
-                        ) : null}
+                        <span className="text-xs font-medium text-gray-700 tabular-nums">
+                          {formatDayHoursPresent(cell)}
+                        </span>
                       </div>
                     </td>
                   );
-                })}
+                })
+                  : null}
+                {isWeek ? (
+                  <>
+                    <td className="px-3 py-2 text-right tabular-nums text-sm font-medium text-gray-900">
+                      {formatHoursTotal(weekHoursTotal)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-sm text-gray-700 pr-4">
+                      {programHours != null ? `${programHours}h` : "—"}
+                    </td>
+                  </>
+                ) : null}
               </tr>
             );
           })}

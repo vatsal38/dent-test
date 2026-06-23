@@ -51,7 +51,7 @@ export function useAttendanceWorkspace({
       track: effectiveTrack || undefined,
       ids: scopedStudentIds?.length ? scopedStudentIds.join(",") : undefined,
       limit: scopedStudentIds?.length || 500,
-      includeStats: false,
+      includeStats: true,
     },
     {
       enabled:
@@ -79,6 +79,21 @@ export function useAttendanceWorkspace({
 
   const attendanceQuery = useBobAttendanceList(attendanceParams);
   const records = attendanceQuery.data?.attendance ?? [];
+
+  const weekRollupParams = useMemo(
+    () => ({
+      startDate: weekMonday,
+      endDate: getWeekSunday(weekMonday),
+      limit: ATTENDANCE_FETCH_LIMIT,
+    }),
+    [weekMonday],
+  );
+  const weekRollupQuery = useBobAttendanceList(weekRollupParams, {
+    enabled: !weekMode,
+  });
+  const weekRecordsForRollup = weekMode
+    ? records
+    : (weekRollupQuery.data?.attendance ?? []);
 
   const workspace = useMemo(
     () =>
@@ -128,6 +143,7 @@ export function useAttendanceWorkspace({
 
   return {
     workspace,
+    weekRecordsForRollup,
     pods,
     effectivePod,
     enrollmentCount,

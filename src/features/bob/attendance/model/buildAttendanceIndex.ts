@@ -13,6 +13,10 @@ import {
 } from "../types";
 import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
+  computeHoursPresentFromStaffTimes,
+} from "./staffRecordDerived";
+import { toTimeInputValue } from "./attendanceRecordTime";
+import {
   expectedPunchTypes,
   isAttendanceExpectedOn,
   isProgramDay,
@@ -430,6 +434,23 @@ export function buildStudentDayAttendance(
 
       const student = studentById.get(studentId);
 
+      let totalHoursLabel =
+        formatHoursLabel(daily?.hoursPresent) ||
+        formatHoursLabel(daily?.totalHours);
+
+      if (!totalHoursLabel && daily) {
+        const computed = computeHoursPresentFromStaffTimes(
+          date,
+          toTimeInputValue(daily.signInTime || daily.adjustedSignIn),
+          toTimeInputValue(daily.staffCorrectionSignOut || daily.manualEndTime),
+          toTimeInputValue(daily.staffCorrectionSignIn || daily.manualStartTime),
+          toTimeInputValue(daily.signOutTime || daily.adjustedSignOut),
+        );
+        if (computed > 0) {
+          totalHoursLabel = formatHoursLabel(computed);
+        }
+      }
+
       days.push({
         key,
         studentId,
@@ -445,9 +466,7 @@ export function buildStudentDayAttendance(
         health,
         missingPunchCount,
         isLate,
-        totalHoursLabel:
-          formatHoursLabel(daily?.hoursPresent) ||
-          formatHoursLabel(daily?.totalHours),
+        totalHoursLabel,
         expectedHoursLabel: formatHoursLabel(daily?.maxHours),
         program: daily?.program ?? undefined,
         site: daily?.branch ?? student?.site ?? undefined,

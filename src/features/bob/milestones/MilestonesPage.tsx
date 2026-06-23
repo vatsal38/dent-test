@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import type { BobDeliverable } from '@/platform/api/bob/milestones';
 import { BobImportProgress } from '@/components/BobImportProgress';
 import {
@@ -18,24 +17,40 @@ import { Skeleton } from '@/components/Skeleton';
 import { PageHeader } from '@/design-system/patterns/PageHeader';
 import {
   TRACK_FILTERS,
-  REVIEW_STATUS_OPTIONS,
-  TRACKER_STATUS_OPTIONS,
   APP_REVIEW_TO_TRACKER,
   TRACKER_TO_APP_REVIEW,
   formatDeliverableDates,
-  pendingUploadCount,
-  progressStatusBadge,
   reviewStatusBadge,
-  computeDeliverableTrackStats,
-  computeOverallDeliverableStats,
 } from './deliverableDisplay';
+import {
+  groupDeliverablesByTeam,
+  groupDeliverablesByTrack,
+  sortByDeliverableNumber,
+} from './deliverableGrouping';
+import { DeliverablesProgressTable } from './components/DeliverablesProgressTable';
+import {
+  DeliverablesTeamMatrix,
+  DeliverablesTrackMatrix,
+} from './components/DeliverablesMatrixView';
+import { DeliverableDetailDrawer } from './components/DeliverableDetailDrawer';
+import {
+  findTrackerForTeam,
+  teamNamesFromDeliverables,
+  teamPendingUploadCount,
+  teamReviewStatus,
+} from './deliverableTeamReview';
 import { formatBobTrackDisplayLabel } from '@/lib/bobDisplayTerminology';
+
+type DetailState = {
+  deliverable: BobDeliverable;
+  teamName?: string;
+};
 
 export function MilestonesPage() {
   const orgId = BOB_MILESTONES_ORG_ID;
-  const [tab, setTab] = useState<'all' | 'pending_review'>('all');
+  const [tab, setTab] = useState<'all' | 'by_team' | 'pending_review'>('all');
   const [trackFilter, setTrackFilter] = useState('');
-  const [detail, setDetail] = useState<BobDeliverable | null>(null);
+  const [detail, setDetail] = useState<DetailState | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [detailSaveError, setDetailSaveError] = useState<string | null>(null);
 
@@ -51,41 +66,55 @@ export function MilestonesPage() {
     ? parseApiError(milestonesQuery.error)
     : null;
 
-  const pendingCount = useMemo(
-    () =>
-      data.filter(
-        (d) =>
-          d.reviewStatus === 'pending_review' ||
-          d.reviewStatus === 'in_progress' ||
-          pendingUploadCount(d) > 0,
-      ).length,
-    [data],
-  );
-
-  const groupedByTrack = useMemo(() => {
-    const map = new Map<string, BobDeliverable[]>();
+  const pendingCount = useMemo(() => {
+    let count = 0;
     for (const d of data) {
-      const key = d.trackName || 'Other';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(d);
+      for (const team of teamNamesFromDeliverables([d])) {
+        const status = teamReviewStatus(d, team);
+        if (
+          status === "pending_review" ||
+          status === "in_progress" ||
+          teamPendingUploadCount(d, team) > 0
+        ) {
+          count += 1;
+        }
+      }
     }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return count;
   }, [data]);
 
-  const overallStats = useMemo(
-    () => computeOverallDeliverableStats(data),
+  const groupedByTrack = useMemo(
+    () => groupDeliverablesByTrack(data),
     [data],
   );
 
-  const trackStats = useMemo(
-    () => computeDeliverableTrackStats(data),
+  const groupedByTeam = useMemo(
+    () => groupDeliverablesByTeam(data),
     [data],
   );
+
+  const reviewItems = useMemo(
+    () => sortByDeliverableNumber(data),
+    [data],
+  );
+
+  function openDetail(d: BobDeliverable, teamName?: string) {
+    setDetailSaveError(null);
+    setDetail({ deliverable: d, teamName });
+  }
+
+  function openTeamReview(teamName: string) {
+    setTab("by_team");
+    setDetail((current) =>
+      current ? { deliverable: current.deliverable, teamName } : current,
+    );
+  }
 
   function applyOptimisticDeliverable(
     item: BobDeliverable,
     reviewStatus: string,
     trackerStatus?: string,
+    teamName?: string,
   ): BobDeliverable {
     const trackerValue =
       trackerStatus || (reviewStatus ? APP_REVIEW_TO_TRACKER[reviewStatus] : undefined);
@@ -93,27 +122,38 @@ export function MilestonesPage() {
       reviewStatus ||
       (trackerStatus ? TRACKER_TO_APP_REVIEW[trackerStatus] : item.reviewStatus);
     const trackers = [...(item.trackerRecords || [])];
+    const existingTracker = findTrackerForTeam(item, teamName);
+    const trackerIdx = existingTracker
+      ? trackers.findIndex(
+          (t) =>
+            t.id === existingTracker.id ||
+            t.airtableRecordId === existingTracker.airtableRecordId,
+        )
+      : -1;
+
     if (trackerValue) {
-      if (trackers.length) {
-        trackers[0] = {
-          ...trackers[0],
-          deliverableStatus: trackerValue,
-          reviewStatus: TRACKER_TO_APP_REVIEW[trackerValue] || reviewValue,
-        };
-      } else {
-        trackers.push({
-          id: 'pending',
-          airtableRecordId: 'pending',
-          date: null,
-          deliverableStatus: trackerValue,
-          reviewStatus: TRACKER_TO_APP_REVIEW[trackerValue] || reviewValue,
-          staffReviewNotes: null,
-          projectDeliverable: null,
-          amountEarned: null,
-          uploads: [],
-        });
-      }
+      const nextRow =
+        trackerIdx >= 0
+          ? { ...trackers[trackerIdx] }
+          : {
+              id: "pending",
+              airtableRecordId: "pending",
+              date: null,
+              deliverableStatus: null,
+              reviewStatus: "pending_review",
+              staffReviewNotes: null,
+              projectDeliverable: null,
+              amountEarned: null,
+              uploads: [],
+              teamNames: teamName ? [teamName] : [],
+            };
+      nextRow.deliverableStatus = trackerValue;
+      nextRow.reviewStatus =
+        TRACKER_TO_APP_REVIEW[trackerValue] || reviewValue;
+      if (trackerIdx >= 0) trackers[trackerIdx] = nextRow;
+      else trackers.unshift(nextRow);
     }
+
     return {
       ...item,
       reviewStatus: reviewValue || item.reviewStatus,
@@ -125,17 +165,23 @@ export function MilestonesPage() {
     item: BobDeliverable,
     reviewStatus: string,
     trackerStatus?: string,
+    teamName?: string,
   ) {
-    const previous = detail?.id === item.id ? detail : item;
+    const previous =
+      detail?.deliverable.id === item.id ? detail.deliverable : item;
     const optimistic = applyOptimisticDeliverable(
       item,
       reviewStatus,
       trackerStatus,
+      teamName,
     );
+    const tracker = findTrackerForTeam(item, teamName);
 
     setUpdatingId(item.id);
     setDetailSaveError(null);
-    if (detail?.id === item.id) setDetail(optimistic);
+    if (detail?.deliverable.id === item.id) {
+      setDetail({ deliverable: optimistic, teamName });
+    }
 
     try {
       const updated = await updateMilestone.mutateAsync({
@@ -144,13 +190,18 @@ export function MilestonesPage() {
         data: {
           reviewStatus: reviewStatus || undefined,
           trackerDeliverableStatus: trackerStatus,
-          trackerId: item.trackerRecords?.[0]?.id,
+          trackerId: tracker?.id,
+          teamName,
         },
       });
-      if (detail?.id === updated.id) setDetail(updated);
+      if (detail?.deliverable.id === updated.id) {
+        setDetail({ deliverable: updated, teamName });
+      }
       await milestonesQuery.refetch();
     } catch (err) {
-      if (detail?.id === item.id) setDetail(previous);
+      if (detail?.deliverable.id === item.id) {
+        setDetail({ deliverable: previous, teamName });
+      }
       setDetailSaveError(parseApiError(err));
     } finally {
       setUpdatingId(null);
@@ -204,62 +255,7 @@ export function MilestonesPage() {
         </p>
       ) : null}
 
-      {data.length > 0 ? (
-        <section className="mb-6 space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              Due deliverables progress
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Percentages count only deliverables past their target completion
-              date.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                All tracks
-              </p>
-              <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">
-                {overallStats.pctDueCompleted}%
-              </p>
-              <p className="text-sm text-gray-600">completed (due)</p>
-              <p className="text-xs text-gray-500 mt-2 tabular-nums">
-                {overallStats.completedCount}/{overallStats.dueCount} due ·{' '}
-                {overallStats.pctDueSubmitted}% submitted
-              </p>
-              {overallStats.overdueCount > 0 ? (
-                <p className="text-xs text-red-700 mt-1">
-                  {overallStats.overdueCount} overdue
-                </p>
-              ) : null}
-            </div>
-            {trackStats.map((t) => (
-              <div
-                key={t.trackName}
-                className="rounded-xl border border-gray-200 bg-white p-4"
-              >
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider truncate">
-                  {formatBobTrackDisplayLabel(t.trackName)}
-                </p>
-                <p className="text-2xl font-bold text-gray-900 mt-1 tabular-nums">
-                  {t.pctDueCompleted}%
-                </p>
-                <p className="text-sm text-gray-600">completed (due)</p>
-                <p className="text-xs text-gray-500 mt-2 tabular-nums">
-                  {t.completedCount}/{t.dueCount} due · {t.pctDueSubmitted}%
-                  submitted
-                </p>
-                {t.overdueCount > 0 ? (
-                  <p className="text-xs text-red-700 mt-1">
-                    {t.overdueCount} overdue
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {data.length > 0 ? <DeliverablesProgressTable deliverables={data} /> : null}
 
       <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 pb-3">
         <button
@@ -272,6 +268,17 @@ export function MilestonesPage() {
           }`}
         >
           Catalog
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('by_team')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            tab === 'by_team'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          By Team
         </button>
         <button
           type="button"
@@ -321,258 +328,81 @@ export function MilestonesPage() {
               : 'Import from Airtable or adjust track filters.'}
           </p>
         </div>
+      ) : tab === 'all' ? (
+        <DeliverablesTrackMatrix
+          rows={groupedByTrack}
+          onSelect={openDetail}
+        />
+      ) : tab === 'by_team' ? (
+        <DeliverablesTeamMatrix
+          rows={groupedByTeam}
+          onSelect={(d, teamName) => openDetail(d, teamName)}
+        />
       ) : (
-        <div className="space-y-8">
-          {groupedByTrack.map(([track, items]) => (
-            <section key={track}>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                {formatBobTrackDisplayLabel(track)}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {items.map((d) => {
-                  const review = reviewStatusBadge(d.reviewStatus);
-                  const progress = progressStatusBadge(d.progressStatus);
-                  const uploads = pendingUploadCount(d);
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => {
-                        setDetailSaveError(null);
-                        setDetail(d);
-                      }}
-                      className="text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-orange-300 hover:shadow-md transition-all"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {reviewItems.flatMap((d) =>
+            teamNamesFromDeliverables([d]).map((team) => {
+              const review = reviewStatusBadge(teamReviewStatus(d, team));
+              const uploads = teamPendingUploadCount(d, team);
+              const status = teamReviewStatus(d, team);
+              if (
+                status !== "pending_review" &&
+                status !== "in_progress" &&
+                uploads === 0
+              ) {
+                return null;
+              }
+              return (
+                <button
+                  key={`${d.id}-${team}`}
+                  type="button"
+                  onClick={() => openDetail(d, team)}
+                  className="text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-orange-300 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-orange-700">
+                        {formatBobTrackDisplayLabel(d.trackName)} ·{" "}
+                        {d.deliverableNumber || "Deliverable"}
+                      </p>
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {d.deliverableName}
+                      </h3>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 truncate">{team}</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {formatDeliverableDates(d)}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${review.className}`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-orange-700">
-                            {d.deliverableNumber || 'Deliverable'}
-                          </p>
-                          <h3 className="font-semibold text-gray-900 truncate">
-                            {d.deliverableName}
-                          </h3>
-                        </div>
-                        {d.milestoneComplete ? (
-                          <span className="shrink-0 text-green-600 text-lg" title="Complete">
-                            ✓
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1 truncate">
-                        {d.teamNames?.join(', ') || d.projectNames?.join(', ') || 'No team linked'}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-2">
-                        {formatDeliverableDates(d)}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${progress.className}`}>
-                          {progress.label}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${review.className}`}>
-                          {review.label}
-                        </span>
-                        {uploads > 0 ? (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
-                            {uploads} upload{uploads === 1 ? '' : 's'} to review
-                          </span>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+                      {review.label}
+                    </span>
+                    {uploads > 0 ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                        {uploads} upload{uploads === 1 ? "" : "s"} to review
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            }),
+          )}
         </div>
       )}
 
       {detail ? (
-        <>
-          <div
-            className="fixed inset-0 bg-black/30 z-40"
-            onClick={() => setDetail(null)}
-            aria-hidden
-          />
-          <div className="fixed top-0 right-0 w-full max-w-lg h-full bg-white shadow-xl z-50 overflow-y-auto border-l border-gray-200">
-            <div className="p-6 space-y-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold text-orange-700">
-                    {detail.trackName} · {detail.deliverableNumber}
-                  </p>
-                  <h2 className="text-xl font-bold text-gray-900 mt-1">
-                    {detail.deliverableName}
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDetail(null)}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <dt className="text-gray-500">Planned start</dt>
-                  <dd className="font-medium">{detail.plannedStartDate || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Target completion</dt>
-                  <dd className="font-medium">{detail.targetCompletionDate || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Type</dt>
-                  <dd className="font-medium">{detail.typeOfMilestone || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Teams</dt>
-                  <dd className="font-medium">
-                    {detail.teamNames?.join(', ') || '—'}
-                  </dd>
-                </div>
-              </dl>
-
-              {detail.details ? (
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                    SMART goal & definition of done
-                  </h3>
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap rounded-lg bg-gray-50 border border-gray-200 p-3">
-                    {detail.details}
-                  </div>
-                </div>
-              ) : null}
-
-              {detailSaveError ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {detailSaveError}
-                </div>
-              ) : null}
-
-              {updatingId === detail.id ? (
-                <p className="text-sm text-orange-600 font-medium flex items-center gap-2">
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-                  Saving to Airtable…
-                </p>
-              ) : null}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Staff review (tracker status)
-                </label>
-                <select
-                  value={detail.trackerRecords?.[0]?.deliverableStatus || ''}
-                  disabled={updatingId === detail.id}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (!v) return;
-                    handleReviewChange(
-                      detail,
-                      TRACKER_TO_APP_REVIEW[v] || 'pending_review',
-                      v,
-                    );
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60 disabled:cursor-wait"
-                >
-                  <option value="">—</option>
-                  {TRACKER_STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  App review status
-                </label>
-                <select
-                  value={detail.reviewStatus || ''}
-                  disabled={updatingId === detail.id}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (!v) return;
-                    handleReviewChange(
-                      detail,
-                      v,
-                      APP_REVIEW_TO_TRACKER[v],
-                    );
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60 disabled:cursor-wait"
-                >
-                  {REVIEW_STATUS_OPTIONS.filter((o) => o.value).map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {(detail.trackerRecords || []).length > 0 ? (
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                    Team submissions
-                  </h3>
-                  <ul className="space-y-3">
-                    {detail.trackerRecords.map((t) => (
-                      <li
-                        key={t.id}
-                        className="rounded-lg border border-gray-200 p-3 text-sm"
-                      >
-                        <p className="font-medium text-gray-900">
-                          {t.date || 'Submission'} · {t.deliverableStatus || 'Status pending'}
-                        </p>
-                        {t.staffReviewNotes ? (
-                          <p className="text-gray-600 mt-1 whitespace-pre-wrap">
-                            {t.staffReviewNotes}
-                          </p>
-                        ) : null}
-                        {t.uploads?.length ? (
-                          <ul className="mt-2 space-y-1">
-                            {t.uploads.map((u) => (
-                              <li key={u.id}>
-                                <a
-                                  href={u.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-orange-600 hover:underline"
-                                >
-                                  {u.filename}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {detail.finalDeliverableLinks ? (
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
-                    Final links
-                  </h3>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {detail.finalDeliverableLinks}
-                  </p>
-                </div>
-              ) : null}
-
-              <Link
-                href="/app/bob/inbox?type=progress_update"
-                className="inline-block text-sm font-medium text-orange-600 hover:underline"
-              >
-                View progress updates in inbox →
-              </Link>
-            </div>
-          </div>
-        </>
+        <DeliverableDetailDrawer
+          deliverable={detail.deliverable}
+          teamName={detail.teamName}
+          updatingId={updatingId}
+          detailSaveError={detailSaveError}
+          onClose={() => setDetail(null)}
+          onReviewChange={handleReviewChange}
+          onOpenTeamReview={openTeamReview}
+        />
       ) : null}
     </div>
   );

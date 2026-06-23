@@ -1,20 +1,17 @@
 "use client";
 
 import type { PodAttendanceStats } from "../types";
-import { siteRollup } from "../model/computeWorkspace";
 
 function MetricBar({
   label,
   value,
   total,
   tone,
-  suffix,
 }: {
   label: string;
   value: number;
   total: number;
   tone: string;
-  suffix?: string;
 }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
@@ -22,7 +19,7 @@ function MetricBar({
       <div className="flex justify-between text-xs mb-1 gap-2">
         <span className="font-medium text-gray-700 truncate">{label}</span>
         <span className="text-gray-500 tabular-nums shrink-0">
-          {value}/{total} ({pct}%){suffix ? ` · ${suffix}` : ""}
+          {value}/{total} ({pct}%)
         </span>
       </div>
       <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
@@ -55,47 +52,20 @@ function PodCard({ pod }: { pod: PodAttendanceStats }) {
 }
 
 export function PodSiteAnalytics({ podStats }: { podStats: PodAttendanceStats[] }) {
-  const sites = siteRollup(podStats);
   const activePods = podStats.filter((p) => p.expected > 0);
 
-  if (!activePods.length && !sites.length) {
+  if (!activePods.length) {
     return (
-      <p className="text-sm text-gray-500">No track attendance data for this date.</p>
+      <p className="text-sm text-gray-500">No pod attendance data for this date.</p>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">Track attendance</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {activePods.map((p) => (
           <PodCard key={p.podId} pod={p} />
         ))}
-      </div>
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">Track rollup</h3>
-        {sites.map((s) => {
-          const pct = s.expected > 0 ? Math.round((s.complete / s.expected) * 100) : 0;
-          return (
-            <div key={s.siteName} className="space-y-2">
-              <MetricBar
-                label={s.siteName}
-                value={s.complete}
-                total={s.expected}
-                tone="bg-orange-500"
-                suffix={`${pct}%`}
-              />
-              <div className="grid grid-cols-3 gap-2 text-[11px] text-gray-600 pl-1">
-                <span>Expected {s.expected}</span>
-                <span>Present {s.complete}</span>
-                <span>Missing {s.missingPunches}</span>
-                <span>Late {s.late}</span>
-                <span>Excused {s.excused}</span>
-                <span>Absent {s.absent}</span>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

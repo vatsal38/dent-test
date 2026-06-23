@@ -6,6 +6,7 @@ import { resolvePodName, resolveStudentName } from "../model/resolveDisplay";
 import { AttendanceStateBadge } from "./AttendanceStateBadge";
 import { StaffAttendanceRecordEditor } from "./StaffAttendanceRecordEditor";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { formatDayHoursPresent } from "../model/dayHours";
 
 export function StudentDayDrawer({
   day,
@@ -22,6 +23,9 @@ export function StudentDayDrawer({
   const canEdit = can("attendance.mark");
   const name = resolveStudentName(day.studentId, workspace.studentById);
   const podName = resolvePodName(day.podId, workspace.podById);
+  const student = workspace.studentById.get(day.studentId);
+  const programHours = student?.attendanceStats?.hoursAttended;
+  const hoursToday = formatDayHoursPresent(day);
 
   return (
     <>
@@ -48,9 +52,22 @@ export function StudentDayDrawer({
               {podName} · {day.date}
               {day.track ? ` · ${day.track}` : ""}
             </p>
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <AttendanceStateBadge state={day.attendanceState} />
+              <span className="text-sm font-medium text-gray-900 tabular-nums">
+                {hoursToday} today
+              </span>
+              {programHours != null ? (
+                <span className="text-sm text-gray-500 tabular-nums">
+                  · {programHours}h program
+                </span>
+              ) : null}
             </div>
+            {day.notes ? (
+              <p className="mt-2 text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-md px-3 py-2">
+                {day.notes}
+              </p>
+            ) : null}
           </div>
 
           {canEdit ? (
