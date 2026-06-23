@@ -21,10 +21,11 @@ import {
 import type { IconType } from 'react-icons';
 import { PageHeader } from '@/design-system/patterns/PageHeader';
 import {
-  KEY_LINK_SECTIONS,
+  keyLinkSectionsForRole,
   type KeyLinkItem,
   type KeyLinkSection,
 } from './keyLinksConfig';
+import { useBobAccess } from '@/platform/rbac/useBobAccess';
 
 type LinkKind =
   | 'drive'
@@ -480,25 +481,28 @@ function KeyLinkSectionPanel({ section }: { section: KeyLinkSection }) {
 
 export function KeyLinksPage() {
   const [query, setQuery] = useState('');
+  const { role } = useBobAccess();
+  const sections = useMemo(() => keyLinkSectionsForRole(role), [role]);
+  const isStudent = role === 'student';
 
   const filteredSections = useMemo(
-    () => filterSections(KEY_LINK_SECTIONS, query),
-    [query],
+    () => filterSections(sections, query),
+    [sections, query],
   );
 
   const totalLinks = useMemo(
-    () => KEY_LINK_SECTIONS.reduce((sum, section) => sum + section.links.length, 0),
-    [],
+    () => sections.reduce((sum, section) => sum + section.links.length, 0),
+    [sections],
   );
 
   const activeLinks = useMemo(
     () =>
-      KEY_LINK_SECTIONS.reduce(
+      sections.reduce(
         (sum, section) =>
           sum + section.links.filter((link) => link.url.trim()).length,
         0,
       ),
-    [],
+    [sections],
   );
 
   const isSearching = query.trim().length > 0;
@@ -506,9 +510,13 @@ export function KeyLinksPage() {
   return (
     <div className="max-w-6xl">
       <PageHeader
-        eyebrow="Staff resources"
+        eyebrow={isStudent ? "Program resources" : "Staff resources"}
         title="Key Links"
-        description="Your program hub for curriculum folders, photo albums, calendars, onboarding docs, wellness resources, and staff email groups."
+        description={
+          isStudent
+            ? "Calendars, curriculum folders, photo albums, and wellness resources for your track."
+            : "Your program hub for curriculum folders, photo albums, calendars, onboarding docs, wellness resources, and staff email groups."
+        }
       />
 
       <div className="mb-8 overflow-hidden rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-5 shadow-sm sm:p-6">
@@ -517,7 +525,7 @@ export function KeyLinksPage() {
             <StatCard
               icon={HiOutlineCollection}
               label="Sections"
-              value={KEY_LINK_SECTIONS.length}
+              value={sections.length}
               iconBg="bg-orange-100"
               iconColor="text-orange-700"
             />

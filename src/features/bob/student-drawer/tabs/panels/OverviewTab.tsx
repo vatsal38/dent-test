@@ -11,6 +11,7 @@ import { ActivityTimeline } from "../../widgets/ActivityTimeline";
 import { extractCoachNotes } from "../../lib/profileSignals";
 import { useStudentActivityFeed } from "../../hooks/useStudentTabQueries";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
 
 function attendancePercent(student: {
   attendanceStats?: {
@@ -48,6 +49,7 @@ function deliverablePercent(student: {
 
 export function OverviewTab() {
   const { student, tab, setTab } = useStudentDrawerContext();
+  const { can } = useBobAccess();
   const { items, isLoading } = useStudentActivityFeed(
     student?.id ?? null,
     tab,
@@ -135,7 +137,7 @@ export function OverviewTab() {
         </dl>
       </section>
 
-      {notes.length > 0 ? (
+      {can("notes.viewStaff") && notes.length > 0 ? (
         <section>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">

@@ -201,3 +201,26 @@ export const KEY_LINK_SECTIONS: KeyLinkSection[] = [
     ],
   },
 ];
+
+/** Youth-facing sections — no staff onboarding or email groups. */
+export const STUDENT_KEY_LINK_SECTION_IDS = new Set([
+  "curriculum",
+  "photos",
+  "calendars",
+  "restorative",
+]);
+
+export function keyLinkSectionsForRole(
+  role: import("@/platform/rbac/types").BobOpsRole,
+): KeyLinkSection[] {
+  if (role !== "student") return KEY_LINK_SECTIONS;
+  return KEY_LINK_SECTIONS.filter((section) =>
+    STUDENT_KEY_LINK_SECTION_IDS.has(section.id),
+  ).map((section) => {
+    if (section.id !== "restorative") return section;
+    return {
+      ...section,
+      links: section.links.filter((link) => link.description === "Youth"),
+    };
+  });
+}

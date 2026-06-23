@@ -42,10 +42,12 @@ export function normalizeBobOpsRole(me: {
       return "program_manager";
     case "site_coach":
       return "coach";
+    case "fellow":
+      return "site_supporter";
     case "read_only":
       return "read_only";
     default:
-      return "program_manager";
+      return "read_only";
   }
 }
 

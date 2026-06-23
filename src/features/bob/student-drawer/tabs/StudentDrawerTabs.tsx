@@ -3,9 +3,19 @@
 import { STUDENT_DRAWER_TABS_CONFIG } from "../constants";
 import { useStudentDrawerContext } from "../context/StudentDrawerContext";
 import type { StudentDrawerTabId } from "../types";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
 
 export function StudentDrawerTabs() {
   const { tab, setTab } = useStudentDrawerContext();
+  const { can, role } = useBobAccess();
+
+  const visibleTabs = STUDENT_DRAWER_TABS_CONFIG.filter((t) => {
+    if (t.denyRoles?.includes(role)) return false;
+    if (t.permissions?.length && !t.permissions.some((p) => can(p))) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <nav
@@ -13,7 +23,7 @@ export function StudentDrawerTabs() {
       aria-label="Student profile sections"
     >
       <div className="flex flex-wrap gap-1">
-        {STUDENT_DRAWER_TABS_CONFIG.map((t) => {
+        {visibleTabs.map((t) => {
           const active = tab === t.id;
           return (
             <button

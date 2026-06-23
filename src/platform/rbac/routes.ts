@@ -88,6 +88,9 @@ export function matchBobRoute(pathname: string): BobRouteDef | null {
 
 /** First allowed landing page for this access context (used when URL is forbidden). */
 export function getBobHomeHref(access: BobAccessContext): string {
+  if (access.role === "student" && canAccess(access, "dashboard.view")) {
+    return "/app/bob";
+  }
   if (access.role === "student" && canAccess(access, "submit.view")) {
     return "/app/bob/home";
   }

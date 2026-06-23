@@ -2,7 +2,11 @@ import type { BobOpsRole } from "./types";
 
 /**
  * Fine-grained permissions for BoB UI and actions.
- * Add new keys here and in `ROLE_PERMISSIONS` — avoid role checks in components.
+ * Role matrix follows FY26 ops whiteboard:
+ *   Leadership (admin) — all
+ *   Support Squad (site_supporter + fellow) — all except intake; 2 tracks
+ *   Coaches — all except intake & track assignment; 1 track
+ *   Students — own profile, submit forms, limited dashboard
  */
 export const BOB_PERMISSIONS = {
   "dashboard.view": "View command center",
@@ -10,6 +14,7 @@ export const BOB_PERMISSIONS = {
   "roster.view": "View student roster",
   "roster.create": "Create roster records",
   "roster.edit": "Edit roster records",
+  "roster.editSelf": "Edit own roster profile only",
   "intake.view": "View recruitment / intake pipeline",
   "intake.edit": "Edit intake records",
   "pods.view": "View tracks list",
@@ -23,9 +28,10 @@ export const BOB_PERMISSIONS = {
   "milestones.edit": "Edit deliverables",
   "inbox.view": "View operations inbox",
   "inbox.notificationsAll": "See org-wide notifications",
+  "notes.viewStaff": "View and add staff coach notes",
   "myPod.view": "View my pod workspace",
   "submit.view": "Submit operational forms",
-  "keyLinks.view": "View staff key links and resources",
+  "keyLinks.view": "View key links and program resources",
   "teams.view": "View teams workspace (coming soon)",
   "staff.view": "View staff directory",
   "settings.view": "Open settings page",
@@ -46,8 +52,10 @@ function pick(...ids: BobPermissionId[]): Set<BobPermissionId> {
   return new Set(ids);
 }
 
+/** Leadership — full program access */
 const ADMIN = pick(...ALL);
 
+/** Program leadership (org-wide ops, no destructive admin settings by default) */
 const PROGRAM_MANAGER = pick(
   "dashboard.view",
   "dashboard.reports",
@@ -67,6 +75,7 @@ const PROGRAM_MANAGER = pick(
   "milestones.edit",
   "inbox.view",
   "inbox.notificationsAll",
+  "notes.viewStaff",
   "submit.view",
   "keyLinks.view",
   "teams.view",
@@ -77,27 +86,39 @@ const PROGRAM_MANAGER = pick(
   "action.studentTransfer",
 );
 
+/**
+ * Support Squad (site supporter + fellow) — all except intake; oversee up to 2 tracks.
+ * Attendance reports, deliverables, blitz accountability, roster, incident response.
+ */
 const SITE_SUPPORTER = pick(
   "dashboard.view",
   "roster.view",
+  "roster.edit",
+  "pods.view",
   "attendance.view",
   "attendance.mark",
   "attendance.discrepancies",
+  "milestones.view",
+  "milestones.edit",
   "inbox.view",
+  "notes.viewStaff",
   "submit.view",
   "keyLinks.view",
   "drawer.studentDetail",
   "drawer.podDetail",
 );
 
+/**
+ * Coaches — deliverables & attendance for their track; no intake or track assignment.
+ */
 const COACH = pick(
   "dashboard.view",
   "roster.view",
   "attendance.view",
   "attendance.mark",
-  "attendance.discrepancies",
   "milestones.view",
   "inbox.view",
+  "notes.viewStaff",
   "myPod.view",
   "submit.view",
   "keyLinks.view",
@@ -105,7 +126,20 @@ const COACH = pick(
   "drawer.podDetail",
 );
 
-const STUDENT = pick("submit.view");
+/**
+ * Students — personalized dashboard, roster (view all / edit self), team deliverables, youth key links.
+ * No org inbox or staff notes.
+ */
+const STUDENT = pick(
+  "dashboard.view",
+  "roster.view",
+  "roster.editSelf",
+  "attendance.view",
+  "milestones.view",
+  "submit.view",
+  "keyLinks.view",
+  "drawer.studentDetail",
+);
 
 const READ_ONLY = pick("dashboard.view");
 

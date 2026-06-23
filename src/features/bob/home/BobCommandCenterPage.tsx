@@ -16,19 +16,34 @@ export function BobCommandCenterPage() {
   const syncMutation = useBobAirtableSync();
   useBobSyncDataRefresh();
   const layoutId = resolveDashboardLayoutId(role);
-  const isCoachHome = layoutId === "coach_home";
+  const isTrackHome =
+    layoutId === "coach_home" || layoutId === "site_supporter_home";
+  const isStudentHome = layoutId === "student_ops";
+  const isSiteSupporterHome = layoutId === "site_supporter_home";
 
   return (
     <div>
       <PageHeader
         eyebrow="Bet on Baltimore"
-        title={isCoachHome ? `${BOB_POD_SINGULAR} dashboard` : "Command Center"}
+        title={
+          isStudentHome
+            ? "My dashboard"
+            : isSiteSupporterHome
+              ? "Command Center"
+              : isTrackHome
+                ? `${BOB_POD_SINGULAR} dashboard`
+                : "Command Center"
+        }
         description={
-          isCoachHome && me?.primaryPod
-            ? `${bobRoleLabel(role)} · ${me.primaryPod.name} — today's attendance, students who need you, and open incidents.`
-            : isCoachHome
-              ? `${bobRoleLabel(role)} — scoped to your assigned ${BOB_POD_PLURAL.toLowerCase()}.`
-              : "Operational overview — what needs attention, who is blocked, what is late."
+          isStudentHome
+            ? "Your attendance, deliverables, and program progress."
+            : isSiteSupporterHome
+              ? `${bobRoleLabel(role)} — oversee your assigned tracks (up to 2): attendance, deliverables, blitz points, roster, and incidents.`
+              : isTrackHome && me?.primaryPod
+                ? `${bobRoleLabel(role)} · ${me.primaryPod.name} — today's attendance, students who need you, and open incidents.`
+                : isTrackHome
+                  ? `${bobRoleLabel(role)} — scoped to your assigned ${BOB_POD_PLURAL.toLowerCase()}.`
+                  : "Operational overview — what needs attention, who is blocked, what is late."
         }
         actions={
           <>
@@ -67,7 +82,7 @@ export function BobCommandCenterPage() {
         }
       />
 
-      {isCoachHome && access.role === "coach" && me?.primaryPod ? (
+      {isTrackHome && access.role === "coach" && me?.primaryPod ? (
         <div className="mb-6 rounded-xl border border-gray-200 bg-white px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-sm text-gray-700">
             Prefer a simple student list? Open{" "}
@@ -78,6 +93,26 @@ export function BobCommandCenterPage() {
             className="text-sm font-medium text-orange-600 hover:text-orange-700"
           >
             Student list view →
+          </Link>
+        </div>
+      ) : null}
+
+      {isSiteSupporterHome && (me?.assignedPods?.length ?? 0) > 0 ? (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-sm text-gray-700">
+            Managing{" "}
+            <span className="font-semibold">
+              {me!.assignedPods!.map((p) => p.name).join(" · ")}
+            </span>
+            {me!.assignedPods!.length > 1
+              ? ` — ${me!.assignedPods!.length} tracks`
+              : ""}
+          </p>
+          <Link
+            href="/app/bob/pods"
+            className="text-sm font-medium text-orange-600 hover:text-orange-700"
+          >
+            Open tracks →
           </Link>
         </div>
       ) : null}

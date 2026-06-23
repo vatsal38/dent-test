@@ -6,6 +6,7 @@ import type { DashboardEngineProps, DashboardScope } from "../types";
 import { useBobDashboard } from "../../../../platform/query/hooks/useBobDashboard";
 import { BOB_POD_PLURAL } from "@/lib/bobDisplayTerminology";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import {
   defaultScopeFromAccess,
   mergeScopeWithSearchParams,
@@ -23,16 +24,17 @@ export function DashboardEngine({
 }: DashboardEngineProps) {
   const searchParams = useSearchParams();
   const { access } = useBobAccess();
+  const { data: me } = useBobMe();
 
   const [scopeOverride, setScopeOverride] = useState<DashboardScope | null>(
     null,
   );
 
   const scope = useMemo(() => {
-    const base = scopeProp ?? defaultScopeFromAccess(access);
+    const base = scopeProp ?? defaultScopeFromAccess(access, me ?? null);
     const merged = mergeScopeWithSearchParams(base, searchParams);
     return scopeOverride ?? merged;
-  }, [scopeProp, access, searchParams, scopeOverride]);
+  }, [scopeProp, access, me, searchParams, scopeOverride]);
 
   const { data, isLoading, isFetching, refetch } = useBobDashboard(scope);
   const { sections } = useDashboardLayout(layoutId, scope.level);
@@ -44,7 +46,9 @@ export function DashboardEngine({
     <div className={className}>
       {headerSlot}
 
-      {layoutId === "command_center" || layoutId === "coach_home" ? (
+      {layoutId === "command_center" ||
+      layoutId === "coach_home" ||
+      layoutId === "site_supporter_home" ? (
         <div className="-mt-2 mb-2 flex justify-end">
           {renderWidget("alerts_dropdown", {
             snapshot: data,

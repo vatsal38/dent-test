@@ -50,6 +50,8 @@ import {
   useBobStudentsList,
   useDeleteBobStudent,
 } from "@/platform/query/hooks/useBobStudents";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { ScopedEmptyState } from "@/platform/rbac/ScopedEmptyState";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "Active",
@@ -159,6 +161,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
     refetch,
   } = useBobStudentsList(listParamsMemo);
   const { data: facets, isLoading: facetsLoading } = useBobStudentsFacets();
+  const { access, isScoped } = useBobAccess();
   const { data: schemaRes } = useBobRosterSchema();
   const schema = schemaRes?.fields ?? null;
 
@@ -266,6 +269,12 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const pageItems = buildPageItems(totalPages, currentPage);
   const tableLoading = loading;
+  const filtersActive =
+    Boolean(debouncedFilters.search.trim()) ||
+    (debouncedFilters.conditions?.length ?? 0) > 0 ||
+    Boolean(trackFilter);
+  const scopedRosterEmpty =
+    isScoped && rows.length === 0 && !loading && !filtersActive && !error;
 
   if (isLoading && !listData) {
     return (
@@ -436,7 +445,11 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
       />
 
       {view === "grid" ? (
-        rows.length === 0 && !loading ? (
+        scopedRosterEmpty ? (
+          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50">
+            <ScopedEmptyState access={access} resource="students" />
+          </div>
+        ) : rows.length === 0 && !loading ? (
           <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center">
             <p className="text-sm font-medium text-gray-800">No students in this queue</p>
             <p className="mt-2 text-sm text-gray-500">Try another queue or clear filters.</p>
@@ -562,7 +575,9 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
               </tbody>
             </table>
           </div>
-          {rows.length === 0 && !loading ? (
+          {scopedRosterEmpty ? (
+            <ScopedEmptyState access={access} resource="students" />
+          ) : rows.length === 0 && !loading ? (
             <p className="p-8 text-center text-sm text-gray-500">No students in this queue.</p>
           ) : null}
         </div>

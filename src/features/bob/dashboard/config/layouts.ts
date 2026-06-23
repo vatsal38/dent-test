@@ -191,6 +191,105 @@ export const DASHBOARD_LAYOUTS: Record<
       },
     ],
   },
+  site_supporter_home: {
+    id: "site_supporter_home",
+    sections: [
+      {
+        id: "kpis",
+        widgets: [
+          {
+            id: "ss-kpis",
+            kind: "kpi_row",
+            metrics: COACH_HOME_KPIS,
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "attention",
+        widgets: [
+          {
+            id: "ss-escalation",
+            kind: "attention_summary",
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "quick",
+        widgets: [
+          {
+            id: "ss-quick-actions",
+            kind: "quick_actions",
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
+      {
+        id: "today",
+        title: "Today on your tracks",
+        columns: 3,
+        widgets: [
+          {
+            id: "ss-attendance",
+            kind: "attendance_summary",
+            title: "Attendance today",
+            colSpan: 8,
+            permissions: ["dashboard.view", "attendance.view"],
+          },
+          {
+            id: "ss-at-risk",
+            kind: "at_risk_list",
+            title: "Students needing attention",
+            colSpan: 4,
+            permissions: ["dashboard.view", "roster.view"],
+          },
+        ],
+      },
+      {
+        id: "work",
+        title: "Your queues",
+        columns: 2,
+        widgets: [
+          {
+            id: "ss-queues",
+            kind: "action_queues",
+            title: "Action queues",
+            colSpan: 6,
+            permissions: ["dashboard.view"],
+          },
+          {
+            id: "ss-milestones",
+            kind: "milestone_summary",
+            title: "Deliverables on your tracks",
+            colSpan: 6,
+            permissions: ["dashboard.view", "milestones.view"],
+          },
+        ],
+      },
+      {
+        id: "accountability",
+        title: "Accountability",
+        columns: 2,
+        widgets: [
+          {
+            id: "ss-blitz",
+            kind: "blitz_teams",
+            title: "Blitz teams",
+            colSpan: 6,
+            permissions: ["dashboard.view"],
+          },
+          {
+            id: "ss-weekly",
+            kind: "weekly_milestone_progress",
+            title: "Weekly deliverable progress",
+            colSpan: 6,
+            permissions: ["dashboard.view", "milestones.view"],
+          },
+        ],
+      },
+    ],
+  },
   command_center_reports: {
     id: "command_center_reports",
     sections: [
@@ -270,28 +369,49 @@ export const DASHBOARD_LAYOUTS: Record<
     id: "student_ops",
     sections: [
       {
-        id: "student-kpis",
+        id: "student-program",
+        title: "Program overview",
         widgets: [
           {
-            id: "stu-kpis",
+            id: "stu-program-kpis",
             kind: "kpi_row",
             metrics: [
-              "checkedInToday",
-              "deliverablesSubmitted",
-              "openIncidents",
+              "overallAttendancePct",
+              "deliverablesSubmittedPctThisWeek",
             ],
-            minScope: "student",
+            permissions: ["dashboard.view"],
+            roles: ["student"],
           },
         ],
       },
       {
-        id: "student-alerts",
+        id: "student-personal",
+        title: "My progress",
+        columns: 3,
         widgets: [
-          { id: "stu-alerts", kind: "alert_strip" },
           {
-            id: "stu-onboarding",
-            kind: "onboarding_summary",
-            title: "Onboarding",
+            id: "stu-attendance",
+            kind: "attendance_summary",
+            title: "My attendance",
+            colSpan: 8,
+            permissions: ["dashboard.view", "attendance.view"],
+            roles: ["student"],
+          },
+          {
+            id: "stu-deliverables",
+            kind: "milestone_summary",
+            title: "Team deliverables",
+            colSpan: 8,
+            permissions: ["dashboard.view", "milestones.view"],
+            roles: ["student"],
+          },
+          {
+            id: "stu-blitz",
+            kind: "blitz_teams",
+            title: "Blitz points",
+            colSpan: 4,
+            permissions: ["dashboard.view"],
+            roles: ["student"],
           },
         ],
       },

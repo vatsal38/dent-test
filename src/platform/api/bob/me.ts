@@ -21,6 +21,13 @@ export interface BobMeResponse {
     podName?: string;
     siteNames?: string[];
   } | null;
+  /** Roster student linked to this youth account */
+  linkedStudent?: {
+    id: string;
+    name: string | null;
+    podId: string | null;
+    track: string | null;
+  } | null;
   /** Canonical role for RBAC */
   role: BobOpsRole;
   scopeType: BobScopeType;

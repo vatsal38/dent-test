@@ -39,22 +39,28 @@ export function DashboardFilters({
 
   if (access.isScoped && assignedPods.length > 0) {
     const showAllPods = assignedPods.length > 1;
+    const scopeLabel =
+      access.role === "site_supporter" ? "My tracks" : "My scope";
+    const allLabel =
+      access.role === "site_supporter"
+        ? `All my tracks (${assignedPods.length})`
+        : `All my ${BOB_POD_PLURAL.toLowerCase()}`;
     return (
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-          My scope
+          {scopeLabel}
         </span>
         {showAllPods ? (
           <button
             type="button"
             onClick={() =>
-              onScopeChange({ level: "organization", label: "My cohort" })
+              onScopeChange({ level: "organization", label: "My tracks" })
             }
             className={chipClass(
               scope.level === "organization" && !scope.podId,
             )}
           >
-            All my {BOB_POD_PLURAL.toLowerCase()}
+            {allLabel}
           </button>
         ) : null}
         {assignedPods.map((pod) => (

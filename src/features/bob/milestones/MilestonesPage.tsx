@@ -1,45 +1,45 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import type { BobDeliverable } from '@/platform/api/bob/milestones';
-import { BobImportProgress } from '@/components/BobImportProgress';
+import { useMemo, useState } from "react";
+import type { BobDeliverable } from "@/platform/api/bob/milestones";
+import { BobImportProgress } from "@/components/BobImportProgress";
 import {
   getBobDeliverablesImportStatus,
   startBobDeliverablesImport,
-} from '@/platform/api/bob/deliverablesImport';
+} from "@/platform/api/bob/deliverablesImport";
 import {
   BOB_MILESTONES_ORG_ID,
   useBobMilestonesList,
   useUpdateBobMilestone,
-} from '@/platform/query/hooks/useBobMilestones';
-import { parseApiError } from '@/platform/api/errors';
-import { Skeleton } from '@/components/Skeleton';
-import { PageHeader } from '@/design-system/patterns/PageHeader';
+} from "@/platform/query/hooks/useBobMilestones";
+import { parseApiError } from "@/platform/api/errors";
+import { Skeleton } from "@/components/Skeleton";
+import { PageHeader } from "@/design-system/patterns/PageHeader";
 import {
   TRACK_FILTERS,
   APP_REVIEW_TO_TRACKER,
   TRACKER_TO_APP_REVIEW,
   formatDeliverableDates,
   reviewStatusBadge,
-} from './deliverableDisplay';
+} from "./deliverableDisplay";
 import {
   groupDeliverablesByTeam,
   groupDeliverablesByTrack,
   sortByDeliverableNumber,
-} from './deliverableGrouping';
-import { DeliverablesProgressTable } from './components/DeliverablesProgressTable';
+} from "./deliverableGrouping";
+import { DeliverablesProgressTable } from "./components/DeliverablesProgressTable";
 import {
   DeliverablesTeamMatrix,
   DeliverablesTrackMatrix,
-} from './components/DeliverablesMatrixView';
-import { DeliverableDetailDrawer } from './components/DeliverableDetailDrawer';
+} from "./components/DeliverablesMatrixView";
+import { DeliverableDetailDrawer } from "./components/DeliverableDetailDrawer";
 import {
   findTrackerForTeam,
   teamNamesFromDeliverables,
   teamPendingUploadCount,
   teamReviewStatus,
-} from './deliverableTeamReview';
-import { formatBobTrackDisplayLabel } from '@/lib/bobDisplayTerminology';
+} from "./deliverableTeamReview";
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
 type DetailState = {
   deliverable: BobDeliverable;
@@ -48,15 +48,15 @@ type DetailState = {
 
 export function MilestonesPage() {
   const orgId = BOB_MILESTONES_ORG_ID;
-  const [tab, setTab] = useState<'all' | 'by_team' | 'pending_review'>('all');
-  const [trackFilter, setTrackFilter] = useState('');
+  const [tab, setTab] = useState<"all" | "by_team" | "pending_review">("all");
+  const [trackFilter, setTrackFilter] = useState("");
   const [detail, setDetail] = useState<DetailState | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [detailSaveError, setDetailSaveError] = useState<string | null>(null);
 
   const milestonesQuery = useBobMilestonesList({
     orgId,
-    tab: tab === 'pending_review' ? 'pending_review' : undefined,
+    tab: tab === "pending_review" ? "pending_review" : undefined,
     track: trackFilter || undefined,
   });
   const updateMilestone = useUpdateBobMilestone();
@@ -83,20 +83,11 @@ export function MilestonesPage() {
     return count;
   }, [data]);
 
-  const groupedByTrack = useMemo(
-    () => groupDeliverablesByTrack(data),
-    [data],
-  );
+  const groupedByTrack = useMemo(() => groupDeliverablesByTrack(data), [data]);
 
-  const groupedByTeam = useMemo(
-    () => groupDeliverablesByTeam(data),
-    [data],
-  );
+  const groupedByTeam = useMemo(() => groupDeliverablesByTeam(data), [data]);
 
-  const reviewItems = useMemo(
-    () => sortByDeliverableNumber(data),
-    [data],
-  );
+  const reviewItems = useMemo(() => sortByDeliverableNumber(data), [data]);
 
   function openDetail(d: BobDeliverable, teamName?: string) {
     setDetailSaveError(null);
@@ -117,10 +108,13 @@ export function MilestonesPage() {
     teamName?: string,
   ): BobDeliverable {
     const trackerValue =
-      trackerStatus || (reviewStatus ? APP_REVIEW_TO_TRACKER[reviewStatus] : undefined);
+      trackerStatus ||
+      (reviewStatus ? APP_REVIEW_TO_TRACKER[reviewStatus] : undefined);
     const reviewValue =
       reviewStatus ||
-      (trackerStatus ? TRACKER_TO_APP_REVIEW[trackerStatus] : item.reviewStatus);
+      (trackerStatus
+        ? TRACKER_TO_APP_REVIEW[trackerStatus]
+        : item.reviewStatus);
     const trackers = [...(item.trackerRecords || [])];
     const existingTracker = findTrackerForTeam(item, teamName);
     const trackerIdx = existingTracker
@@ -148,8 +142,7 @@ export function MilestonesPage() {
               teamNames: teamName ? [teamName] : [],
             };
       nextRow.deliverableStatus = trackerValue;
-      nextRow.reviewStatus =
-        TRACKER_TO_APP_REVIEW[trackerValue] || reviewValue;
+      nextRow.reviewStatus = TRACKER_TO_APP_REVIEW[trackerValue] || reviewValue;
       if (trackerIdx >= 0) trackers[trackerIdx] = nextRow;
       else trackers.unshift(nextRow);
     }
@@ -255,38 +248,40 @@ export function MilestonesPage() {
         </p>
       ) : null}
 
-      {data.length > 0 ? <DeliverablesProgressTable deliverables={data} /> : null}
+      {data.length > 0 ? (
+        <DeliverablesProgressTable deliverables={data} />
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 pb-3">
         <button
           type="button"
-          onClick={() => setTab('all')}
+          onClick={() => setTab("all")}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            tab === 'all'
-              ? 'border-orange-500 text-orange-600'
-              : 'border-transparent text-gray-600'
+            tab === "all"
+              ? "border-orange-500 text-orange-600"
+              : "border-transparent text-gray-600"
           }`}
         >
           Catalog
         </button>
         <button
           type="button"
-          onClick={() => setTab('by_team')}
+          onClick={() => setTab("by_team")}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            tab === 'by_team'
-              ? 'border-orange-500 text-orange-600'
-              : 'border-transparent text-gray-600'
+            tab === "by_team"
+              ? "border-orange-500 text-orange-600"
+              : "border-transparent text-gray-600"
           }`}
         >
           By Team
         </button>
         <button
           type="button"
-          onClick={() => setTab('pending_review')}
+          onClick={() => setTab("pending_review")}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-2 ${
-            tab === 'pending_review'
-              ? 'border-orange-500 text-orange-600'
-              : 'border-transparent text-gray-600'
+            tab === "pending_review"
+              ? "border-orange-500 text-orange-600"
+              : "border-transparent text-gray-600"
           }`}
         >
           Deliverables to Review
@@ -301,13 +296,13 @@ export function MilestonesPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         {TRACK_FILTERS.map((t) => (
           <button
-            key={t.id || 'all'}
+            key={t.id || "all"}
             type="button"
             onClick={() => setTrackFilter(t.id)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
               trackFilter === t.id
-                ? 'bg-orange-500 text-white border-orange-500'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-orange-300'
+                ? "bg-orange-500 text-white border-orange-500"
+                : "bg-white text-gray-700 border-gray-300 hover:border-orange-300"
             }`}
           >
             {t.label}
@@ -318,22 +313,19 @@ export function MilestonesPage() {
       {data.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
           <p className="text-gray-700 font-medium">
-            {needsImport && !trackFilter && tab === 'all'
-              ? 'No deliverables imported yet'
-              : 'No deliverables in this view'}
+            {needsImport && !trackFilter && tab === "all"
+              ? "No deliverables imported yet"
+              : "No deliverables in this view"}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            {needsImport && !trackFilter && tab === 'all'
-              ? 'Use Import deliverables from Airtable above to load the catalog.'
-              : 'Import from Airtable or adjust track filters.'}
+            {needsImport && !trackFilter && tab === "all"
+              ? "Use Import deliverables from Airtable above to load the catalog."
+              : "Import from Airtable or adjust track filters."}
           </p>
         </div>
-      ) : tab === 'all' ? (
-        <DeliverablesTrackMatrix
-          rows={groupedByTrack}
-          onSelect={openDetail}
-        />
-      ) : tab === 'by_team' ? (
+      ) : tab === "all" ? (
+        <DeliverablesTrackMatrix rows={groupedByTrack} onSelect={openDetail} />
+      ) : tab === "by_team" ? (
         <DeliverablesTeamMatrix
           rows={groupedByTeam}
           onSelect={(d, teamName) => openDetail(d, teamName)}

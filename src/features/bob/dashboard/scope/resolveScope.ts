@@ -11,8 +11,32 @@ export function scopeToApiParams(scope: DashboardScope): BobDashboardParams {
   return params;
 }
 
-/** Default scope from RBAC session — coaches land on pod scope. */
-export function defaultScopeFromAccess(access: BobAccessContext): DashboardScope {
+/** Default scope from RBAC session — coaches land on pod scope; support squad on all assigned tracks. */
+export function defaultScopeFromAccess(
+  access: BobAccessContext,
+  me?: { linkedStudent?: { id: string; name?: string | null; podId?: string | null } | null } | null,
+): DashboardScope {
+  if (access.role === "student") {
+    const podId = access.primaryPod?.id || access.podIds[0] || me?.linkedStudent?.podId;
+    if (podId) {
+      return {
+        level: "pod",
+        podId: String(podId),
+        label: access.primaryPod?.name || "My track",
+        studentId: me?.linkedStudent?.id,
+      };
+    }
+    if (me?.linkedStudent?.id) {
+      return {
+        level: "student",
+        studentId: me.linkedStudent.id,
+        label: me.linkedStudent.name || "My profile",
+      };
+    }
+  }
+  if (access.role === "site_supporter" && access.podIds.length > 1) {
+    return { level: "organization", label: "My tracks" };
+  }
   if (access.scopeType === "pod") {
     if (access.podIds.length > 1) {
       return { level: "organization", label: "My cohort" };

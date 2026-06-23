@@ -43,9 +43,12 @@ export function NotesTab() {
       at: new Date(s.createdAt).toLocaleDateString(),
     }));
 
-  const all = [...coachNotes, ...submissionNotes];
+  const canViewStaffNotes = can("notes.viewStaff");
+  const all = canViewStaffNotes
+    ? [...coachNotes, ...submissionNotes]
+    : submissionNotes.filter((s) => s.author !== "Incident");
   const authorLabel = user?.name || user?.email || "Coach";
-  const canAddNote = can("roster.edit") || can("submit.view");
+  const canAddNote = can("roster.edit") && canViewStaffNotes;
 
   async function handleAddNote() {
     const body = draft.trim();

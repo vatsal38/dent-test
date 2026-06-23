@@ -1,17 +1,54 @@
 # BoB RBAC Architecture
 
-Enterprise role-based access control for **Bet on Baltimore** (Dent Ops).
+Enterprise role-based access control for **Bet on Baltimore** (Dent Ops), aligned with the FY26 ops whiteboard.
 
 ## Roles & scopes
 
-| Role | Scope | Typical visibility |
-|------|--------|-------------------|
-| **Admin** | Organization | Full program data, settings, sync, reports |
-| **Program Manager** | Organization | Roster, intake, pods, attendance, milestones (no admin settings) |
-| **Site Supporter** | Site / assigned pods | Attendance, discrepancies, site roster & incidents |
-| **Coach** | Pod | My pod, pod students, pod milestones, assigned notifications |
+| Role | Whiteboard | Scope | Access summary |
+|------|------------|--------|----------------|
+| **Admin** | Leadership | Organization | Full program data, settings, sync, reports |
+| **Program Manager** | Leadership | Organization | Roster, intake, tracks, attendance, deliverables |
+| **Site Supporter** | Support Squad | Assigned tracks (up to 2) | All except intake; deliverables, blitz, roster, incidents |
+| **Fellow** | Support Squad | Assigned tracks | Same permissions as site supporter (`bobRole: fellow` → `site_supporter`) |
+| **Coach** | Coaches | 1 track | Deliverables & attendance for their track; no intake or track assignment |
+| **Student** | Students | Self | Own profile, submit forms, limited dashboard; no staff notes or org inbox |
 
-Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` (`coachIdsFilter` on lists) and **client-side** via `scopedFilters.ts` for UI consistency.
+Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **client-side** via `useBobAccess()` / route guards.
+
+## Permission matrix (whiteboard)
+
+### Leadership (`admin`, `program_manager`)
+- **All** areas including intake, settings (admin only), staff directory, org-wide reports
+
+### Support Squad (`site_supporter`, `fellow`)
+- ✅ **Command Center** — default view scoped to assigned tracks (up to 2)
+- ✅ **Attendance** — mark attendance, submit reports, attendance correction triage
+- ✅ **Deliverables** — view and review/edit team submissions (`milestones.edit`)
+- ✅ **Blitz points** — accountability widgets on command center (blitz teams leaderboard)
+- ✅ **Roster** — view and edit students on assigned tracks
+- ✅ **Incidents** — operations inbox for responding to incidents
+- ✅ **Submit** — operational forms
+- ✅ **Key Links** — full staff resource hub
+- ✅ **Tracks** (`pods.view`) — oversee assigned tracks (not org-wide track admin)
+- ❌ **Intake** pipeline (`intake.view`, `intake.edit`)
+- ❌ **Track assignment** / create (`pods.edit`, `pods.create`)
+- ❌ Program reports tab, settings, staff directory
+
+### Coaches (`coach`)
+- ✅ Dashboard (1 track), roster, attendance, deliverables (view), submit, incidents
+- ❌ Intake pipeline
+- ❌ Track assignment (`pods.edit`, `pods.create`, `pods.view` list)
+- ❌ Blitz / weekly deliverable accountability widgets (support squad only)
+- ❌ Attendance discrepancy triage (support squad)
+
+### Students (`student`)
+- ✅ **Personal dashboard** — track attendance & deliverable achievement, my attendance, team deliverables, blitz points
+- ✅ **Roster** — view cohort; edit own profile only (`roster.editSelf`)
+- ✅ **Submit** — sign in/out, progress updates, incidents (own submissions)
+- ✅ **Key Links** — youth-facing calendars, curriculum, photos, wellness resources (no staff onboarding or email groups)
+- ❌ **Submissions inbox** — no other students’ submissions (`inbox.view`)
+- ❌ **Staff notes** (`notes.viewStaff`)
+- ❌ Intake, tracks admin, settings, staff directory
 
 ## Layered model
 
@@ -38,90 +75,26 @@ GET /api/bob/me  →  resolveBobAccess()  →  ROLE_PERMISSIONS matrix
 | `useBobAccess.ts` | Hook: `can`, `access`, scoped defaults |
 | `BobRouteGuard` | Route → permission (`app/bob/layout.tsx`) |
 | `BobPermissionGuard` | Component-level gates (actions, drawers, widgets) |
-| `scopedFilters.ts` | Client pod/site filtering |
 | `routes.ts` / `navConfig.ts` | Declarative route & nav rules |
 
-## Patterns
+## Staff roster seeding
 
-### Page feature
+Run `npm run seed:bob-staff` from `dent-be` to sync Mongo users from the BoB '26 staff roster:
 
-```tsx
-const { can, access, defaultPodId } = useBobAccess();
-if (!can("attendance.mark")) return <UnauthorizedState />;
-```
-
-### Action button
-
-```tsx
-<BobPermissionGuard permission="pods.create" silent>
-  <CreatePodLink />
-</BobPermissionGuard>
-```
-
-### Scoped query defaults
-
-```tsx
-const { defaultPodId, siteFilterOptions } = useBobAccess();
-const [podFilter, setPodFilter] = useState(defaultPodId);
-```
-
-Backend list endpoints already apply coach scope when the session user is not admin/program manager.
-
-## Dent Ops (admin only)
-
-Partnerships, Email, Runs, and `/app` home are **platform admin only** (`user.isAdmin` from bootstrap).
-
-- UI: `DentOpsRouteGuard` in `app/app/layout.tsx` — redirects others to BoB home
-- Sidebar: Dent Ops section hidden for non-admins
-- API: `/api/education/*` and `/api/integrations/*` (except Gmail OAuth callback) require `requireAdmin`
-
-## URL protection (BoB)
-
-All `/app/bob/*` routes are wrapped by `BobRouteGuard` in `app/app/bob/layout.tsx`:
-
-- Matches path → required permission via `routes.ts` (`BOB_ROUTES`)
-- **Does not render** page content until access is confirmed
-- **Redirects** to role-appropriate home (e.g. coach → My Pod, site supporter → Attendance)
-
-Direct navigation examples:
-
-| URL | Coach | Site supporter |
-|-----|-------|----------------|
-| `/app/bob/settings` | Redirect | Redirect |
-| `/app/bob/pods` | Redirect | Redirect |
-| `/app/bob/recruitment` | Redirect | Redirect |
-| `/app/bob/my-pod` | Allowed | Redirect |
-| `/app/bob/attendance` | Redirect | Allowed |
-
-API routes enforce the same boundaries (e.g. recruitment → 403 for coach/site roles).
-
-## Middleware
-
-- **Edge** (`middleware.ts`): tags BoB routes; auth is Firebase client-side.
-- **Client** (`BobRouteGuard`): permission check from `/api/bob/me`.
-
-## Scaling
-
-- **ABAC**: extend `resolveBobAccess` with resource attributes; keep `can()` API stable.
-- **Server permissions array**: optional `permissions[]` on `/me` for dynamic grants.
-- **Feature flags**: compose with `can()` — `can('x') && flags.y`.
-
-## Legacy
-
-`bobCapabilities()` and `bobRole` on `/me` remain for gradual migration. Prefer `useBobAccess().can()`.
+| Airtable role | Platform `bobRole` | Ops role |
+|---------------|-------------------|----------|
+| CEO, admins | `admin` | Leadership |
+| BoB '26 Coach | `coach` | Coach |
+| BoB '26 Site Supporter | `site_supporter` | Support Squad |
+| BoB '26 Fellow | `site_supporter` | Support Squad |
+| Program staff | `program_manager` | Leadership |
 
 ## Local test accounts
 
-From `dent-be`, run:
-
 ```bash
-npm run seed:bob-rbac:mongo   # Mongo users + BoB pods/students
-npm run seed:bob-rbac:auth    # Firebase email/password users (required for /login)
+npm run seed:bob-rbac:mongo
+npm run seed:bob-rbac:auth
 ```
-
-Or full seed: `npm run seed:bob-rbac` (uses Admin SDK, or REST fallback if credentials are missing).
-
-Requires `MONGODB_URI` and Firebase **Email/Password** sign-in enabled in Console.
 
 | Role | Email | Password |
 |------|--------|----------|
@@ -129,9 +102,3 @@ Requires `MONGODB_URI` and Firebase **Email/Password** sign-in enabled in Consol
 | Program Manager | `bob.pm@dent.test` | `BobTest2026!` |
 | Site Supporter | `bob.site@dent.test` | `BobTest2026!` |
 | Coach | `bob.coach@dent.test` | `BobTest2026!` |
-
-Override password: `BOB_SEED_PASSWORD=YourSecret npm run seed:bob-rbac`
-
-On the login page (dev only), expand **BoB test accounts** to autofill email and password.
-
-**Seed data:** Pod Falcon (coach + site supporter, Northwest), Pod Harbor (site supporter only, Eastside), four students, sample attendance.
