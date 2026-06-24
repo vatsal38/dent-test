@@ -6,6 +6,7 @@ import { useBobPodsList } from "@/platform/query/hooks/useBobPods";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
 import { parseApiError } from "@/platform/api/errors";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { filterPodsByAccess } from "@/platform/rbac/scopedFilters";
 import { getWeekMonday, getWeekSunday } from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
@@ -21,6 +22,14 @@ export interface UseAttendanceWorkspaceOptions {
   trackFilter?: string;
 }
 
+function filterRecordsForStudent<T extends { studentId?: string | null }>(
+  rows: T[],
+  studentId: string | null,
+): T[] {
+  if (!studentId) return rows;
+  return rows.filter((r) => String(r.studentId || "") === studentId);
+}
+
 export function useAttendanceWorkspace({
   focusDate,
   weekMode = false,
@@ -28,72 +37,98 @@ export function useAttendanceWorkspace({
   trackFilter = "",
 }: UseAttendanceWorkspaceOptions) {
   const { access } = useBobAccess();
-  const effectivePod = podFilter;
-  const effectiveTrack = trackFilter;
+  const { data: me } = useBobMe();
+  const linkedStudentId = me?.linkedStudent?.id ?? null;
+  const isStudentViewer = access.role === "student";
+  const effectivePod = isStudentViewer ? "" : podFilter;
+  const effectiveTrack = isStudentViewer ? "" : trackFilter;
 
   const weekMonday = getWeekMonday(new Date(focusDate + "T12:00:00"));
   const startDate = weekMode ? weekMonday : focusDate;
   const endDate = weekMode ? getWeekSunday(weekMonday) : focusDate;
 
-  const podsQuery = useBobPodsList({ limit: 100 });
-  const pods = filterPodsByAccess(podsQuery.data?.pods ?? [], access);
+  const podsQuery = useBobPodsList(
+    { limit: 100 },
+    { enabled: !isStudentViewer },
+  );
+  const pods = isStudentViewer
+    ? []
+    : filterPodsByAccess(podsQuery.data?.pods ?? [], access);
 
   const scopedStudentIds = useMemo((): string[] | null | undefined => {
+    if (isStudentViewer) {
+      return linkedStudentId ? [linkedStudentId] : [];
+    }
     if (!effectivePod) return undefined;
     const pod = pods.find((p) => p.id === effectivePod);
     if (!pod) return null;
     return pod.students ?? [];
-  }, [effectivePod, pods]);
+  }, [effectivePod, pods, isStudentViewer, linkedStudentId]);
 
   const studentsQuery = useBobStudentsList(
     {
       bobCohort: effectivePod ? undefined : "active",
       track: effectiveTrack || undefined,
       ids: scopedStudentIds?.length ? scopedStudentIds.join(",") : undefined,
-      limit: scopedStudentIds?.length || 500,
+      limit: isStudentViewer ? 1 : scopedStudentIds?.length || 500,
       includeStats: true,
     },
     {
       enabled:
-        scopedStudentIds !== null &&
-        !(effectivePod && scopedStudentIds?.length === 0),
+        isStudentViewer
+          ? Boolean(linkedStudentId)
+          : scopedStudentIds !== null &&
+            !(effectivePod && scopedStudentIds?.length === 0),
     },
   );
   const students = studentsQuery.data?.students ?? [];
 
   const enrollmentCount = useMemo(() => {
+    if (isStudentViewer) return students.length;
     if (effectiveTrack) return students.length;
     const fromPods = countEnrollment(pods, effectivePod || undefined);
     if (fromPods > 0) return fromPods;
     return students.length;
-  }, [pods, effectivePod, effectiveTrack, students.length]);
+  }, [isStudentViewer, effectiveTrack, pods, effectivePod, students.length]);
+
+  const studentAttendanceParams = useMemo(
+    () =>
+      isStudentViewer && linkedStudentId ? { studentId: linkedStudentId } : {},
+    [isStudentViewer, linkedStudentId],
+  );
 
   const attendanceParams = useMemo(
     () => ({
       startDate,
       endDate,
       limit: ATTENDANCE_FETCH_LIMIT,
+      ...studentAttendanceParams,
     }),
-    [startDate, endDate],
+    [startDate, endDate, studentAttendanceParams],
   );
 
   const attendanceQuery = useBobAttendanceList(attendanceParams);
-  const records = attendanceQuery.data?.attendance ?? [];
+  const records = filterRecordsForStudent(
+    attendanceQuery.data?.attendance ?? [],
+    isStudentViewer ? linkedStudentId : null,
+  );
 
   const weekRollupParams = useMemo(
     () => ({
       startDate: weekMonday,
       endDate: getWeekSunday(weekMonday),
       limit: ATTENDANCE_FETCH_LIMIT,
+      ...studentAttendanceParams,
     }),
-    [weekMonday],
+    [weekMonday, studentAttendanceParams],
   );
   const weekRollupQuery = useBobAttendanceList(weekRollupParams, {
     enabled: !weekMode,
   });
-  const weekRecordsForRollup = weekMode
-    ? records
-    : (weekRollupQuery.data?.attendance ?? []);
+  const weekRecordsForRollup = filterRecordsForStudent(
+    weekMode ? records : (weekRollupQuery.data?.attendance ?? []),
+    isStudentViewer ? linkedStudentId : null,
+  );
 
   const workspace = useMemo(
     () =>
@@ -108,6 +143,7 @@ export function useAttendanceWorkspace({
         records,
         enrollmentCount,
         studentsRequested: students.length,
+        studentOnlyId: isStudentViewer ? linkedStudentId : null,
       }),
     [
       focusDate,
@@ -121,24 +157,27 @@ export function useAttendanceWorkspace({
       records,
       enrollmentCount,
       students.length,
+      isStudentViewer,
+      linkedStudentId,
     ],
   );
 
   const loading =
     (attendanceQuery.isLoading && !attendanceQuery.data) ||
-    podsQuery.isLoading ||
+    (!isStudentViewer && podsQuery.isLoading) ||
     (studentsQuery.isLoading && !studentsQuery.data);
 
   const error =
     (attendanceQuery.error && parseApiError(attendanceQuery.error)) ||
-    (podsQuery.error && parseApiError(podsQuery.error)) ||
+    (!isStudentViewer && podsQuery.error && parseApiError(podsQuery.error)) ||
     (studentsQuery.error && parseApiError(studentsQuery.error)) ||
     null;
 
   const refetch = () => {
     attendanceQuery.refetch();
-    podsQuery.refetch();
+    if (!isStudentViewer) podsQuery.refetch();
     studentsQuery.refetch();
+    if (!weekMode) weekRollupQuery.refetch();
   };
 
   return {
@@ -154,5 +193,7 @@ export function useAttendanceWorkspace({
     lastSyncedAt: attendanceQuery.dataUpdatedAt
       ? new Date(attendanceQuery.dataUpdatedAt)
       : null,
+    isStudentViewer,
+    linkedStudentId,
   };
 }

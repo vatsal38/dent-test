@@ -52,7 +52,10 @@ export function useBobNavItems(
     const primaryItems = orderPrimaryItems(
       allowed.filter((i) => i.section === "primary"),
     );
-    const moreItems = allowed.filter((i) => i.section === "more");
+    const moreItems =
+      access.role === "admin"
+        ? allowed.filter((i) => i.section === "more")
+        : [];
     return {
       primary: primaryItems.map(toNav),
       more: moreItems.map(toNav),

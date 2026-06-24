@@ -23,12 +23,13 @@ function isStudentDrawerRoute(pathname: string): boolean {
 export function StudentDrawerHost() {
   const pathname = usePathname();
   const { studentId, tab, open: urlOpen, closeStudent, setTab } = useStudentDrawerUrl();
-  const open = urlOpen && isStudentDrawerRoute(pathname);
+  const routeOpen = urlOpen && isStudentDrawerRoute(pathname);
+  const allowedId = routeOpen && studentId ? studentId : null;
 
   return (
     <StudentCommandDrawer
-      studentId={open ? studentId : null}
-      open={open}
+      studentId={allowedId}
+      open={Boolean(allowedId)}
       onClose={closeStudent}
       tab={tab}
       onTabChange={setTab}

@@ -127,7 +127,7 @@ const COACH = pick(
 );
 
 /**
- * Students — personalized dashboard, roster (view all / edit self), team deliverables, youth key links.
+ * Students — view track roster (read-only for peers), edit own profile only.
  * No org inbox or staff notes.
  */
 const STUDENT = pick(

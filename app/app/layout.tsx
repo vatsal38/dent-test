@@ -378,7 +378,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
               })}
-            {!bobNavLoading && (
+            {!bobNavLoading && bobNavMoreItems.length > 0 && (
             <div className="pt-1">
               <button
                 type="button"

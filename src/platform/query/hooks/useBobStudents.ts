@@ -30,11 +30,12 @@ export function useBobStudentsList(
   });
 }
 
-export function useBobStudentsFacets() {
+export function useBobStudentsFacets(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: bobKeys.students.facets(),
     queryFn: getBobStudentsFacets,
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
 

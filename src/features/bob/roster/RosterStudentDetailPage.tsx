@@ -17,6 +17,9 @@ import { StudentHeadshot } from "@/features/bob/student-drawer/header/StudentHea
 import { cellDisplayValue, isAirtableRecordId } from "@/lib/bobAirtableDisplay";
 import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
 import { Skeleton } from "@/components/Skeleton";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
+import { canEditStudentRecord } from "@/platform/rbac/studentProfile";
 
 function getAirtableErrorText(v: unknown): string | null {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
@@ -374,6 +377,8 @@ export function RosterStudentDetailPage() {
   const queryClient = useQueryClient();
   const id = params?.id;
   const openedEditFromQueryRef = useRef(false);
+  const { can } = useBobAccess();
+  const { data: me } = useBobMe();
 
   const [student, setStudent] = useState<BobStudent | null>(null);
   const [schema, setSchema] = useState<BobRosterSchemaField[] | null>(null);
@@ -412,11 +417,11 @@ export function RosterStudentDetailPage() {
 
   useEffect(() => {
     if (!student || openedEditFromQueryRef.current) return;
-    if (searchParams?.get("edit") === "1") {
-      setEditing(true);
-      openedEditFromQueryRef.current = true;
-    }
-  }, [student, searchParams]);
+    if (searchParams?.get("edit") !== "1") return;
+    if (!canEditStudentRecord(can, me?.linkedStudent?.id, student.id)) return;
+    setEditing(true);
+    openedEditFromQueryRef.current = true;
+  }, [student, searchParams, can, me?.linkedStudent?.id]);
 
   const airtableFields = (student?.airtableFields || {}) as Record<string, unknown>;
   const fieldTypeByName = useMemo(() => {
@@ -571,6 +576,7 @@ export function RosterStudentDetailPage() {
   if (!student) return null;
 
   const title = `${student.firstName} ${student.lastName}`.trim() || "Student";
+  const allowEdit = canEditStudentRecord(can, me?.linkedStudent?.id, student.id);
   const subtitle =
     (airtableFields["Student Email"] as string | undefined) ||
     student.email ||
@@ -877,7 +883,8 @@ export function RosterStudentDetailPage() {
                 setSaveError(null);
                 setEditing((v) => !v);
               }}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
+              disabled={!allowEdit}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {editing ? "Cancel" : "Edit"}
             </button>

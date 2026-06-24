@@ -7,6 +7,7 @@ import {
   isBobRouteAllowed,
   matchBobRoute,
   resolveBobRouteRedirect,
+  resolveStudentProfileRedirect,
 } from "./routes";
 
 /** URL-level access for the current BoB route (for links, programmatic navigation). */
@@ -19,9 +20,16 @@ export function useBobRouteAccess() {
   const route = matchBobRoute(pathname);
   const allowed = isBobRouteAllowed(pathname, can);
   const redirectTo = useMemo(() => {
-    if (!accessReady || allowed) return null;
-    return resolveBobRouteRedirect(pathname, can, access);
-  }, [accessReady, allowed, pathname, can, access]);
+    if (!accessReady) return null;
+    const profileRedirect = resolveStudentProfileRedirect(
+      pathname,
+      access,
+      me?.linkedStudent?.id,
+    );
+    if (profileRedirect) return profileRedirect;
+    if (allowed) return null;
+    return resolveBobRouteRedirect(pathname, can, access, me);
+  }, [accessReady, allowed, pathname, can, access, me]);
 
   return {
     pathname,

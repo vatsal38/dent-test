@@ -12,6 +12,8 @@ import {
 import { RatingBar } from "../widgets/RatingBar";
 import { WellnessStrip } from "../widgets/WellnessIndicator";
 import { useStudentDrawerContext } from "../context/StudentDrawerContext";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
 import {
   computeEngagementRating,
   computeWellnessSignals,
@@ -38,6 +40,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 export function StudentDrawerHeader() {
   const { student, onClose, tab, setTab } = useStudentDrawerContext();
+  const { can, access } = useBobAccess();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: submissions = [] } = useStudentSubmissions(
@@ -118,25 +121,31 @@ export function StudentDrawerHeader() {
       </div>
 
       <div className="px-5 pb-3 flex flex-wrap gap-2">
-        <Link
-          href={`/app/bob/attendance/mark?${markParams.toString()}`}
-          className="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 transition-colors"
-        >
-          Update attendance
-        </Link>
-        <Link
-          href={`/app/bob/submit?${submitParams.toString()}`}
-          className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50"
-        >
-          Log incident
-        </Link>
-        <button
-          type="button"
-          onClick={() => setTab("notes")}
-          className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50"
-        >
-          Coach notes
-        </button>
+        <BobPermissionGuard permission="attendance.mark" silent>
+          <Link
+            href={`/app/bob/attendance/mark?${markParams.toString()}`}
+            className="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 transition-colors"
+          >
+            Update attendance
+          </Link>
+        </BobPermissionGuard>
+        {can("submit.view") && access.role !== "student" ? (
+          <Link
+            href={`/app/bob/submit?${submitParams.toString()}`}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50"
+          >
+            Log incident
+          </Link>
+        ) : null}
+        <BobPermissionGuard permission="notes.viewStaff" silent>
+          <button
+            type="button"
+            onClick={() => setTab("notes")}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50"
+          >
+            Coach notes
+          </button>
+        </BobPermissionGuard>
         <Link
           href={`/app/bob/roster/${student.id}`}
           className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50 ml-auto"

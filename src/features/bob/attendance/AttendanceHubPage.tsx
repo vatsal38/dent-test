@@ -94,6 +94,7 @@ export function AttendanceHubPage() {
     isRefreshing,
     refetch,
     lastSyncedAt,
+    isStudentViewer,
   } = useAttendanceWorkspace({
     focusDate,
     weekMode: viewMode === "week",
@@ -112,7 +113,7 @@ export function AttendanceHubPage() {
   );
 
   const { data: rosterFacets, isLoading: rosterFacetsLoading } =
-    useBobStudentsFacets();
+    useBobStudentsFacets({ enabled: !isStudentViewer });
   const trackOptions = useMemo(
     () => rosterTrackFilterOptions(rosterFacets ?? null),
     [rosterFacets],
@@ -223,148 +224,156 @@ export function AttendanceHubPage() {
         onClose={() => setSyncError(null)}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-        <h1 className="text-lg font-bold text-gray-900">Attendance</h1>
+        <h1 className="text-lg font-bold text-gray-900">
+          {isStudentViewer ? "My attendance" : "Attendance"}
+        </h1>
         <div className="flex flex-wrap items-center gap-1.5">
-          <div className="relative">
-            <BobActionButton
-              label={`Alerts (${alertCount})`}
-              icon={<FiAlertTriangle />}
-              variant={alertCount > 0 ? "warning" : "outline"}
-              onClick={() => setAlertsOpen((v) => !v)}
-              title="View alerts"
-              className="select-none"
-            />
-            {alertsOpen ? (
-              <div
-                className="absolute right-0 mt-2 w-[360px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden"
-                role="menu"
-              >
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-                  <div className="text-sm font-semibold text-gray-900">
-                    Alerts
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAlertsOpen(false)}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+          {!isStudentViewer ? (
+            <>
+              <div className="relative">
+                <BobActionButton
+                  label={`Alerts (${alertCount})`}
+                  icon={<FiAlertTriangle />}
+                  variant={alertCount > 0 ? "warning" : "outline"}
+                  onClick={() => setAlertsOpen((v) => !v)}
+                  title="View alerts"
+                  className="select-none"
+                />
+                {alertsOpen ? (
+                  <div
+                    className="absolute right-0 mt-2 w-[360px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden"
+                    role="menu"
                   >
-                    Close
-                  </button>
-                </div>
-                <div className="max-h-[360px] overflow-auto">
-                  {workspace.alerts.length === 0 ? (
-                    <div className="px-3 py-3 text-sm text-gray-600">
-                      No alerts.
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                      <div className="text-sm font-semibold text-gray-900">
+                        Alerts
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAlertsOpen(false)}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        Close
+                      </button>
                     </div>
-                  ) : (
-                    <ul className="divide-y divide-gray-100">
-                      {workspace.alerts.map((a) => {
-                        const sev =
-                          a.severity === "critical"
-                            ? "bg-red-50 text-red-800 border-red-200"
-                            : a.severity === "warning"
-                              ? "bg-amber-50 text-amber-900 border-amber-200"
-                              : "bg-gray-50 text-gray-800 border-gray-200";
-                        const row = (
-                          <div className="px-3 py-3 hover:bg-gray-50">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="text-sm font-medium text-gray-900 truncate">
-                                  {a.title}
-                                </div>
-                                {a.body ? (
-                                  <div className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                    {a.body}
+                    <div className="max-h-[360px] overflow-auto">
+                      {workspace.alerts.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-gray-600">
+                          No alerts.
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-gray-100">
+                          {workspace.alerts.map((a) => {
+                            const sev =
+                              a.severity === "critical"
+                                ? "bg-red-50 text-red-800 border-red-200"
+                                : a.severity === "warning"
+                                  ? "bg-amber-50 text-amber-900 border-amber-200"
+                                  : "bg-gray-50 text-gray-800 border-gray-200";
+                            const row = (
+                              <div className="px-3 py-3 hover:bg-gray-50">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-900 truncate">
+                                      {a.title}
+                                    </div>
+                                    {a.body ? (
+                                      <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                        {a.body}
+                                      </div>
+                                    ) : null}
                                   </div>
-                                ) : null}
+                                  <div className="flex flex-col items-end gap-2">
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded-full border ${sev}`}
+                                    >
+                                      {a.count}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full border ${sev}`}
-                                >
-                                  {a.count}
-                                </span>
+                            );
+                            return (
+                              <li key={a.id} role="menuitem">
+                                {a.href ? (
+                                  <Link
+                                    href={a.href}
+                                    onClick={() => setAlertsOpen(false)}
+                                    className="block"
+                                  >
+                                    {row}
+                                  </Link>
+                                ) : (
+                                  row
+                                )}
+                              </li>
+                            );
+                          })}
+                          {workspace.scale.alertsTruncated ? (
+                            <li>
+                              <div className="px-3 py-2 text-xs text-gray-600 bg-gray-50">
+                                Showing top alerts (truncated:{" "}
+                                {workspace.scale.alertsTruncated})
                               </div>
-                            </div>
-                          </div>
-                        );
-                        return (
-                          <li key={a.id} role="menuitem">
-                            {a.href ? (
-                              <Link
-                                href={a.href}
-                                onClick={() => setAlertsOpen(false)}
-                                className="block"
-                              >
-                                {row}
-                              </Link>
-                            ) : (
-                              row
-                            )}
-                          </li>
-                        );
-                      })}
-                      {workspace.scale.alertsTruncated ? (
-                        <li>
-                          <div className="px-3 py-2 text-xs text-gray-600 bg-gray-50">
-                            Showing top alerts (truncated:{" "}
-                            {workspace.scale.alertsTruncated})
-                          </div>
-                        </li>
-                      ) : null}
-                    </ul>
-                  )}
-                </div>
+                            </li>
+                          ) : null}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
+              <BobActionButton
+                label="Export"
+                icon={<FiDownload />}
+                variant="outline"
+                disabled={!tableDays.length}
+                onClick={exportCsv}
+              />
+              <BobActionButton
+                href="/app/bob/attendance/discrepancies"
+                label={`Attendance corrections (${workspace.summary.openDiscrepancies})`}
+                icon={<FiAlertTriangle />}
+                variant={
+                  workspace.summary.openDiscrepancies ? "warning" : "outline"
+                }
+              />
+              <BobPermissionGuard permission="attendance.mark" silent>
+                <BobActionButton
+                  href={`/app/bob/attendance/mark?date=${focusDate}${trackFilter ? `&track=${encodeURIComponent(trackFilter)}` : ""}`}
+                  label="Scan mode"
+                  icon={<FiZap />}
+                  variant="primary"
+                />
+              </BobPermissionGuard>
+            </>
+          ) : null}
           <BobActionButton
             label="Refresh"
             icon={<FiRefreshCw />}
             variant="outline"
             onClick={() => refetch()}
           />
-          <BobActionButton
-            label="Export"
-            icon={<FiDownload />}
-            variant="outline"
-            disabled={!tableDays.length}
-            onClick={exportCsv}
-          />
-          <BobActionButton
-            href="/app/bob/attendance/discrepancies"
-            label={`Attendance corrections (${workspace.summary.openDiscrepancies})`}
-            icon={<FiAlertTriangle />}
-            variant={
-              workspace.summary.openDiscrepancies ? "warning" : "outline"
-            }
-          />
-          <BobPermissionGuard permission="attendance.mark" silent>
-            <BobActionButton
-              href={`/app/bob/attendance/mark?date=${focusDate}${trackFilter ? `&track=${encodeURIComponent(trackFilter)}` : ""}`}
-              label="Scan mode"
-              icon={<FiZap />}
-              variant="primary"
-            />
-          </BobPermissionGuard>
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <BobImportProgress
-          className="flex-1 min-w-[200px] [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md"
-          label="attendance"
-          fetchStatus={getBobAttendanceImportStatus}
-          startImport={startBobAttendanceImport}
-          onComplete={() => refetch()}
-          compact
-        />
-        <AttendanceScaleBanner
-          scale={workspace.scale}
-          onSelectTrack={() => trackSelectRef.current?.focus()}
-          inline
-        />
-      </div>
+      {!isStudentViewer ? (
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <BobImportProgress
+            className="flex-1 min-w-[200px] [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md"
+            label="attendance"
+            fetchStatus={getBobAttendanceImportStatus}
+            startImport={startBobAttendanceImport}
+            onComplete={() => refetch()}
+            compact
+          />
+          <AttendanceScaleBanner
+            scale={workspace.scale}
+            onSelectTrack={() => trackSelectRef.current?.focus()}
+            inline
+          />
+        </div>
+      ) : null}
 
       {boundsTotal > 0 &&
       latestImportedDate &&
@@ -405,12 +414,14 @@ export function AttendanceHubPage() {
         onHealthFilterChange={setHealthFilter}
         summary={workspace.summary}
         issues={workspace.issues}
-        search={search}
-        onSearchChange={setSearch}
+        search={isStudentViewer ? "" : search}
+        onSearchChange={isStudentViewer ? () => {} : setSearch}
         page={page}
         totalRows={rowCount}
         onPageChange={setPage}
         trackSelectRef={trackSelectRef}
+        hideTrackFilter={isStudentViewer}
+        hideSearch={isStudentViewer}
       />
 
       <AttendanceHoursRollup
@@ -429,7 +440,7 @@ export function AttendanceHubPage() {
         page={page}
       />
 
-      <section className="mt-8">
+      <section className={isStudentViewer ? "hidden" : "mt-8"}>
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
           Pod check-in today
         </h2>
@@ -440,7 +451,7 @@ export function AttendanceHubPage() {
         <PodSiteAnalytics podStats={workspace.podStats} />
       </section>
 
-      {selectedDay ? (
+      {selectedDay && !isStudentViewer ? (
         <StudentDayDrawer
           day={selectedDay}
           workspace={workspace}

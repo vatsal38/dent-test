@@ -40,6 +40,8 @@ import {
   teamReviewStatus,
 } from "./deliverableTeamReview";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
 
 type DetailState = {
   deliverable: BobDeliverable;
@@ -48,8 +50,14 @@ type DetailState = {
 
 export function MilestonesPage() {
   const orgId = BOB_MILESTONES_ORG_ID;
-  const [tab, setTab] = useState<"all" | "by_team" | "pending_review">("all");
-  const [trackFilter, setTrackFilter] = useState("");
+  const { access, can } = useBobAccess();
+  const { data: me } = useBobMe();
+  const studentTrack =
+    access.role === "student" ? me?.linkedStudent?.track || "" : "";
+  const [tab, setTab] = useState<"all" | "by_team" | "pending_review">(
+    access.role === "student" ? "by_team" : "all",
+  );
+  const [trackFilter, setTrackFilter] = useState(studentTrack);
   const [detail, setDetail] = useState<DetailState | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [detailSaveError, setDetailSaveError] = useState<string | null>(null);
@@ -230,17 +238,19 @@ export function MilestonesPage() {
         </div>
       ) : null}
 
-      <BobImportProgress
-        className="mb-6"
-        label="deliverables"
-        fetchStatus={getBobDeliverablesImportStatus}
-        startImport={async () => {
-          const result = await startBobDeliverablesImport();
-          await milestonesQuery.refetch();
-          return result;
-        }}
-        onComplete={() => void milestonesQuery.refetch()}
-      />
+      {can("settings.manage") ? (
+        <BobImportProgress
+          className="mb-6"
+          label="deliverables"
+          fetchStatus={getBobDeliverablesImportStatus}
+          startImport={async () => {
+            const result = await startBobDeliverablesImport();
+            await milestonesQuery.refetch();
+            return result;
+          }}
+          onComplete={() => void milestonesQuery.refetch()}
+        />
+      ) : null}
 
       {milestonesQuery.data?.syncedAt ? (
         <p className="text-xs text-gray-500 -mt-2 mb-4">
@@ -253,17 +263,19 @@ export function MilestonesPage() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 pb-3">
-        <button
-          type="button"
-          onClick={() => setTab("all")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            tab === "all"
-              ? "border-orange-500 text-orange-600"
-              : "border-transparent text-gray-600"
-          }`}
-        >
-          Catalog
-        </button>
+        {access.role !== "student" ? (
+          <button
+            type="button"
+            onClick={() => setTab("all")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+              tab === "all"
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-600"
+            }`}
+          >
+            Catalog
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setTab("by_team")}
@@ -275,40 +287,51 @@ export function MilestonesPage() {
         >
           By Team
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("pending_review")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-2 ${
-            tab === "pending_review"
-              ? "border-orange-500 text-orange-600"
-              : "border-transparent text-gray-600"
-          }`}
-        >
-          Deliverables to Review
-          {pendingCount > 0 ? (
-            <span className="px-1.5 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">
-              {pendingCount}
-            </span>
-          ) : null}
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-6">
-        {TRACK_FILTERS.map((t) => (
+        {can("milestones.edit") ? (
           <button
-            key={t.id || "all"}
             type="button"
-            onClick={() => setTrackFilter(t.id)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
-              trackFilter === t.id
-                ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white text-gray-700 border-gray-300 hover:border-orange-300"
+            onClick={() => setTab("pending_review")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-2 ${
+              tab === "pending_review"
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-600"
             }`}
           >
-            {t.label}
+            Deliverables to Review
+            {pendingCount > 0 ? (
+              <span className="px-1.5 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">
+                {pendingCount}
+              </span>
+            ) : null}
           </button>
-        ))}
+        ) : null}
       </div>
+
+      {access.role !== "student" ? (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {TRACK_FILTERS.map((t) => (
+            <button
+              key={t.id || "all"}
+              type="button"
+              onClick={() => setTrackFilter(t.id)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
+                trackFilter === t.id
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white text-gray-700 border-gray-300 hover:border-orange-300"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : studentTrack ? (
+        <p className="text-sm text-gray-600 mb-6">
+          Your track:{" "}
+          <span className="font-medium text-gray-900">
+            {formatBobTrackDisplayLabel(studentTrack)}
+          </span>
+        </p>
+      ) : null}
 
       {data.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">

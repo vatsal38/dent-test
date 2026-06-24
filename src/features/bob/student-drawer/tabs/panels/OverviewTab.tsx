@@ -12,6 +12,8 @@ import { extractCoachNotes } from "../../lib/profileSignals";
 import { useStudentActivityFeed } from "../../hooks/useStudentTabQueries";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { canEditStudentRecord } from "@/platform/rbac/studentProfile";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
 
 function attendancePercent(student: {
   attendanceStats?: {
@@ -49,7 +51,9 @@ function deliverablePercent(student: {
 
 export function OverviewTab() {
   const { student, tab, setTab } = useStudentDrawerContext();
-  const { can } = useBobAccess();
+  const { can, access } = useBobAccess();
+  const { data: me } = useBobMe();
+  const allowEdit = canEditStudentRecord(can, me?.linkedStudent?.id, student?.id);
   const { items, isLoading } = useStudentActivityFeed(
     student?.id ?? null,
     tab,
@@ -159,35 +163,39 @@ export function OverviewTab() {
         </section>
       ) : null}
 
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Recent activity
-          </h3>
-          <button
-            type="button"
-            onClick={() => setTab("activity")}
-            className="text-xs text-orange-600 font-medium"
-          >
-            Full timeline
-          </button>
-        </div>
-        {isLoading ? (
-          <p className="text-sm text-gray-400">Loading activity…</p>
-        ) : (
-          <ActivityTimeline items={items.slice(0, 6)} />
-        )}
-      </section>
+      {access.role !== "student" ? (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Recent activity
+            </h3>
+            <button
+              type="button"
+              onClick={() => setTab("activity")}
+              className="text-xs text-orange-600 font-medium"
+            >
+              Full timeline
+            </button>
+          </div>
+          {isLoading ? (
+            <p className="text-sm text-gray-400">Loading activity…</p>
+          ) : (
+            <ActivityTimeline items={items.slice(0, 6)} />
+          )}
+        </section>
+      ) : null}
 
-      <p className="text-xs text-gray-500">
-        Need to edit fields?{" "}
-        <Link
-          href={`/app/bob/roster/${student.id}?edit=1`}
-          className="text-orange-600 font-medium"
-        >
-          Open full record editor
-        </Link>
-      </p>
+      {allowEdit ? (
+        <p className="text-xs text-gray-500">
+          Need to edit fields?{" "}
+          <Link
+            href={`/app/bob/roster/${student.id}?edit=1`}
+            className="text-orange-600 font-medium"
+          >
+            Open full record editor
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }

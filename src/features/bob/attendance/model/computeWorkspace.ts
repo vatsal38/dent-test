@@ -258,6 +258,8 @@ export interface ComputeWorkspaceInput {
   records: BobAttendance[];
   enrollmentCount: number;
   studentsRequested: number;
+  /** When set, workspace is limited to this student only (youth self-service). */
+  studentOnlyId?: string | null;
 }
 
 export function computeAttendanceWorkspace(
@@ -274,9 +276,18 @@ export function computeAttendanceWorkspace(
     records,
     enrollmentCount,
     studentsRequested,
+    studentOnlyId: studentOnlyIdRaw,
   } = input;
 
-  const studentById = new Map(students.map((s) => [s.id, s]));
+  const studentOnlyId = studentOnlyIdRaw ? String(studentOnlyIdRaw) : null;
+  const scopedStudents = studentOnlyId
+    ? students.filter((s) => String(s.id) === studentOnlyId)
+    : students;
+  const scopedRecords = studentOnlyId
+    ? records.filter((r) => String(r.studentId || "") === studentOnlyId)
+    : records;
+
+  const studentById = new Map(scopedStudents.map((s) => [s.id, s]));
   const podById = new Map(pods.map((p) => [p.id, p]));
   const rangeStart = startDate || focusDate;
   const rangeEnd = endDate || focusDate;
@@ -288,21 +299,24 @@ export function computeAttendanceWorkspace(
   const trackTerm = String(trackFilter || "").trim();
 
   // When track-scoped, enrollments come from the filtered student list only.
-  const rosterEnrollments = trackTerm
-    ? []
-    : listExpectedEnrollments(pods, podFilter);
+  const rosterEnrollments =
+    studentOnlyId || trackTerm
+      ? []
+      : listExpectedEnrollments(pods, podFilter);
   const cohortEnrollments = supplementEnrollmentsFromStudents(
-    students,
+    scopedStudents,
     rosterEnrollments,
     podFilter,
   );
-  const enrollments = supplementEnrollmentsFromAttendance(
-    records,
-    dates,
-    cohortEnrollments,
-    studentById,
-    podFilter,
-  );
+  const enrollments = studentOnlyId
+    ? cohortEnrollments.filter((e) => e.studentId === studentOnlyId)
+    : supplementEnrollmentsFromAttendance(
+        scopedRecords,
+        dates,
+        cohortEnrollments,
+        studentById,
+        podFilter,
+      );
 
   if (enrollments.some((e) => e.podId === UNASSIGNED_POD_ID)) {
     podById.set(UNASSIGNED_POD_ID, {
@@ -317,7 +331,7 @@ export function computeAttendanceWorkspace(
   }
 
   let days = buildStudentDayAttendance(
-    records,
+    scopedRecords,
     enrollments,
     dates,
     studentById,
@@ -328,6 +342,8 @@ export function computeAttendanceWorkspace(
       const student = studentById.get(d.studentId);
       return student && studentMatchesRosterTrack(student, trackTerm);
     });
+  } else if (studentOnlyId) {
+    days = days.filter((d) => d.studentId === studentOnlyId);
   }
 
   const discrepancies = buildDiscrepancies(days, studentById, podById);
@@ -376,7 +392,7 @@ export function computeAttendanceWorkspace(
   return {
     date: focusDate,
     pods,
-    students,
+    students: scopedStudents,
     studentById,
     podById,
     days,
@@ -397,7 +413,7 @@ export function computeAttendanceWorkspace(
         enrollmentCount > WEEK_VIEW_ENROLLMENT_THRESHOLD &&
         !podFilter &&
         !trackTerm,
-      studentsLoaded: students.length,
+      studentsLoaded: scopedStudents.length,
       studentsRequested,
       attendanceRecordsLoaded: records.length,
       alertsTruncated: truncated,

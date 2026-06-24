@@ -125,6 +125,8 @@ export function AttendanceHubControls({
   onPageChange,
   pageSize = ATTENDANCE_PAGE_SIZE,
   trackSelectRef,
+  hideTrackFilter = false,
+  hideSearch = false,
 }: {
   focusDate: string;
   onFocusDateChange: (date: string) => void;
@@ -147,6 +149,8 @@ export function AttendanceHubControls({
   onPageChange: (page: number) => void;
   pageSize?: number;
   trackSelectRef?: Ref<HTMLSelectElement>;
+  hideTrackFilter?: boolean;
+  hideSearch?: boolean;
 }) {
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const start = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -170,7 +174,7 @@ export function AttendanceHubControls({
           options={trackOptions}
           loading={tracksLoading}
           emptyLabel={requiresScope ? "Select track…" : "All tracks"}
-          className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500 min-w-[140px] max-w-[220px]"
+          className={`h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500 min-w-[140px] max-w-[220px] ${hideTrackFilter ? "hidden" : ""}`}
         />
 
         <Segmented
@@ -198,7 +202,7 @@ export function AttendanceHubControls({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search students…"
-          className="h-8 w-full sm:w-44 lg:w-52 px-2.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500"
+          className={`h-8 w-full sm:w-44 lg:w-52 px-2.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 ${hideSearch ? "hidden" : ""}`}
         />
 
         {totalPages > 1 ? (

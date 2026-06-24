@@ -87,9 +87,15 @@ export function matchBobRoute(pathname: string): BobRouteDef | null {
 }
 
 /** First allowed landing page for this access context (used when URL is forbidden). */
-export function getBobHomeHref(access: BobAccessContext): string {
+export function getBobHomeHref(
+  access: BobAccessContext,
+  me?: { linkedStudent?: { id: string } | null } | null,
+): string {
   if (access.role === "student" && canAccess(access, "dashboard.view")) {
     return "/app/bob";
+  }
+  if (access.role === "student" && canAccess(access, "roster.view")) {
+    return "/app/bob/roster";
   }
   if (access.role === "student" && canAccess(access, "submit.view")) {
     return "/app/bob/home";
@@ -116,11 +122,26 @@ export function resolveBobRouteRedirect(
   pathname: string,
   can: (permission: BobPermissionId) => boolean,
   access: BobAccessContext,
+  me?: { linkedStudent?: { id: string } | null } | null,
 ): string | null {
   const route = matchBobRoute(pathname);
   if (!route) return null;
   if (can(route.permission)) return null;
-  return route.fallback ?? getBobHomeHref(access);
+  return route.fallback ?? getBobHomeHref(access, me);
+}
+
+/** Students may not create roster records via `/roster/new`. */
+export function resolveStudentProfileRedirect(
+  pathname: string,
+  access: BobAccessContext,
+  _linkedStudentId: string | null | undefined,
+): string | null {
+  if (access.role !== "student") return null;
+  const normalized = pathname.split("?")[0].replace(/\/$/, "") || "/";
+  if (normalized === "/app/bob/roster/new") {
+    return "/app/bob/roster";
+  }
+  return null;
 }
 
 export function isBobRouteAllowed(

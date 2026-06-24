@@ -161,7 +161,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
     refetch,
   } = useBobStudentsList(listParamsMemo);
   const { data: facets, isLoading: facetsLoading } = useBobStudentsFacets();
-  const { access, isScoped } = useBobAccess();
+  const { access, isScoped, can } = useBobAccess();
   const { data: schemaRes } = useBobRosterSchema();
   const schema = schemaRes?.fields ?? null;
 
@@ -299,19 +299,23 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
               >
                 Export CSV
               </button>
-              <button
-                type="button"
-                onClick={() => startBobRosterImport()}
-                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Import from Airtable
-              </button>
-              <Link
-                href="/app/bob/roster/new"
-                className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
-              >
-                Add student
-              </Link>
+              {can("settings.manage") ? (
+                <button
+                  type="button"
+                  onClick={() => startBobRosterImport()}
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Import from Airtable
+                </button>
+              ) : null}
+              {can("roster.create") ? (
+                <Link
+                  href="/app/bob/roster/new"
+                  className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
+                >
+                  Add student
+                </Link>
+              ) : null}
             </div>
           }
         />
@@ -492,9 +496,11 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
                       {formatBobFieldDisplayName(f.name)}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase sticky right-0 bg-gray-50">
-                    ···
-                  </th>
+                  {can("action.studentDelete") ? (
+                    <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase sticky right-0 bg-gray-50">
+                      ···
+                    </th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -557,18 +563,20 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
                           />
                         </td>
                       ))}
-                      <td className="px-4 py-3 text-right sticky right-0 bg-inherit">
-                        <button
-                          type="button"
-                          className="text-xs text-red-600 hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget({ id: s.id, name });
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
+                      {can("action.studentDelete") ? (
+                        <td className="px-4 py-3 text-right sticky right-0 bg-inherit">
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ id: s.id, name });
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}
