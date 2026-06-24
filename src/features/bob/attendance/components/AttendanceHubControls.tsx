@@ -113,7 +113,6 @@ export function AttendanceHubControls({
   requiresScope,
   viewMode,
   onViewModeChange,
-  weekViewDisabled,
   healthFilter,
   onHealthFilterChange,
   summary,
@@ -139,7 +138,6 @@ export function AttendanceHubControls({
   requiresScope: boolean;
   viewMode: "day" | "week";
   onViewModeChange: (mode: "day" | "week") => void;
-  weekViewDisabled: boolean;
   healthFilter: IssueFilter;
   onHealthFilterChange: (filter: IssueFilter) => void;
   summary: AttendanceWorkspaceData["summary"];
@@ -190,7 +188,6 @@ export function AttendanceHubControls({
             { id: "week", label: "Week" },
           ]}
           onChange={(id) => onViewModeChange(id as "day" | "week")}
-          disabledKeys={weekViewDisabled ? new Set(["week"]) : undefined}
         />
 
         <div className="hidden sm:block h-5 w-px bg-gray-200" />

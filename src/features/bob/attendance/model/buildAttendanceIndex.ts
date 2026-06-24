@@ -31,6 +31,7 @@ import {
   mapAttendanceStateFromRecord,
   sessionStatusLabel,
 } from "./mapAttendanceState";
+import { hasStaffAnnotation, mergeStaffAnnotations } from "./attendanceStaffNotes";
 
 function emptyPunches(): Record<PunchType, PunchSlot> {
   return Object.fromEntries(
@@ -338,6 +339,13 @@ export function buildStudentDayAttendance(
 ): StudentDayAttendance[] {
   const punchEvents: BobAttendance[] = [];
   const dailyByKey = new Map<string, BobAttendance>();
+  const dayRecordsByKey = new Map<string, BobAttendance[]>();
+
+  function rememberDayRecord(dayKey: string, record: BobAttendance) {
+    const list = dayRecordsByKey.get(dayKey) || [];
+    list.push(record);
+    dayRecordsByKey.set(dayKey, list);
+  }
 
   for (const r of records) {
     if (!r.date) continue;
@@ -351,7 +359,14 @@ export function buildStudentDayAttendance(
     const podId =
       r.podId || studentById.get(studentId)?.podId || UNASSIGNED_POD_ID;
     const dayKey = `${podId}|${studentId}|${r.date}`;
-    if (isDailyAttendanceRecord(r) || r.status || isBaselineDailyRecord(r)) {
+    rememberDayRecord(dayKey, r);
+
+    if (
+      isDailyAttendanceRecord(r) ||
+      r.status ||
+      isBaselineDailyRecord(r) ||
+      hasStaffAnnotation(r)
+    ) {
       const prev = dailyByKey.get(dayKey);
       if (shouldPreferDailyRecord(prev, r)) {
         dailyByKey.set(dayKey, r);
@@ -451,6 +466,10 @@ export function buildStudentDayAttendance(
         }
       }
 
+      const staffAnnotations = mergeStaffAnnotations(
+        dayRecordsByKey.get(key) || (daily ? [daily] : []),
+      );
+
       days.push({
         key,
         studentId,
@@ -472,12 +491,14 @@ export function buildStudentDayAttendance(
         site: daily?.branch ?? student?.site ?? undefined,
         branch: daily?.branch ?? undefined,
         track: daily?.track ?? student?.track ?? undefined,
-        manualOverride: daily?.manualOverride ?? undefined,
+        manualOverride:
+          staffAnnotations.manualOverride ?? daily?.manualOverride ?? undefined,
         staffCorrectionSignIn: daily?.staffCorrectionSignIn ?? undefined,
         staffCorrectionSignOut: daily?.staffCorrectionSignOut ?? undefined,
-        notes: daily?.notes ?? undefined,
+        notes: staffAnnotations.notes ?? daily?.notes ?? undefined,
         hasManualCorrection: Boolean(
-          daily?.manualOverride ||
+          staffAnnotations.manualOverride ||
+            daily?.manualOverride ||
             daily?.staffCorrectionSignIn ||
             daily?.staffCorrectionSignOut,
         ),

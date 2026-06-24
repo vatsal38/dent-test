@@ -40,6 +40,7 @@ import {
   isBeforeProgramStart,
   PROGRAM_END_DATE,
   PROGRAM_START_DATE,
+  resolveAttendancePickerMinDate,
   resolveDefaultAttendanceFocusDate,
 } from "@/lib/bobProgramCalendar";
 
@@ -130,7 +131,9 @@ export function AttendanceHubPage() {
   );
 
   const latestImportedDate = boundsQuery.data?.latestDate ?? null;
+  const earliestImportedDate = boundsQuery.data?.earliestDate ?? null;
   const boundsTotal = boundsQuery.data?.total ?? 0;
+  const datePickerMin = resolveAttendancePickerMinDate(earliestImportedDate);
   const suggestedFocusDate =
     boundsQuery.data?.suggestedFocusDate ??
     resolveDefaultAttendanceFocusDate({ latestImportedDate });
@@ -162,12 +165,6 @@ export function AttendanceHubPage() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, trackFilter, healthFilter, focusDate, viewMode]);
-
-  useEffect(() => {
-    if (workspace.scale.weekViewHeavy && viewMode === "week" && !trackFilter) {
-      setViewMode("day");
-    }
-  }, [workspace.scale.weekViewHeavy, viewMode, trackFilter]);
 
   const weekDates = useMemo(() => {
     if (viewMode !== "week") return [focusDate];
@@ -423,7 +420,6 @@ export function AttendanceHubPage() {
         requiresScope={false}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        weekViewDisabled={workspace.scale.weekViewHeavy && !trackFilter}
         healthFilter={healthFilter}
         onHealthFilterChange={setHealthFilter}
         summary={workspace.summary}
@@ -436,7 +432,7 @@ export function AttendanceHubPage() {
         trackSelectRef={trackSelectRef}
         hideTrackFilter={isStudentViewer}
         hideSearch={isStudentViewer}
-        minDate={PROGRAM_START_DATE}
+        minDate={datePickerMin}
         maxDate={PROGRAM_END_DATE}
       />
 

@@ -123,9 +123,6 @@ export function resolveDefaultAttendanceFocusDate(options?: {
     ? String(options.requestedDate).slice(0, 10)
     : null;
   if (requested) {
-    if (isBeforeProgramStart(requested) && !isBeforeProgramStart(today)) {
-      return today <= PROGRAM_END_DATE ? today : PROGRAM_END_DATE;
-    }
     if (isAfterProgramEnd(requested)) return PROGRAM_END_DATE;
     return requested;
   }
@@ -154,4 +151,13 @@ export function clampDateToProgramWindow(iso: string): string {
   if (d < PROGRAM_START_DATE) return PROGRAM_START_DATE;
   if (d > PROGRAM_END_DATE) return PROGRAM_END_DATE;
   return d;
+}
+
+/** Earliest selectable date in attendance hub — includes pre-season imported rows. */
+export function resolveAttendancePickerMinDate(
+  earliestImportedDate?: string | null,
+): string {
+  const earliest = String(earliestImportedDate || "").slice(0, 10);
+  if (earliest && earliest < PROGRAM_START_DATE) return earliest;
+  return PROGRAM_START_DATE;
 }

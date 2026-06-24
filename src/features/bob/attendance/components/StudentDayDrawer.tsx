@@ -7,6 +7,7 @@ import { AttendanceStateBadge } from "./AttendanceStateBadge";
 import { StaffAttendanceRecordEditor } from "./StaffAttendanceRecordEditor";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { formatDayHoursPresent } from "../model/dayHours";
+import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 
 export function StudentDayDrawer({
   day,
@@ -26,6 +27,7 @@ export function StudentDayDrawer({
   const student = workspace.studentById.get(day.studentId);
   const programHours = student?.attendanceStats?.hoursAttended;
   const hoursToday = formatDayHoursPresent(day);
+  const staffNote = resolveAttendanceStaffNote(day);
 
   return (
     <>
@@ -63,9 +65,9 @@ export function StudentDayDrawer({
                 </span>
               ) : null}
             </div>
-            {day.notes ? (
+            {staffNote ? (
               <p className="mt-2 text-sm text-gray-600 bg-gray-50 border border-gray-100 rounded-md px-3 py-2">
-                {day.notes}
+                {staffNote}
               </p>
             ) : null}
           </div>

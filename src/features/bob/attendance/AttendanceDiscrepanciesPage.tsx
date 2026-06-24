@@ -8,7 +8,8 @@ import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect"
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { getWeekMonday, getWeekSunday } from "./weekDates";
-import { isBeforeProgramStart, PROGRAM_START_DATE, PROGRAM_END_DATE, resolveDefaultAttendanceFocusDate } from "@/lib/bobProgramCalendar";
+import { isBeforeProgramStart, PROGRAM_START_DATE, PROGRAM_END_DATE, resolveAttendancePickerMinDate, resolveDefaultAttendanceFocusDate } from "@/lib/bobProgramCalendar";
+import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttendance";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { DiscrepancyList } from "./components/DiscrepancyList";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
@@ -26,6 +27,10 @@ export function AttendanceDiscrepanciesPage() {
   const [trackFilter, setTrackFilter] = useState(initialTrack);
   const [detailDay, setDetailDay] = useState<StudentDayAttendance | null>(null);
   const [fixedThisSession, setFixedThisSession] = useState(0);
+  const boundsQuery = useBobAttendanceDateBounds();
+  const datePickerMin = resolveAttendancePickerMinDate(
+    boundsQuery.data?.earliestDate,
+  );
 
   const focusDate = weekOf;
   const { workspace, loading, error, refetch } = useAttendanceWorkspace({
@@ -104,7 +109,7 @@ export function AttendanceDiscrepanciesPage() {
           <input
             type="date"
             value={weekOf}
-            min={PROGRAM_START_DATE}
+            min={datePickerMin}
             max={PROGRAM_END_DATE}
             onChange={(e) => setWeekOf(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"

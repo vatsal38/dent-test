@@ -12,6 +12,18 @@ import {
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
+function isAirtableRecordId(value: string): boolean {
+  return /^rec[A-Za-z0-9]{10,}$/.test(String(value || "").trim());
+}
+
+function memberDisplayName(member: { name: string }): string {
+  const name = String(member.name || "").trim();
+  if (!name || isAirtableRecordId(name)) {
+    return "Member (name pending sync)";
+  }
+  return name;
+}
+
 export function ProjectTeamsPage() {
   const { can } = useBobAccess();
   const teamsQuery = useBobProjectTeamsList();
@@ -121,10 +133,10 @@ export function ProjectTeamsPage() {
                           href={`/app/bob/roster/${m.studentId}`}
                           className="text-orange-600 hover:underline"
                         >
-                          {m.name}
+                          {memberDisplayName(m)}
                         </Link>
                       ) : (
-                        <span>{m.name}</span>
+                        <span>{memberDisplayName(m)}</span>
                       )}
                     </li>
                   ))}

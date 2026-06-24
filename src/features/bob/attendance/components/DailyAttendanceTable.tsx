@@ -14,6 +14,7 @@ import {
   formatHoursTotal,
   sumDayHours,
 } from "../model/dayHours";
+import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 
 export function DailyAttendanceTable({
   days,
@@ -175,6 +176,7 @@ export function DailyAttendanceTable({
               ? Array.from(row.byDate.values())
               : [];
             const weekHoursTotal = sumDayHours(weekDays);
+            const staffNote = today ? resolveAttendanceStaffNote(today) : null;
             return (
               <tr
                 key={`${row.podId}-${row.studentId}`}
@@ -211,9 +213,9 @@ export function DailyAttendanceTable({
                       <p className="text-xs text-gray-500 truncate">
                         {podName}
                       </p>
-                      {today?.notes ? (
+                      {staffNote ? (
                         <p className="text-[10px] text-gray-500 truncate mt-0.5 italic">
-                          {today.notes}
+                          {staffNote}
                         </p>
                       ) : null}
                     </div>

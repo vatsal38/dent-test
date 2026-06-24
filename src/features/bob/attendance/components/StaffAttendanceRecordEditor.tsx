@@ -26,6 +26,7 @@ import {
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
 import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
+import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 import { parseApiError } from "@/platform/api/errors";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -153,7 +154,7 @@ export function StaffAttendanceRecordEditor({
         r?.signOutTime || r?.adjustedSignOut || day.punches.pm_out.timeLabel,
       ),
     );
-    setNotes(r?.notes || day.notes || "");
+    setNotes(r?.notes || resolveAttendanceStaffNote(day) || "");
     setPaid(Boolean(r?.paid));
     setPaidAmount(r?.paidAmount != null ? String(r.paidAmount) : "");
     setYouthWorksBatch(r?.youthWorksBatch || "");
