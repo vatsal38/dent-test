@@ -101,7 +101,7 @@ export function PodCreatePage() {
       >
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Pod name
+            {BOB_POD_SINGULAR} name
           </label>
           <input
             type="text"

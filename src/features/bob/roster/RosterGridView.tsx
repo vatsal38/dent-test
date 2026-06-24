@@ -7,6 +7,7 @@ import { extractAirtableAttachments } from "@/lib/bobAirtableDisplay";
 import { initialsOf, studentDisplayName } from "@/features/bob/roster/recordDisplay";
 import { extractAirtableRecordIds } from "@/lib/bobAirtableDisplay";
 import { OnboardingStatusChips } from "@/features/bob/onboarding/OnboardingStatusChips";
+import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
 
 function isAirtableRecordId(v: string) {
   return /^rec[a-zA-Z0-9]{8,}$/.test(v);
@@ -101,7 +102,7 @@ export function RosterGridView({
       const fields = (s.airtableFields || {}) as Record<string, unknown>;
       const name = studentDisplayName(s);
       const school = displayFromField(fields, s.school ?? "", [/^school$/i, /site/i, /organization/i]);
-      const track = displayFromField(fields, s.track ?? "", [/^track$/i, /program\s*track/i]);
+      const track = resolveStudentTrackLabel(s);
       const pod = displayFromField(fields, "", [/pod/i]);
       const coach = displayFromField(fields, s.coach ?? "", [/^coach$/i, /case\s*manager/i]);
       const atRisk = pickBooleanField(fields, /at\s*risk/i);
@@ -114,7 +115,7 @@ export function RosterGridView({
       return {
         id: s.id,
         name,
-        track,
+        track: track === "Unassigned" ? "" : track,
         pod,
         coach,
         school,

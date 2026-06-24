@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import {
@@ -228,14 +227,8 @@ export function DeliverablesTeamMatrix({
         </table>
       </div>
       <p className="text-xs text-gray-500">
-        Youth submit weekly progress updates for coach review in{" "}
-        <Link
-          href="/app/bob/inbox?type=progress_update"
-          className="text-orange-600 hover:underline font-medium"
-        >
-          Inbox → Progress updates
-        </Link>
-        .
+        Weekly progress is submitted outside Dent; update deliverable review status
+        here after coach review.
       </p>
     </div>
   );

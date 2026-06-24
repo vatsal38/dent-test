@@ -35,6 +35,7 @@ export type WidgetKind =
   | "action_queues"
   | "attendance_summary"
   | "milestone_summary"
+  | "project_team_deliverables"
   | "onboarding_summary"
   | "wellness_alerts"
   | "alerts_dropdown"

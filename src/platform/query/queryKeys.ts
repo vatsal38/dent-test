@@ -80,4 +80,10 @@ export const bobKeys = {
     list: (params: import("@/platform/api/bob/milestones").BobMilestonesListParams) =>
       [...bobKeys.milestones.all(), "list", params] as const,
   },
+  projectTeams: {
+    all: () => [...bobKeys.all, "projectTeams"] as const,
+    list: (params?: { track?: string }) =>
+      [...bobKeys.projectTeams.all(), "list", params ?? {}] as const,
+    me: () => [...bobKeys.projectTeams.all(), "me"] as const,
+  },
 };

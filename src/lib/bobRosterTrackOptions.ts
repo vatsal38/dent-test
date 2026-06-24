@@ -1,5 +1,6 @@
 import type { BobStudentsFacetsResponse } from "@/platform/api/bob/students";
 import {
+  BOB26_TRACK_NAME_LOOKUP_FIELDS,
   BOB26_TRACK_SITE_LOOKUP_FIELDS,
   ROSTER_TRACK_PLACEMENT_2026_FIELD,
 } from "@/lib/bobRosterFieldConstants";
@@ -64,6 +65,7 @@ export function studentMatchesRosterTrack(
   const af = student.airtableFields;
   if (af && typeof af === "object") {
     const scopeFields = [
+      ...BOB26_TRACK_NAME_LOOKUP_FIELDS,
       ...BOB26_TRACK_SITE_LOOKUP_FIELDS,
       ROSTER_TRACK_PLACEMENT_2026_FIELD,
     ];
@@ -85,6 +87,20 @@ export function resolveStudentTrackLabel(student: {
   track?: string | null;
   airtableFields?: Record<string, unknown> | null;
 }): string {
+  const af = student.airtableFields;
+  if (af && typeof af === "object") {
+    for (const key of BOB26_TRACK_NAME_LOOKUP_FIELDS) {
+      const raw = af[key];
+      const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+      for (const v of arr) {
+        const s = String(v ?? "").trim();
+        if (s && !/^rec[a-zA-Z0-9]+$/i.test(s)) {
+          return formatBobTrackDisplayLabel(s);
+        }
+      }
+    }
+  }
+
   const labels: string[] = [];
 
   if (student.track) {
@@ -92,7 +108,6 @@ export function resolveStudentTrackLabel(student: {
     if (t && !/^rec[a-zA-Z0-9]+$/i.test(t)) labels.push(t);
   }
 
-  const af = student.airtableFields;
   if (af && typeof af === "object") {
     for (const key of [
       ...BOB26_TRACK_SITE_LOOKUP_FIELDS,

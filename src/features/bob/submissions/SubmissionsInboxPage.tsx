@@ -156,7 +156,7 @@ export function SubmissionsInboxPage() {
       <PageHeader
         eyebrow="Workflow engine"
         title="Submissions"
-        description="Incidents and wellness checks by default. Check “All submission types” to include Blitz points and weekly progress."
+        description="Incidents and wellness checks by default. Check “All submission types” to include Blitz points."
         actions={
           <>
             <Link

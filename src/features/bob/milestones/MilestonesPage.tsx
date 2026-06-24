@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 import { BobImportProgress } from "@/components/BobImportProgress";
 import {
@@ -25,7 +27,7 @@ import {
 import {
   groupDeliverablesByTeam,
   groupDeliverablesByTrack,
-  sortByDeliverableNumber,
+  deliverablesToTeamSlotMap,
 } from "./deliverableGrouping";
 import { DeliverablesProgressTable } from "./components/DeliverablesProgressTable";
 import {
@@ -38,10 +40,19 @@ import {
   teamNamesFromDeliverables,
   teamPendingUploadCount,
   teamReviewStatus,
+  teamNameMatchesFilter,
+  countTeamDeliverablesNeedingReview,
+  listTeamDeliverablesNeedingReview,
 } from "./deliverableTeamReview";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
+import { useBobProjectTeamsList } from "@/platform/query/hooks/useBobProjectTeams";
+import type { BobStudent } from "@/platform/api/bob/students";
+import {
+  filterDeliverablesForStudent,
+  studentProjectTeamNames,
+} from "./deliverableStudentScope";
 
 type DetailState = {
   deliverable: BobDeliverable;
@@ -49,14 +60,43 @@ type DetailState = {
 };
 
 export function MilestonesPage() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams?.get("tab");
+  const teamFilterParam = searchParams?.get("team") || "";
   const orgId = BOB_MILESTONES_ORG_ID;
   const { access, can } = useBobAccess();
   const { data: me } = useBobMe();
-  const studentTrack =
-    access.role === "student" ? me?.linkedStudent?.track || "" : "";
-  const [tab, setTab] = useState<"all" | "by_team" | "pending_review">(
-    access.role === "student" ? "by_team" : "all",
-  );
+  const studentTrack = useMemo(() => {
+    if (access.role !== "student") return "";
+    const raw = me?.linkedStudent?.track || "";
+    return raw ? formatBobTrackDisplayLabel(raw) : "";
+  }, [access.role, me?.linkedStudent?.track]);
+
+  const linkedStudent = useMemo((): BobStudent | null => {
+    if (access.role !== "student" || !me?.linkedStudent?.id) return null;
+    const ls = me.linkedStudent;
+    return {
+      id: ls.id,
+      firstName: "",
+      lastName: ls.name || "",
+      email: null,
+      phone: null,
+      status: "active",
+      interviewStage: "placed",
+      podId: ls.podId ?? null,
+      track: ls.track ?? null,
+      createdAt: "",
+      updatedAt: "",
+    };
+  }, [access.role, me?.linkedStudent]);
+  const [tab, setTab] = useState<"all" | "by_team" | "pending_review">(() => {
+    if (teamFilterParam) return "by_team";
+    if (initialTab === "by_team" || initialTab === "pending_review") {
+      return initialTab;
+    }
+    return access.role === "student" ? "by_team" : "all";
+  });
+  const [selectedTeam, setSelectedTeam] = useState(teamFilterParam);
   const [trackFilter, setTrackFilter] = useState(studentTrack);
   const [detail, setDetail] = useState<DetailState | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -64,38 +104,72 @@ export function MilestonesPage() {
 
   const milestonesQuery = useBobMilestonesList({
     orgId,
-    tab: tab === "pending_review" ? "pending_review" : undefined,
     track: trackFilter || undefined,
   });
+  const projectTeamsQuery = useBobProjectTeamsList();
   const updateMilestone = useUpdateBobMilestone();
-  const data = milestonesQuery.data?.data ?? [];
+  const rawData = milestonesQuery.data?.data ?? [];
+  const data = useMemo(() => {
+    if (!linkedStudent) return rawData;
+    return filterDeliverablesForStudent(
+      rawData,
+      linkedStudent,
+      projectTeamsQuery.data?.data ?? [],
+    );
+  }, [rawData, linkedStudent, projectTeamsQuery.data?.data]);
   const loading = milestonesQuery.isLoading;
   const error = milestonesQuery.error
     ? parseApiError(milestonesQuery.error)
     : null;
 
-  const pendingCount = useMemo(() => {
-    let count = 0;
-    for (const d of data) {
-      for (const team of teamNamesFromDeliverables([d])) {
-        const status = teamReviewStatus(d, team);
-        if (
-          status === "pending_review" ||
-          status === "in_progress" ||
-          teamPendingUploadCount(d, team) > 0
-        ) {
-          count += 1;
-        }
-      }
-    }
-    return count;
-  }, [data]);
+  const pendingCount = useMemo(
+    () => countTeamDeliverablesNeedingReview(data),
+    [data],
+  );
 
   const groupedByTrack = useMemo(() => groupDeliverablesByTrack(data), [data]);
 
-  const groupedByTeam = useMemo(() => groupDeliverablesByTeam(data), [data]);
+  const groupedByTeam = useMemo(() => {
+    let grouped = groupDeliverablesByTeam(data);
+    if (!grouped.length && projectTeamsQuery.data?.data?.length) {
+      const teams = linkedStudent
+        ? projectTeamsQuery.data.data.filter(
+            (team) => studentProjectTeamNames(linkedStudent, [team]).length > 0,
+          )
+        : projectTeamsQuery.data.data;
+      grouped = teams.map((team) => ({
+        teamName: team.name,
+        items: data.filter((d) =>
+          (d.trackerRecords || []).some((t) =>
+            (t.teamNames || []).some((n) =>
+              teamNameMatchesFilter(n, team.name),
+            ),
+          ),
+        ),
+        slots: deliverablesToTeamSlotMap(team.name, data),
+      }));
+    }
+    if (linkedStudent) {
+      const mine = studentProjectTeamNames(
+        linkedStudent,
+        projectTeamsQuery.data?.data ?? [],
+      );
+      if (mine.length) {
+        grouped = grouped.filter((row) =>
+          mine.some((name) => teamNameMatchesFilter(row.teamName, name)),
+        );
+      }
+    }
+    if (!selectedTeam) return grouped;
+    return grouped.filter((row) =>
+      teamNameMatchesFilter(row.teamName, selectedTeam),
+    );
+  }, [data, selectedTeam, projectTeamsQuery.data?.data, linkedStudent]);
 
-  const reviewItems = useMemo(() => sortByDeliverableNumber(data), [data]);
+  const pendingReviewItems = useMemo(
+    () => listTeamDeliverablesNeedingReview(data),
+    [data],
+  );
 
   function openDetail(d: BobDeliverable, teamName?: string) {
     setDetailSaveError(null);
@@ -232,6 +306,21 @@ export function MilestonesPage() {
         description="FY26 deliverable catalog by track — synced from Airtable. Coaches review team submissions in the tracker."
       />
 
+      {selectedTeam ? (
+        <p className="text-sm text-gray-600 mb-4 -mt-2">
+          Showing deliverables for{" "}
+          <span className="font-medium text-gray-900">{selectedTeam}</span>
+          {" · "}
+          <button
+            type="button"
+            onClick={() => setSelectedTeam("")}
+            className="text-orange-600 hover:underline"
+          >
+            Clear filter
+          </button>
+        </p>
+      ) : null}
+
       {error ? (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
           {error}
@@ -353,60 +442,57 @@ export function MilestonesPage() {
           rows={groupedByTeam}
           onSelect={(d, teamName) => openDetail(d, teamName)}
         />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {reviewItems.flatMap((d) =>
-            teamNamesFromDeliverables([d]).map((team) => {
-              const review = reviewStatusBadge(teamReviewStatus(d, team));
-              const uploads = teamPendingUploadCount(d, team);
-              const status = teamReviewStatus(d, team);
-              if (
-                status !== "pending_review" &&
-                status !== "in_progress" &&
-                uploads === 0
-              ) {
-                return null;
-              }
-              return (
-                <button
-                  key={`${d.id}-${team}`}
-                  type="button"
-                  onClick={() => openDetail(d, team)}
-                  className="text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-orange-300 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-orange-700">
-                        {formatBobTrackDisplayLabel(d.trackName)} ·{" "}
-                        {d.deliverableNumber || "Deliverable"}
-                      </p>
-                      <h3 className="font-semibold text-gray-900 truncate">
-                        {d.deliverableName}
-                      </h3>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1 truncate">{team}</p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {formatDeliverableDates(d)}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${review.className}`}
-                    >
-                      {review.label}
-                    </span>
-                    {uploads > 0 ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
-                        {uploads} upload{uploads === 1 ? "" : "s"} to review
-                      </span>
-                    ) : null}
-                  </div>
-                </button>
-              );
-            }),
-          )}
+      ) : tab === "pending_review" && pendingReviewItems.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
+          <p className="text-gray-700 font-medium">Nothing to review</p>
+          <p className="text-sm text-gray-500 mt-1">
+            No team deliverables are waiting for staff review in this track.
+          </p>
         </div>
-      )}
+      ) : tab === "pending_review" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {pendingReviewItems.map(({ deliverable: d, teamName: team }) => {
+            const review = reviewStatusBadge(teamReviewStatus(d, team));
+            const uploads = teamPendingUploadCount(d, team);
+            return (
+              <button
+                key={`${d.id}-${team}`}
+                type="button"
+                onClick={() => openDetail(d, team)}
+                className="text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-orange-300 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-orange-700">
+                      {formatBobTrackDisplayLabel(d.trackName)} ·{" "}
+                      {d.deliverableNumber || "Deliverable"}
+                    </p>
+                    <h3 className="font-semibold text-gray-900 truncate">
+                      {d.deliverableName}
+                    </h3>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 truncate">{team}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {formatDeliverableDates(d)}
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${review.className}`}
+                  >
+                    {review.label}
+                  </span>
+                  {uploads > 0 ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                      {uploads} upload{uploads === 1 ? "" : "s"} to review
+                    </span>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {detail ? (
         <DeliverableDetailDrawer

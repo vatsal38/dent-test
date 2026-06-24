@@ -59,10 +59,8 @@ export function OnboardingSummaryWidget({
     );
   }
 
-  const ready =
-    onboarding.contractAndPreSurveyComplete ?? onboarding.readyForProgram;
-  const pending =
-    onboarding.contractAndPreSurveyPending ?? Math.max(0, total - ready);
+  const ready = onboarding.contractAndPreSurveyComplete ?? 0;
+  const pending = onboarding.contractAndPreSurveyPending ?? Math.max(0, total - ready);
 
   return (
     <DashboardCard title={title} refreshing={isRefreshing}>

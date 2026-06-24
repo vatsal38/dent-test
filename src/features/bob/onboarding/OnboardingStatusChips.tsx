@@ -41,12 +41,6 @@ export function OnboardingStatusChips({
           ? "not_started"
           : "unknown";
 
-  const ywPhase = status.ywReady
-    ? "complete"
-    : status.ywRegistration.phase === "incomplete"
-      ? "incomplete"
-      : "unknown";
-
   const surveyPhase = status.preSurveyComplete
     ? "complete"
     : status.preSurvey.phase === "incomplete"
@@ -54,6 +48,9 @@ export function OnboardingStatusChips({
       : status.preSurvey.synced
         ? "incomplete"
         : "unknown";
+
+  const ready =
+    status.contractAndPreSurveyComplete ?? status.readyForProgram;
 
   const items = [
     chip(
@@ -64,11 +61,6 @@ export function OnboardingStatusChips({
           : "Contract"
         : `Contract: ${contractPhase === "signed" ? "Signed" : contractPhase === "in_progress" ? "Pending" : "—"}`,
       contractPhase === "signed" ? "signed" : contractPhase === "in_progress" ? "in_progress" : "not_started",
-    ),
-    chip(
-      "yw",
-      compact ? (status.ywReady ? "YW ✓" : "YW") : `YW: ${status.ywReady ? "Ready" : "Pending"}`,
-      ywPhase,
     ),
     chip(
       "survey",
@@ -84,7 +76,7 @@ export function OnboardingStatusChips({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {items}
-      {status.readyForProgram ? (
+      {ready ? (
         <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
           Ready
         </span>

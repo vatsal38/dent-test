@@ -70,9 +70,17 @@ export interface BobOnboardingStatus {
     synced: boolean;
   };
   readyForProgram: boolean;
+  contractAndPreSurveyComplete?: boolean;
   contractSigned: boolean;
   ywReady: boolean;
   preSurveyComplete: boolean;
+}
+
+export interface BobStaffCoachNote {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface BobStudent {
@@ -94,6 +102,8 @@ export interface BobStudent {
   milestoneStats?: BobStudentMilestoneStats | null;
   /** Contract / YW registration / pre-survey from synced Airtable fields. */
   onboardingStatus?: BobOnboardingStatus;
+  /** Staff coach notes stored in-app (not Airtable linked records). */
+  staffCoachNotes?: BobStaffCoachNote[];
   /** Full Airtable row fields from "All Students" (when requested). */
   airtableFields?: Record<string, unknown>;
   createdAt: string;
@@ -227,6 +237,17 @@ export async function updateBobStudent(
   return apiRequest<BobStudent>(`/api/bob/students/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export async function addBobStudentCoachNote(
+  id: string,
+  body: string,
+  author?: string,
+): Promise<BobStudent> {
+  return apiRequest<BobStudent>(`/api/bob/students/${id}/coach-notes`, {
+    method: "POST",
+    body: JSON.stringify({ body, author }),
   });
 }
 

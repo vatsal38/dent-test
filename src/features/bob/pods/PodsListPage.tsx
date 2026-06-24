@@ -63,7 +63,7 @@ export function PodsListPage() {
     <div className="space-y-6">
       <PageHeader
         title={BOB_POD_PLURAL}
-        description="Pods sync with Airtable Programs. Create new pods here or re-import to refresh from Airtable."
+        description={`${BOB_POD_PLURAL} sync with Airtable Programs. Create new tracks here or re-import to refresh from Airtable.`}
         actions={
           <>
             <BobActionButton
@@ -115,7 +115,7 @@ export function PodsListPage() {
           <div className="p-8 text-center">
             <ScopedEmptyState
               access={access}
-              resource="pods"
+              resource="tracks"
               actionHref={can("pods.create") ? "/app/bob/pods/new" : undefined}
               actionLabel={can("pods.create") ? `Create ${BOB_POD_SINGULAR.toLowerCase()}` : undefined}
             />

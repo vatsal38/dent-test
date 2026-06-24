@@ -5,18 +5,18 @@ import { PageHeader } from "@/design-system/patterns/PageHeader";
 
 const ACTIONS = [
   {
-    title: "One-Stop Submit",
+    title: "Deliverables",
     description:
-      "Report an incident, share feedback, log parent contact, or submit weekly progress.",
-    href: "/app/bob/submit",
-    cta: "Open submit form",
+      "See your project team's deliverable status and due dates.",
+    href: "/app/bob/deliverables",
+    cta: "View deliverables",
   },
   {
-    title: "Attendance questions",
+    title: "One-Stop Submit",
     description:
-      "If your hours or attendance look wrong, tell your coach or use Submit to reach staff. Corrections are reviewed in the attendance triage queue.",
+      "Report an incident, share feedback, or log parent contact.",
     href: "/app/bob/submit",
-    cta: "Contact staff",
+    cta: "Open submit form",
   },
 ];
 

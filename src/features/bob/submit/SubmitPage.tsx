@@ -12,7 +12,7 @@ import {
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
 import { decodeBobReturnTo } from "@/lib/bobReturnUrl";
 
-type SubmissionType = 'incident' | 'wellness_check' | 'blitz_points' | 'anonymous_feedback' | 'progress_update' | 'parent_contact';
+type SubmissionType = 'incident' | 'wellness_check' | 'blitz_points' | 'anonymous_feedback' | 'parent_contact';
 
 function studentLabel(s: BobStudent) {
     return [s.firstName, s.lastName].filter(Boolean).join(' ') || s.id;
@@ -31,7 +31,6 @@ export function SubmitPage() {
     const needStudents =
         submissionType === "incident" ||
         submissionType === "wellness_check" ||
-        submissionType === "progress_update" ||
         submissionType === "parent_contact";
     const studentsQuery = useBobStudentsList(
         { limit: 500, includeStats: false },
@@ -155,7 +154,7 @@ export function SubmitPage() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        const needsStudent = submissionType === 'incident' || submissionType === 'wellness_check' || submissionType === 'progress_update' || submissionType === 'parent_contact';
+        const needsStudent = submissionType === 'incident' || submissionType === 'wellness_check' || submissionType === 'parent_contact';
         if (needsStudent && !(form.studentId || form.student)) {
             setError('Please select a student.');
             return;
@@ -202,7 +201,7 @@ export function SubmitPage() {
                     <div className="flex items-start justify-between gap-3">
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">BoB One-Stop Submit</h1>
-                            <p className="text-sm text-gray-600 mt-1">Incidents, wellness checks, Blitz points, feedback, progress updates, parent contact.</p>
+                            <p className="text-sm text-gray-600 mt-1">Incidents, wellness checks, Blitz points, feedback, parent contact.</p>
                         </div>
                         {returnHref ? (
                             <Link href={returnHref} className="text-sm text-orange-600 hover:underline shrink-0">
@@ -226,7 +225,6 @@ export function SubmitPage() {
                             <option value="wellness_check">Wellness Check</option>
                             <option value="blitz_points">Blitz Points Award</option>
                             <option value="anonymous_feedback">Anonymous Feedback</option>
-                            <option value="progress_update">Weekly Progress Update</option>
                             <option value="parent_contact">Parent Contact Log</option>
                         </select>
                     </div>
@@ -292,13 +290,6 @@ export function SubmitPage() {
                         <>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={form.category ?? ''} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"><option value="">Select</option><option value="program">Program</option><option value="logistics">Logistics</option><option value="other">Other</option></select></div>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label><textarea value={form.feedback ?? ''} onChange={(e) => setForm((f) => ({ ...f, feedback: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" rows={4} placeholder="Your feedback (no name required)" required /></div>
-                        </>
-                    )}
-                    {submissionType === 'progress_update' && (
-                        <>
-                            {studentDropdown}
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Deliverable / focus</label><input type="text" value={form.milestone ?? ''} onChange={(e) => setForm((f) => ({ ...f, milestone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" placeholder="Deliverable or topic" /></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Progress notes</label><textarea value={form.notes ?? ''} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" rows={3} placeholder="Notes" required /></div>
                         </>
                     )}
                     {submissionType === 'parent_contact' && (

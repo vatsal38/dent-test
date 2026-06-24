@@ -54,11 +54,7 @@ export function OverviewTab() {
   const { can, access } = useBobAccess();
   const { data: me } = useBobMe();
   const allowEdit = canEditStudentRecord(can, me?.linkedStudent?.id, student?.id);
-  const { items, isLoading } = useStudentActivityFeed(
-    student?.id ?? null,
-    tab,
-    student?.podId,
-  );
+  const { items, isLoading } = useStudentActivityFeed(student, tab, student?.podId);
   const { fields, school, track } = useStudentLinkedFieldDisplay(student);
 
   if (!student) return null;

@@ -127,6 +127,8 @@ export function AttendanceHubControls({
   trackSelectRef,
   hideTrackFilter = false,
   hideSearch = false,
+  minDate,
+  maxDate,
 }: {
   focusDate: string;
   onFocusDateChange: (date: string) => void;
@@ -151,6 +153,8 @@ export function AttendanceHubControls({
   trackSelectRef?: Ref<HTMLSelectElement>;
   hideTrackFilter?: boolean;
   hideSearch?: boolean;
+  minDate?: string;
+  maxDate?: string;
 }) {
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const start = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -164,6 +168,8 @@ export function AttendanceHubControls({
         <input
           type="date"
           value={focusDate}
+          min={minDate}
+          max={maxDate}
           onChange={(e) => onFocusDateChange(e.target.value)}
           className="h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
         />

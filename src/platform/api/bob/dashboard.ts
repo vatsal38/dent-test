@@ -125,6 +125,15 @@ export interface BobDashboardSnapshot {
     submitted: number;
     total: number;
   }>;
+  deliverableReviewByProjectTeam?: Array<{
+    teamName: string;
+    pendingReview: number;
+    inProgress: number;
+    approved: number;
+    needsChanges: number;
+    notStarted: number;
+    total: number;
+  }>;
   wellnessDistribution?: {
     total: number;
     thriving: number;

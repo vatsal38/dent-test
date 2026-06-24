@@ -77,6 +77,14 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     section: "primary",
   },
   {
+    href: "/app/bob/teams",
+    label: "Project teams",
+    iconKey: "teams",
+    permission: "teams.view",
+    section: "primary",
+    after: "/app/bob/deliverables",
+  },
+  {
     href: "/app/bob/key-links",
     label: "Key Links",
     iconKey: "keyLinks",
@@ -107,13 +115,6 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     permission: "staff.view",
     section: "primary",
     after: "/app/bob/submit",
-  },
-  {
-    href: "/app/bob/teams",
-    label: "Teams",
-    iconKey: "teams",
-    permission: "teams.view",
-    section: "more",
   },
   {
     href: "/app/bob/settings",

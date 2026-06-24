@@ -15,6 +15,7 @@ import { WellnessDistributionWidget } from "./WellnessDistributionWidget";
 import { WeeklyMilestoneProgressWidget } from "./WeeklyMilestoneProgressWidget";
 import { BlitzTeamsWidget } from "./BlitzTeamsWidget";
 import { AlertsDropdownWidget } from "./AlertsDropdownWidget";
+import { ProjectTeamDeliverablesWidget } from "./ProjectTeamDeliverablesWidget";
 
 type WidgetComponent = (props: WidgetRenderProps) => React.ReactNode;
 
@@ -25,6 +26,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetComponent> = {
   action_queues: ActionQueuesWidget,
   attendance_summary: AttendanceSummaryWidget,
   milestone_summary: MilestoneSummaryWidget,
+  project_team_deliverables: ProjectTeamDeliverablesWidget,
   onboarding_summary: OnboardingSummaryWidget,
   wellness_alerts: WellnessAlertsWidget,
   alerts_dropdown: AlertsDropdownWidget,

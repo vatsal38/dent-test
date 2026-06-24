@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getBobAttendance } from "@/platform/api/bob/attendance";
-import { getBobMilestones, type BobDeliverable } from "@/platform/api/bob/milestones";
+import { getBobMilestones } from "@/platform/api/bob/milestones";
+import { getBobProjectTeams } from "@/platform/api/bob/projectTeams";
+import type { BobStudent } from "@/platform/api/bob/students";
+import { filterDeliverablesForStudent } from "@/features/bob/milestones/deliverableStudentScope";
 import { getBobSubmissions } from "@/platform/api/bob/submissions";
 import { BOB_MILESTONES_ORG_ID } from "@/platform/query/hooks/useBobMilestones";
 import { bobKeys } from "@/platform/query/queryKeys";
@@ -90,24 +93,26 @@ export function useStudentSubmissions(
 }
 
 export function useStudentMilestones(
-  studentId: string | null,
+  student: BobStudent | null,
   activeTab: StudentDrawerTabId,
-  trackHint?: string | null,
 ) {
   const enabled =
-    Boolean(studentId) &&
+    Boolean(student?.id) &&
     tabEnablesFetch(activeTab, ["milestones", "overview", "activity"]);
 
   return useQuery({
-    queryKey: bobKeys.students.milestones(studentId ?? ""),
+    queryKey: bobKeys.students.milestones(student?.id ?? ""),
     queryFn: async () => {
-      const res = await getBobMilestones({ orgId: BOB_MILESTONES_ORG_ID });
-      const hint = String(trackHint || "").toLowerCase();
-      if (!hint) return res.data;
-      return res.data.filter((m: BobDeliverable) => {
-        const track = String(m.trackName || "").toLowerCase();
-        return track.includes(hint) || hint.includes(track);
-      });
+      const [milestonesRes, teamsRes] = await Promise.all([
+        getBobMilestones({ orgId: BOB_MILESTONES_ORG_ID }),
+        getBobProjectTeams(),
+      ]);
+      if (!student) return [];
+      return filterDeliverablesForStudent(
+        milestonesRes.data,
+        student,
+        teamsRes.data,
+      );
     },
     enabled,
     staleTime: 60_000,
@@ -115,13 +120,13 @@ export function useStudentMilestones(
 }
 
 export function useStudentActivityFeed(
-  studentId: string | null,
+  student: BobStudent | null,
   activeTab: StudentDrawerTabId,
   podId: string | null | undefined,
 ) {
-  const attendance = useStudentAttendanceHistory(studentId, podId, activeTab);
-  const submissions = useStudentSubmissions(studentId, activeTab);
-  const milestones = useStudentMilestones(studentId, activeTab);
+  const attendance = useStudentAttendanceHistory(student?.id ?? null, podId, activeTab);
+  const submissions = useStudentSubmissions(student?.id ?? null, activeTab);
+  const milestones = useStudentMilestones(student, activeTab);
 
   const items = useMemo(() => {
     const out: import("../types").ActivityTimelineItem[] = [];

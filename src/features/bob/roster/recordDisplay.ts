@@ -1,4 +1,5 @@
 import type { BobStudent } from "@/platform/api/bob/students";
+import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
 
 export function studentDisplayName(s: BobStudent): string {
   return `${s.firstName || ""} ${s.lastName || ""}`.trim() || "Untitled";
@@ -25,9 +26,14 @@ export function studentSummaryRows(s: BobStudent): Array<{ label: string; value:
     { label: "Email", value: s.email || get("Student Email") || get("Email") },
     { label: "Phone", value: s.phone || get("Student Cell Phone Number") || get("Phone") },
     { label: "School", value: s.school || get("School") },
-    { label: "Track", value: s.track || get("Track") },
+    {
+      label: "Track",
+      value: (() => {
+        const label = resolveStudentTrackLabel(s);
+        return label === "Unassigned" ? "" : label;
+      })(),
+    },
     { label: "Coach", value: s.coach || get("Coach") },
-    { label: "YW status", value: s.ywStatus || get("YW Status") || get("Youth Works Status") },
   ].filter((r) => r.value);
 }
 

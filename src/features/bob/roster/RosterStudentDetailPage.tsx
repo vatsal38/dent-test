@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/Skeleton";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { canEditStudentRecord } from "@/platform/rbac/studentProfile";
+import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
 
 function getAirtableErrorText(v: unknown): string | null {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
@@ -621,15 +622,10 @@ export function RosterStudentDetailPage() {
   const pronounsLabel = pronounsField
     ? formatValue(pronounsField.value, labelsForField(pronounsField.key))
     : null;
-  const trackLabel =
-    student.track ||
-    formatValue(
-      airtableFields["Track"] ??
-        airtableFields["Track - Site (from BoB '26 Track)"],
-      labelsForField("Track"),
-    );
-  const trackDisplay =
-    trackLabel && trackLabel !== "—" ? String(trackLabel) : null;
+  const trackDisplay = (() => {
+    const label = resolveStudentTrackLabel(student);
+    return label === "Unassigned" ? null : label;
+  })();
 
   function setDraftField(name: string, value: unknown) {
     setDraft((d) => ({ ...d, [name]: value }));

@@ -10,6 +10,7 @@ const SEVERITY = {
 } as const;
 
 import { MAX_ALERTS_VISIBLE } from "../model/scale";
+import { BOB_POD_PLURAL, BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 
 export function AttendanceAlertStrip({
   alerts,
@@ -47,10 +48,10 @@ export function AttendanceAlertStrip({
       {truncatedCount > 0 || alerts.length > MAX_ALERTS_VISIBLE ? (
         <p className="text-xs text-gray-500 px-1">
           {alerts.length > MAX_ALERTS_VISIBLE
-            ? `${alerts.length - MAX_ALERTS_VISIBLE} more alert${alerts.length - MAX_ALERTS_VISIBLE === 1 ? "" : "s"} — filter by pod to focus`
+            ? `${alerts.length - MAX_ALERTS_VISIBLE} more alert${alerts.length - MAX_ALERTS_VISIBLE === 1 ? "" : "s"} — filter by ${BOB_POD_SINGULAR.toLowerCase()} to focus`
             : null}
           {truncatedCount > 0
-            ? `${truncatedCount} pod${truncatedCount === 1 ? "" : "s"} summarized in the queue below.`
+            ? `${truncatedCount} ${BOB_POD_PLURAL.toLowerCase()} summarized in the queue below.`
             : null}
         </p>
       ) : null}

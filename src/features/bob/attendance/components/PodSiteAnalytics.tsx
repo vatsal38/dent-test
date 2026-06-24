@@ -1,6 +1,7 @@
 "use client";
 
 import type { PodAttendanceStats } from "../types";
+import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 
 function MetricBar({
   label,
@@ -56,7 +57,7 @@ export function PodSiteAnalytics({ podStats }: { podStats: PodAttendanceStats[] 
 
   if (!activePods.length) {
     return (
-      <p className="text-sm text-gray-500">No pod attendance data for this date.</p>
+      <p className="text-sm text-gray-500">No {BOB_POD_SINGULAR.toLowerCase()} attendance data for this date.</p>
     );
   }
 

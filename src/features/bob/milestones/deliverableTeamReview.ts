@@ -3,20 +3,53 @@ import type {
   BobDeliverableTrackerRecord,
 } from "@/platform/api/bob/milestones";
 
+/** Display label: "Jay's Water | Denternship" → "Jay's Water" */
+export function shortProjectTeamName(name: string | null | undefined): string {
+  const s = String(name || "").trim();
+  if (!s) return "";
+  return s.split("|")[0]?.trim() || s;
+}
+
+export function teamNameFromProjectDeliverable(
+  value: string | null | undefined,
+): string {
+  const parts = String(value || "")
+    .split("|")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts[0] || "";
+}
+
+function teamNamesMatch(a: string, b: string): boolean {
+  const left = shortProjectTeamName(a).toLowerCase();
+  const right = shortProjectTeamName(b).toLowerCase();
+  if (!left || !right) return false;
+  return left === right || a.toLowerCase().includes(right) || b.toLowerCase().includes(left);
+}
+
 export function findTrackerForTeam(
   deliverable: BobDeliverable,
   teamName?: string,
 ): BobDeliverableTrackerRecord | null {
   if (!teamName) return deliverable.trackerRecords?.[0] ?? null;
   const trackers = deliverable.trackerRecords || [];
-  const exact = trackers.find((t) => (t.teamNames || []).includes(teamName));
+  const exact = trackers.find((t) =>
+    (t.teamNames || []).some((n) => teamNamesMatch(n, teamName)),
+  );
   if (exact) return exact;
   const fuzzy = trackers.find((t) =>
+    teamNamesMatch(
+      teamNameFromProjectDeliverable(t.projectDeliverable),
+      teamName,
+    ),
+  );
+  if (fuzzy) return fuzzy;
+  const fuzzyPd = trackers.find((t) =>
     String(t.projectDeliverable || "")
       .toLowerCase()
-      .includes(teamName.toLowerCase()),
+      .includes(shortProjectTeamName(teamName).toLowerCase()),
   );
-  return fuzzy ?? null;
+  return fuzzyPd ?? null;
 }
 
 export function teamReviewStatus(
@@ -50,10 +83,21 @@ export function teamNamesFromDeliverables(
 ): string[] {
   const names = new Set<string>();
   for (const d of deliverables) {
-    for (const t of d.teamNames || []) names.add(t);
-    for (const t of d.projectNames || []) names.add(t);
+    for (const t of d.teamNames || []) {
+      const short = shortProjectTeamName(t);
+      if (short) names.add(short);
+    }
+    for (const t of d.projectNames || []) {
+      const short = shortProjectTeamName(t);
+      if (short) names.add(short);
+    }
     for (const row of d.trackerRecords || []) {
-      for (const t of row.teamNames || []) names.add(t);
+      for (const t of row.teamNames || []) {
+        const short = shortProjectTeamName(t);
+        if (short) names.add(short);
+      }
+      const fromPd = teamNameFromProjectDeliverable(row.projectDeliverable);
+      if (fromPd) names.add(fromPd);
     }
   }
   return [...names].sort((a, b) => a.localeCompare(b));
@@ -63,10 +107,16 @@ export function deliverableAppliesToTeam(
   deliverable: BobDeliverable,
   teamName: string,
 ): boolean {
-  if (deliverable.teamNames?.includes(teamName)) return true;
-  if (deliverable.projectNames?.includes(teamName)) return true;
-  return (deliverable.trackerRecords || []).some((t) =>
-    (t.teamNames || []).includes(teamName),
+  if (deliverable.teamNames?.some((n) => teamNamesMatch(n, teamName))) {
+    return true;
+  }
+  if (deliverable.projectNames?.some((n) => teamNamesMatch(n, teamName))) {
+    return true;
+  }
+  return (deliverable.trackerRecords || []).some(
+    (t) =>
+      (t.teamNames || []).some((n) => teamNamesMatch(n, teamName)) ||
+      teamNamesMatch(teamNameFromProjectDeliverable(t.projectDeliverable), teamName),
   );
 }
 
@@ -74,10 +124,21 @@ export function teamTrackerSummaries(
   deliverable: BobDeliverable,
 ): Array<{ teamName: string; tracker: BobDeliverableTrackerRecord | null }> {
   const teams = new Set<string>();
-  for (const name of deliverable.teamNames || []) teams.add(name);
-  for (const name of deliverable.projectNames || []) teams.add(name);
+  for (const name of deliverable.teamNames || []) {
+    const short = shortProjectTeamName(name);
+    if (short) teams.add(short);
+  }
+  for (const name of deliverable.projectNames || []) {
+    const short = shortProjectTeamName(name);
+    if (short) teams.add(short);
+  }
   for (const row of deliverable.trackerRecords || []) {
-    for (const name of row.teamNames || []) teams.add(name);
+    for (const name of row.teamNames || []) {
+      const short = shortProjectTeamName(name);
+      if (short) teams.add(short);
+    }
+    const fromPd = teamNameFromProjectDeliverable(row.projectDeliverable);
+    if (fromPd) teams.add(fromPd);
   }
   if (!teams.size) {
     return [{ teamName: "Unassigned", tracker: deliverable.trackerRecords?.[0] ?? null }];
@@ -88,4 +149,52 @@ export function teamTrackerSummaries(
       teamName,
       tracker: findTrackerForTeam(deliverable, teamName),
     }));
+}
+
+export function teamDeliverableNeedsReview(
+  deliverable: BobDeliverable,
+  teamName: string,
+): boolean {
+  const status = teamReviewStatus(deliverable, teamName);
+  if (status === "pending_review" || status === "in_progress") return true;
+  return teamPendingUploadCount(deliverable, teamName) > 0;
+}
+
+export function countTeamDeliverablesNeedingReview(
+  deliverables: BobDeliverable[],
+): number {
+  let count = 0;
+  for (const d of deliverables) {
+    for (const team of teamNamesFromDeliverables([d])) {
+      if (teamDeliverableNeedsReview(d, team)) count += 1;
+    }
+  }
+  return count;
+}
+
+export function listTeamDeliverablesNeedingReview(
+  deliverables: BobDeliverable[],
+): Array<{ deliverable: BobDeliverable; teamName: string }> {
+  const out: Array<{ deliverable: BobDeliverable; teamName: string }> = [];
+  for (const d of deliverables) {
+    for (const team of teamNamesFromDeliverables([d])) {
+      if (teamDeliverableNeedsReview(d, team)) {
+        out.push({ deliverable: d, teamName: team });
+      }
+    }
+  }
+  out.sort((a, b) => {
+    const na = a.deliverable.deliverableNumber || "";
+    const nb = b.deliverable.deliverableNumber || "";
+    return na.localeCompare(nb, undefined, { numeric: true });
+  });
+  return out;
+}
+
+export function teamNameMatchesFilter(
+  rowTeam: string,
+  filter: string,
+): boolean {
+  if (!filter) return true;
+  return teamNamesMatch(rowTeam, filter);
 }

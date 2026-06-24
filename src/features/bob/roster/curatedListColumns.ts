@@ -7,7 +7,6 @@ const PREFERRED = [
   /^track$/i,
   /^coach$/i,
   /^pod$/i,
-  /yw\s*status|youth\s*works/i,
 ];
 
 /** Roster list: headshot + up to 4 readable columns (not full Airtable). */

@@ -71,6 +71,9 @@ export interface BobSubmission {
   category?: string | null;
   feedback?: string | null;
   milestone?: string | null;
+  deliverableId?: string | null;
+  deliverableLabel?: string | null;
+  teamName?: string | null;
   notes?: string | null;
   parentName?: string | null;
   resolutionNote?: string | null;

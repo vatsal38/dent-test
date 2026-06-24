@@ -2,14 +2,16 @@ import type { BobStudent } from "@/platform/api/bob/students";
 import type { BobSubmission } from "@/platform/api/bob/submissions";
 import type { CoachNote, WellnessSignal } from "../types";
 
-const NOTE_FIELD_CANDIDATES = [
-  "Coach Notes",
-  "Coach Note",
-  "Notes",
+const TEXT_NOTE_FIELD_CANDIDATES = [
   "Internal Notes",
   "Staff Notes",
   "Counselor Notes",
+  "Notes",
 ] as const;
+
+function isAirtableRecordId(value: string): boolean {
+  return /^rec[a-zA-Z0-9]{14,}$/i.test(value);
+}
 
 export const INDUSTRY_CREDENTIAL_FIELD_NAMES = [
   "Industry Credential",
@@ -38,10 +40,44 @@ export function coachNoteFieldKey(
   student: BobStudent | undefined,
 ): string {
   const fields = (student?.airtableFields || {}) as Record<string, unknown>;
-  for (const key of NOTE_FIELD_CANDIDATES) {
+  for (const key of TEXT_NOTE_FIELD_CANDIDATES) {
     if (key in fields) return key;
   }
-  return NOTE_FIELD_CANDIDATES[0];
+  return TEXT_NOTE_FIELD_CANDIDATES[0];
+}
+
+export function extractCoachNotes(
+  student: BobStudent | undefined,
+): CoachNote[] {
+  if (!student) return [];
+  const notes: CoachNote[] = [];
+
+  for (const n of student.staffCoachNotes || []) {
+    const body = String(n?.body || "").trim();
+    if (!body) continue;
+    notes.push({
+      id: n.id || `staff:${body.slice(0, 24)}`,
+      author: n.author || "Coach",
+      body,
+      at: n.createdAt
+        ? new Date(n.createdAt).toLocaleString()
+        : undefined,
+    });
+  }
+
+  const fields = (student.airtableFields || {}) as Record<string, unknown>;
+  for (const key of TEXT_NOTE_FIELD_CANDIDATES) {
+    const raw = fields[key];
+    if (raw == null) continue;
+    const body = String(raw).trim();
+    if (!body || isAirtableRecordId(body)) continue;
+    notes.push({
+      id: `field:${key}`,
+      author: key.replace(/notes?/i, "").trim() || "Coach",
+      body,
+    });
+  }
+  return notes;
 }
 
 export function hasIndustryCredential(student: BobStudent | undefined): boolean {
@@ -56,27 +92,6 @@ export function hasIndustryCredential(student: BobStudent | undefined): boolean 
     }
   }
   return false;
-}
-
-export function extractCoachNotes(
-  student: BobStudent | undefined,
-): CoachNote[] {
-  if (!student?.airtableFields) return [];
-  const fields = student.airtableFields as Record<string, unknown>;
-  const notes: CoachNote[] = [];
-
-  for (const key of NOTE_FIELD_CANDIDATES) {
-    const raw = fields[key];
-    if (raw == null) continue;
-    const body = String(raw).trim();
-    if (!body) continue;
-    notes.push({
-      id: `field:${key}`,
-      author: key.replace(/notes?/i, "").trim() || "Coach",
-      body,
-    });
-  }
-  return notes;
 }
 
 export function computeWellnessSignals(

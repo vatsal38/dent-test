@@ -83,6 +83,9 @@ export interface BobAttendanceDateBounds {
   earliestDate: string | null;
   latestDate: string | null;
   total: number;
+  programStart?: string;
+  programEnd?: string;
+  suggestedFocusDate?: string;
 }
 
 export async function getBobAttendanceDateBounds(): Promise<BobAttendanceDateBounds> {

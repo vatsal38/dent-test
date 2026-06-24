@@ -13,6 +13,7 @@ import {
 } from "./model/issueDetection";
 import { SessionSummary } from "./components/SessionSummary";
 import { AttendanceStatusBadge } from "./components/AttendanceStatusBadge";
+import { BOB_POD_PLURAL, BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
 import { BulkActionBar } from "./components/BulkActionBar";
 import type { StudentDayAttendance } from "./types";
@@ -206,7 +207,7 @@ export function AttendanceScanPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Pod / track
+            {BOB_POD_SINGULAR}
           </label>
           <select
             value={podId}
@@ -214,7 +215,7 @@ export function AttendanceScanPage() {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
             <option value="">
-              {trackFilter ? "All pods in track" : "Select track"}
+              {trackFilter ? `All ${BOB_POD_PLURAL.toLowerCase()} in filter` : `Select ${BOB_POD_SINGULAR.toLowerCase()}`}
             </option>
             {pods.map((p) => (
               <option key={p.id} value={p.id}>
@@ -255,7 +256,7 @@ export function AttendanceScanPage() {
 
       {!scopeReady ? (
         <p className="text-sm text-gray-500">
-          Select a pod or enter a track filter to begin.
+          Select a {BOB_POD_SINGULAR.toLowerCase()} or enter a track filter to begin.
         </p>
       ) : todayRows.length === 0 ? (
         <p className="text-sm text-gray-500">

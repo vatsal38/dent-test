@@ -13,32 +13,11 @@ import {
   reviewStatusBadge,
 } from "@/features/bob/milestones/deliverableDisplay";
 import { hasIndustryCredential } from "../../lib/profileSignals";
-
-function firstTrackLabel(value: unknown): string | null {
-  if (value == null) return null;
-  if (typeof value === "string") return value.trim() || null;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      if (typeof item === "string" && item.trim()) return item.trim();
-    }
-  }
-  return null;
-}
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
 export function MilestonesTab() {
   const { student, tab } = useStudentDrawerContext();
-  const trackHint =
-    firstTrackLabel(student?.track) ||
-    firstTrackLabel(
-      student?.airtableFields?.["Track - Site (from BoB '26 Track)"],
-    ) ||
-    firstTrackLabel(student?.airtableFields?.["BoB '25 Final Track"]) ||
-    null;
-  const { data: milestones = [], isLoading } = useStudentMilestones(
-    student?.id ?? null,
-    tab,
-    trackHint,
-  );
+  const { data: milestones = [], isLoading } = useStudentMilestones(student, tab);
 
   if (!student) return null;
   if (isLoading) return <MilestonesTabSkeleton />;
@@ -140,7 +119,7 @@ export function MilestonesTab() {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {m.trackName || "—"}
+                  {formatBobTrackDisplayLabel(m.trackName) || "—"}
                   {m.targetCompletionDate
                     ? ` · due ${m.targetCompletionDate}`
                     : ""}

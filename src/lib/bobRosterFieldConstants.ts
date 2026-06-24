@@ -9,6 +9,11 @@ export const BOB25_TRACK_SITE_LOOKUP_FIELDS = [
 
 export const BOB26_TRACK_FIELD_NAMES = ["BoB '26 Track", "BOB '26 Track"] as const;
 
+export const BOB26_TRACK_NAME_LOOKUP_FIELDS = [
+  "Track Name (from BoB '26 Track)",
+  "Track Name (from BOB '26 Track)",
+] as const;
+
 export const BOB26_TRACK_SITE_LOOKUP_FIELDS = [
   "Track - Site (from BoB '26 Track)",
   "Track - Site (from BOB '26 Track)",
@@ -46,9 +51,14 @@ export function isBob26TrackField(name: string): boolean {
   return /bob\s*[''\u2019]?26\s*track/i.test(name);
 }
 
+export function isTrackNameField(name: string): boolean {
+  return /track\s*name\s*\(from\s*bob/i.test(name);
+}
+
 export function isSystemFilterRosterField(name: string): boolean {
   return (
     isTrackSiteField(name) ||
+    isTrackNameField(name) ||
     isBob26TrackField(name) ||
     isYouthWorksStatusField(name) ||
     /^2026\s*track\s*placement$/i.test(name.trim()) ||

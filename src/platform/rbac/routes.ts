@@ -16,7 +16,7 @@ export type BobRouteDef = {
  */
 export const BOB_ROUTES: BobRouteDef[] = [
   { path: "/app/bob/key-links", permission: "keyLinks.view", fallback: "/app/bob" },
-  { path: "/app/bob/teams", permission: "teams.view", fallback: "/app/bob" },
+  { path: "/app/bob/teams", permission: "teams.view", fallback: "/app/bob/deliverables" },
   { path: "/app/bob/settings", permission: "settings.view", fallback: "/app/bob" },
   { path: "/app/bob/staff", permission: "staff.view", fallback: "/app/bob" },
   {

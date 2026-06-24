@@ -3,21 +3,13 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { parseApiError } from "@/platform/api/errors";
-import { updateBobStudent } from "@/platform/api/bob/students";
+import { addBobStudentCoachNote } from "@/platform/api/bob/students";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { CoachNoteCard } from "../../widgets/CoachNoteCard";
-import {
-  coachNoteFieldKey,
-  extractCoachNotes,
-} from "../../lib/profileSignals";
+import { extractCoachNotes } from "../../lib/profileSignals";
 import { useStudentSubmissions } from "../../hooks/useStudentTabQueries";
 import { SUBMISSION_TYPE_LABELS } from "@/features/bob/submissions/display";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
-
-function formatNoteEntry(author: string, body: string): string {
-  const stamp = new Date().toLocaleString();
-  return `[${stamp} · ${author}]\n${body.trim()}`;
-}
 
 export function NotesTab() {
   const { student, tab, refetch } = useStudentDrawerContext();
@@ -56,14 +48,7 @@ export function NotesTab() {
     setSaving(true);
     setSaveError(null);
     try {
-      const fieldKey = coachNoteFieldKey(student);
-      const fields = (student.airtableFields || {}) as Record<string, unknown>;
-      const existing = String(fields[fieldKey] || "").trim();
-      const entry = formatNoteEntry(authorLabel, body);
-      const next = existing ? `${existing}\n\n${entry}` : entry;
-      await updateBobStudent(student.id, {
-        airtableFields: { [fieldKey]: next },
-      });
+      await addBobStudentCoachNote(student.id, body, authorLabel);
       setDraft("");
       refetch();
     } catch (err) {
@@ -89,7 +74,7 @@ export function NotesTab() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={4}
-            placeholder="Log context for the team — saved to Airtable Coach Notes."
+            placeholder="Log context for the team — saved to coach notes and synced to Airtable when linked."
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
           />
           {saveError ? (

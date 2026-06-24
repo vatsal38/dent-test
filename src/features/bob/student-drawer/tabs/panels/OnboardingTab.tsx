@@ -5,7 +5,6 @@ import {
   contractStatusLabel,
   onboardingPhaseTone,
   preSurveyLabel,
-  ywRegistrationLabel,
 } from "@/features/bob/onboarding/statusLabels";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { OnboardingTabSkeleton } from "../../widgets/TabPanelSkeleton";
@@ -52,7 +51,7 @@ export function OnboardingTab() {
           <h3 className="text-sm font-semibold text-gray-900">
             Airtable onboarding status
           </h3>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <StatusCard
               title="Contract"
               detail={
@@ -61,17 +60,6 @@ export function OnboardingTab() {
                   : contractStatusLabel(ob.contract.phase)
               }
               phase={ob.contract.phase === "signed" ? "signed" : ob.contract.phase === "in_progress" ? "in_progress" : ob.contract.phase === "not_started" ? "not_started" : "unknown"}
-            />
-            <StatusCard
-              title="YouthWorks"
-              detail={ywRegistrationLabel(ob.ywRegistration)}
-              phase={
-                ob.ywReady
-                  ? "complete"
-                  : ob.ywRegistration.phase === "incomplete"
-                    ? "incomplete"
-                    : "unknown"
-              }
             />
             <StatusCard
               title="Pre-survey"
@@ -85,13 +73,14 @@ export function OnboardingTab() {
               }
             />
           </div>
-          {ob.readyForProgram ? (
+          {ob.contractAndPreSurveyComplete ?? ob.readyForProgram ? (
             <p className="text-sm text-emerald-700 font-medium">
-              Ready for in-program (contract + YW checks passed).
+              Ready for program — contract and pre-survey complete.
             </p>
           ) : (
             <p className="text-sm text-amber-800">
-              Onboarding incomplete — update contract or YW status in Airtable.
+              Onboarding incomplete — contract or pre-survey still pending in
+              Airtable.
             </p>
           )}
         </div>

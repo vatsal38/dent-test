@@ -112,3 +112,46 @@ export function isBeforeProgramStart(iso: string) {
 export function isAfterProgramEnd(iso: string) {
   return String(iso || "").slice(0, 10) > PROGRAM_END_DATE;
 }
+
+/** Default attendance focus date — uses program window, not wall-clock today when pre-season. */
+export function resolveDefaultAttendanceFocusDate(options?: {
+  requestedDate?: string | null;
+  latestImportedDate?: string | null;
+}): string {
+  const today = todayISO();
+  const requested = options?.requestedDate
+    ? String(options.requestedDate).slice(0, 10)
+    : null;
+  if (requested) {
+    if (isBeforeProgramStart(requested) && !isBeforeProgramStart(today)) {
+      return today <= PROGRAM_END_DATE ? today : PROGRAM_END_DATE;
+    }
+    if (isAfterProgramEnd(requested)) return PROGRAM_END_DATE;
+    return requested;
+  }
+
+  const latest = options?.latestImportedDate
+    ? String(options.latestImportedDate).slice(0, 10)
+    : null;
+  const inProgramLatest =
+    latest && isWithinProgramRange(latest) ? latest : null;
+
+  if (isBeforeProgramStart(today)) {
+    return inProgramLatest || PROGRAM_START_DATE;
+  }
+  if (isAfterProgramEnd(today)) {
+    return inProgramLatest || PROGRAM_END_DATE;
+  }
+  if (isProgramDay(today)) return today;
+
+  const programDates = listProgramDates({ throughDate: today });
+  const lastProgramDay = programDates[programDates.length - 1];
+  return inProgramLatest || lastProgramDay || PROGRAM_START_DATE;
+}
+
+export function clampDateToProgramWindow(iso: string): string {
+  const d = String(iso || "").slice(0, 10);
+  if (d < PROGRAM_START_DATE) return PROGRAM_START_DATE;
+  if (d > PROGRAM_END_DATE) return PROGRAM_END_DATE;
+  return d;
+}

@@ -8,7 +8,7 @@ import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect"
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { getWeekMonday, getWeekSunday } from "./weekDates";
-import { isBeforeProgramStart, PROGRAM_START_DATE, PROGRAM_END_DATE } from "@/lib/bobProgramCalendar";
+import { isBeforeProgramStart, PROGRAM_START_DATE, PROGRAM_END_DATE, resolveDefaultAttendanceFocusDate } from "@/lib/bobProgramCalendar";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { DiscrepancyList } from "./components/DiscrepancyList";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
@@ -17,9 +17,12 @@ import type { AttendanceDiscrepancy, StudentDayAttendance } from "./types";
 export function AttendanceDiscrepanciesPage() {
   const searchParams = useSearchParams();
   const initialTrack = searchParams?.get("track") || "";
-  const initialDate = searchParams?.get("date") || new Date().toISOString().slice(0, 10);
+  const initialDate =
+    searchParams?.get("date") || resolveDefaultAttendanceFocusDate();
 
-  const [weekOf, setWeekOf] = useState(() => getWeekMonday(new Date(initialDate + "T12:00:00")));
+  const [weekOf, setWeekOf] = useState(() =>
+    getWeekMonday(new Date(initialDate + "T12:00:00")),
+  );
   const [trackFilter, setTrackFilter] = useState(initialTrack);
   const [detailDay, setDetailDay] = useState<StudentDayAttendance | null>(null);
   const [fixedThisSession, setFixedThisSession] = useState(0);
@@ -90,8 +93,9 @@ export function AttendanceDiscrepanciesPage() {
           </p>
           {isBeforeProgramStart(new Date().toISOString().slice(0, 10)) ? (
             <p className="text-sm text-amber-800 mt-2">
-              Program has not started yet — attendance correction counts will stay at zero
-              until Mon {PROGRAM_START_DATE}.
+              Program has not started yet — defaulting to the first session week (
+              {PROGRAM_START_DATE}). Correction counts use program weekdays only (
+              {PROGRAM_START_DATE} – {PROGRAM_END_DATE}, excluding July 3).
             </p>
           ) : null}
         </div>
@@ -100,6 +104,8 @@ export function AttendanceDiscrepanciesPage() {
           <input
             type="date"
             value={weekOf}
+            min={PROGRAM_START_DATE}
+            max={PROGRAM_END_DATE}
             onChange={(e) => setWeekOf(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
           />

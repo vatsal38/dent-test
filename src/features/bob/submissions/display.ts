@@ -86,12 +86,16 @@ export function cardTitle(s: BobSubmission) {
   }
   if (s.type === "anonymous_feedback")
     return s.category ? `Feedback · ${formatLabel(s.category)}` : "Anonymous feedback";
-  if (s.type === "progress_update")
+  if (s.type === "progress_update") {
+    const focus =
+      s.deliverableLabel || s.milestone
+        ? ` · ${s.deliverableLabel || s.milestone}`
+        : "";
+    const team = s.teamName ? ` (${s.teamName})` : "";
     return student
-      ? `${student} · Progress update`
-      : s.milestone
-        ? `Progress · ${s.milestone}`
-        : "Progress update";
+      ? `${student} · Progress update${focus}${team}`
+      : `Progress update${focus}${team}`;
+  }
   if (s.type === "parent_contact")
     return student
       ? `${student} · Parent contact`

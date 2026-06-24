@@ -22,7 +22,7 @@ export function commandCenterToKpis(stats: BobCommandCenterStats) {
       studentsEnrolled: { value: stats.cards.studentsEnrolled, unit: "count" as const },
       youthWorksSynced: { value: stats.cards.youthWorksSynced, unit: "percent" as const },
       onboardingCompleted: {
-        value: stats.cards.onboardingCompleted ?? stats.cards.youthWorksSynced,
+        value: stats.cards.onboardingCompleted ?? 0,
         unit: "percent" as const,
       },
       overallAttendancePct: { value: 0, unit: "percent" as const },

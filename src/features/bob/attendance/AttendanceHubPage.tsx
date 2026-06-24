@@ -15,6 +15,7 @@ import { AttendanceHoursRollup } from "./components/AttendanceHoursRollup";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
 import { DailyAttendanceTable } from "./components/DailyAttendanceTable";
 import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
+import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
 import type { IssueFilter, StudentDayAttendance } from "./types";
 import { parseApiError } from "@/platform/api/errors";
@@ -35,12 +36,18 @@ import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttenda
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { buildHoursAttendanceRollup } from "./model/hoursRollup";
+import {
+  isBeforeProgramStart,
+  PROGRAM_END_DATE,
+  PROGRAM_START_DATE,
+  resolveDefaultAttendanceFocusDate,
+} from "@/lib/bobProgramCalendar";
 
 export function AttendanceHubPage() {
   const searchParams = useSearchParams();
   const trackSelectRef = useRef<HTMLSelectElement>(null);
   const initialDate =
-    searchParams?.get("date") || new Date().toISOString().slice(0, 10);
+    searchParams?.get("date") || resolveDefaultAttendanceFocusDate();
   const initialTrack = searchParams?.get("track") || "";
   const initialFilter = (searchParams?.get("filter") || "all") as IssueFilter;
 
@@ -62,7 +69,10 @@ export function AttendanceHubPage() {
   useEffect(() => {
     // Keep UI state in sync with URL params so alert clicks apply filters.
     const nextDate =
-      searchParams?.get("date") || new Date().toISOString().slice(0, 10);
+      searchParams?.get("date") ||
+      resolveDefaultAttendanceFocusDate({
+        latestImportedDate: boundsQuery.data?.latestDate,
+      });
     const nextTrack = searchParams?.get("track") || "";
     const rawFilter = (searchParams?.get("filter") || "all") as string;
     const allowed: IssueFilter[] = [
@@ -84,7 +94,7 @@ export function AttendanceHubPage() {
     setFocusDate((cur) => (cur === nextDate ? cur : nextDate));
     setTrackFilter((cur) => (cur === nextTrack ? cur : nextTrack));
     setHealthFilter((cur) => (cur === nextFilter ? cur : nextFilter));
-  }, [searchParams]);
+  }, [searchParams, boundsQuery.data?.latestDate]);
 
   const {
     workspace,
@@ -121,15 +131,26 @@ export function AttendanceHubPage() {
 
   const latestImportedDate = boundsQuery.data?.latestDate ?? null;
   const boundsTotal = boundsQuery.data?.total ?? 0;
+  const suggestedFocusDate =
+    boundsQuery.data?.suggestedFocusDate ??
+    resolveDefaultAttendanceFocusDate({ latestImportedDate });
+
+  useEffect(() => {
+    if (searchParams?.get("date")) return;
+    if (!boundsQuery.data) return;
+    setFocusDate((cur) =>
+      cur === suggestedFocusDate ? cur : suggestedFocusDate,
+    );
+    setDateAutoAdjusted(true);
+  }, [searchParams, boundsQuery.data, suggestedFocusDate]);
 
   useEffect(() => {
     if (dateAutoAdjusted || searchParams?.get("date")) return;
     if (!latestImportedDate || boundsTotal === 0) return;
-    const today = new Date().toISOString().slice(0, 10);
-    if (focusDate !== today) return;
-    if (latestImportedDate >= today) return;
-    setFocusDate(latestImportedDate);
-    setDateAutoAdjusted(true);
+    if (focusDate > latestImportedDate) {
+      setFocusDate(latestImportedDate);
+      setDateAutoAdjusted(true);
+    }
   }, [
     dateAutoAdjusted,
     searchParams,
@@ -392,13 +413,6 @@ export function AttendanceHubPage() {
         </div>
       ) : null}
 
-      {dateAutoAdjusted && latestImportedDate ? (
-        <div className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-          Showing latest imported attendance date ({latestImportedDate}). Use
-          the date picker to browse other days.
-        </div>
-      ) : null}
-
       <AttendanceHubControls
         focusDate={focusDate}
         onFocusDateChange={setFocusDate}
@@ -422,6 +436,8 @@ export function AttendanceHubPage() {
         trackSelectRef={trackSelectRef}
         hideTrackFilter={isStudentViewer}
         hideSearch={isStudentViewer}
+        minDate={PROGRAM_START_DATE}
+        maxDate={PROGRAM_END_DATE}
       />
 
       <AttendanceHoursRollup
@@ -442,11 +458,11 @@ export function AttendanceHubPage() {
 
       <section className={isStudentViewer ? "hidden" : "mt-8"}>
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
-          Pod check-in today
+          {BOB_POD_SINGULAR} check-in today
         </h2>
         <p className="text-xs text-gray-500 mb-3">
-          Punch completion by pod for {focusDate} — use the hours rollup above for
-          BoB and track totals.
+          Punch completion by {BOB_POD_SINGULAR.toLowerCase()} for {focusDate} —
+          use the hours rollup above for BoB and track totals.
         </p>
         <PodSiteAnalytics podStats={workspace.podStats} />
       </section>

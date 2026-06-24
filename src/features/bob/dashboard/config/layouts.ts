@@ -76,9 +76,16 @@ export const DASHBOARD_LAYOUTS: Record<
         columns: 3,
         widgets: [
           {
+            id: "cc-project-teams",
+            kind: "project_team_deliverables",
+            title: "Deliverable review by project team",
+            colSpan: 8,
+            permissions: ["dashboard.view", "milestones.view"],
+          },
+          {
             id: "cc-milestones",
             kind: "milestone_summary",
-            title: "Deliverable Submissions by Track",
+            title: "Deliverable submissions by track",
             colSpan: 8,
             permissions: ["dashboard.view", "milestones.view"],
           },
@@ -155,7 +162,7 @@ export const DASHBOARD_LAYOUTS: Record<
           {
             id: "coach-attendance",
             kind: "attendance_summary",
-            title: "Attendance today",
+            title: "Attendance by track",
             colSpan: 8,
             permissions: ["dashboard.view", "attendance.view"],
           },
@@ -184,6 +191,13 @@ export const DASHBOARD_LAYOUTS: Record<
             id: "coach-milestones",
             kind: "milestone_summary",
             title: "Deliverables on your pod",
+            colSpan: 6,
+            permissions: ["dashboard.view", "milestones.view"],
+          },
+          {
+            id: "coach-project-teams",
+            kind: "project_team_deliverables",
+            title: "Deliverable review by project team",
             colSpan: 6,
             permissions: ["dashboard.view", "milestones.view"],
           },
@@ -319,6 +333,12 @@ export const DASHBOARD_LAYOUTS: Record<
             id: "rpt-milestones",
             kind: "milestone_summary",
             title: "Deliverable submission by track",
+            permissions: ["dashboard.reports"],
+          },
+          {
+            id: "rpt-project-teams",
+            kind: "project_team_deliverables",
+            title: "Deliverable review by project team",
             permissions: ["dashboard.reports"],
           },
           {

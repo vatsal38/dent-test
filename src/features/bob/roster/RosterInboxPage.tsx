@@ -37,7 +37,6 @@ import { getRosterQueue, type RosterQueueId } from "@/features/bob/roster/queues
 import {
   contractStatusLabel,
   preSurveyLabel,
-  ywRegistrationLabel,
 } from "@/features/bob/onboarding/statusLabels";
 import {
   initialsOf,
@@ -205,7 +204,6 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
       "coach",
       "podId",
       "contractStatus",
-      "ywRegistration",
       "preSurvey",
       "readyForProgram",
       "attendancePresent",
@@ -238,9 +236,8 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
           s.coach ?? "",
           s.podId ?? "",
           ob ? contractStatusLabel(ob.contract.phase) : "",
-          ob ? ywRegistrationLabel(ob.ywRegistration) : "",
           ob ? preSurveyLabel(ob.preSurvey) : "",
-          ob?.readyForProgram ? "yes" : ob ? "no" : "",
+          ob?.contractAndPreSurveyComplete ?? ob?.readyForProgram ? "yes" : ob ? "no" : "",
           (a as { present?: number }).present ?? "",
           (a as { absent?: number }).absent ?? "",
           (m as { submitted?: number }).submitted ?? "",

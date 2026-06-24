@@ -8,7 +8,7 @@ import { ActivityTabSkeleton } from "../../widgets/TabPanelSkeleton";
 export function ActivityTab() {
   const { student, tab } = useStudentDrawerContext();
   const { items, isLoading, refetch } = useStudentActivityFeed(
-    student?.id ?? null,
+    student,
     tab,
     student?.podId,
   );

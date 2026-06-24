@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 import {
   REVIEW_STATUS_OPTIONS,
@@ -301,12 +300,6 @@ export function DeliverableDetailDrawer({
             </div>
           ) : null}
 
-          <Link
-            href="/app/bob/inbox?type=progress_update"
-            className="inline-block text-sm font-medium text-orange-600 hover:underline"
-          >
-            View progress updates in inbox →
-          </Link>
         </div>
       </div>
     </>
