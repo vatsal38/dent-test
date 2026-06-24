@@ -8,7 +8,10 @@ function humanizeAirtableErrorMessage(message: string): string {
     return "Could not save to Airtable because a field has an incompatible value. Please try again or contact support if this continues.";
   }
   if (/INVALID_PERMISSIONS|API error 403/i.test(message)) {
-    return "You do not have permission to update this record in Airtable.";
+    if (/externally synced/i.test(message)) {
+      return "Airtable blocked the write because this table is externally synced. Imports still work; outbound writes are skipped.";
+    }
+    return "The server Airtable API token cannot write to this table. Ask an admin to grant the token editor access on Students & Alums (this is not your Dent login).";
   }
   if (/API error 404/i.test(message)) {
     return "The linked Airtable record could not be found.";

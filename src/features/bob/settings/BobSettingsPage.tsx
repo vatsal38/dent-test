@@ -165,7 +165,8 @@ export function BobSettingsPage() {
           </h2>
           <p className="text-sm text-gray-600 mb-3">
             Bi-directional sync with BoB Airtable bases. Status also appears in
-            the sidebar.
+            the sidebar. Sync uses the server&apos;s Airtable API token — not
+            your Dent login role.
           </p>
           <BobSyncStatusBadge />
         </section>
