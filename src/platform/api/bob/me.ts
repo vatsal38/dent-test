@@ -6,6 +6,7 @@ export type BobRole =
   | "program_director"
   | "site_coach"
   | "recruitment_ops"
+  | "fellow"
   | "read_only";
 
 export interface BobMeResponse {

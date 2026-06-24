@@ -85,6 +85,7 @@ export interface BobStaffCoachNote {
 
 export interface BobStudent {
   id: string;
+  airtableRecordId?: string | null;
   firstName: string;
   lastName: string;
   email: string | null;

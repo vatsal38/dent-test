@@ -93,7 +93,7 @@ export function useStudentSubmissions(
 }
 
 export function useStudentMilestones(
-  student: BobStudent | null,
+  student: BobStudent | null | undefined,
   activeTab: StudentDrawerTabId,
 ) {
   const enabled =
@@ -120,7 +120,7 @@ export function useStudentMilestones(
 }
 
 export function useStudentActivityFeed(
-  student: BobStudent | null,
+  student: BobStudent | null | undefined,
   activeTab: StudentDrawerTabId,
   podId: string | null | undefined,
 ) {

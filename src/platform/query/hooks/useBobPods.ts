@@ -11,11 +11,15 @@ import {
 } from "@/platform/api/bob/pods";
 import { bobKeys } from "@/platform/query/queryKeys";
 
-export function useBobPodsList(params?: BobPodsListParams) {
+export function useBobPodsList(
+  params?: BobPodsListParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: bobKeys.pods.list(params ?? {}),
     queryFn: () => getBobPods(params),
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 }
 
