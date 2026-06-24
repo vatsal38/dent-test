@@ -13,6 +13,7 @@ export * from "./attendanceImport";
 export * from "./submissions";
 export * from "./submit";
 export * from "./staff.ts";
+export * from "./evaluationsDemographics";
 
 // Backward compatibility: resolve labels lived on students in api.ts
 export { resolveBobAirtableRecordLabels } from "./airtable";

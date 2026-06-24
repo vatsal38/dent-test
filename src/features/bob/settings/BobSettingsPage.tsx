@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { BobSyncStatusBadge } from "@/features/bob/sync/BobSyncStatusBadge";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
@@ -13,14 +13,58 @@ import {
   resetBobPipeline,
   startBobRecruitmentImport,
   startBobRosterImport,
+  getEvaluationsDemographicsSyncStatus,
+  startEvaluationsDemographicsSync,
 } from "@/platform/api/bob";
 import { parseApiError } from "@/platform/api/errors";
+import type { BobImportJobStatus } from "@/platform/api/bob/shared";
 
 export function BobSettingsPage() {
   const { can } = useBobAccess();
   const [importBusy, setImportBusy] = useState<string | null>(null);
+  const [demographicsStarting, setDemographicsStarting] = useState(false);
+  const [demographicsStatus, setDemographicsStatus] =
+    useState<BobImportJobStatus | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const pollDemographicsStatus = useCallback(async () => {
+    try {
+      const status = await getEvaluationsDemographicsSyncStatus();
+      setDemographicsStatus(status);
+      if (!status.running && status.progress?.phase === "done") {
+        setMessage(
+          status.result?.message ||
+            status.progress?.message ||
+            "Demographics sync complete.",
+        );
+      } else if (!status.running && status.progress?.phase === "error") {
+        setMessage(
+          status.lastError?.message ||
+            status.progress?.message ||
+            "Demographics sync failed.",
+        );
+      }
+      return status;
+    } catch (err) {
+      setMessage(parseApiError(err));
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    void pollDemographicsStatus();
+  }, [pollDemographicsStatus]);
+
+  const demographicsRunning =
+    demographicsStarting || Boolean(demographicsStatus?.running);
+
+  useEffect(() => {
+    if (!demographicsRunning) return;
+    void pollDemographicsStatus();
+    const id = window.setInterval(() => void pollDemographicsStatus(), 1500);
+    return () => window.clearInterval(id);
+  }, [demographicsRunning, pollDemographicsStatus]);
 
   if (!can("settings.manage")) {
     return (
@@ -65,6 +109,22 @@ export function BobSettingsPage() {
     }
   }
 
+  async function handleDemographicsSync() {
+    setDemographicsStarting(true);
+    setMessage(null);
+    try {
+      await startEvaluationsDemographicsSync({
+        sinceHours: 72,
+        limit: 15,
+      });
+      await pollDemographicsStatus();
+    } catch (err) {
+      setMessage(parseApiError(err));
+    } finally {
+      setDemographicsStarting(false);
+    }
+  }
+
   async function handlePipelineReset() {
     const ok = window.confirm(
       "Type OK to wipe bob_recruitment and bob_students in Mongo. This cannot be undone.",
@@ -93,7 +153,7 @@ export function BobSettingsPage() {
       />
 
       {message && (
-        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 whitespace-pre-wrap">
           {message}
         </div>
       )}
@@ -139,6 +199,52 @@ export function BobSettingsPage() {
                 : "Import roster table"}
             </button>
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+            Evaluations demographics
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Copy submitted demographics from the Dent Evaluations form into
+            Students &amp; Alums (matched by email). Students must already be on
+            the roster from intake transfer.
+          </p>
+          <button
+            type="button"
+            disabled={demographicsRunning || importBusy !== null}
+            onClick={() => void handleDemographicsSync()}
+            className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+          >
+            {demographicsRunning
+              ? "Syncing demographics…"
+              : "Sync demographics from Evaluations"}
+          </button>
+          {demographicsRunning ? (
+            <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-950">
+              <div className="font-medium">Demographics sync in progress</div>
+              <div className="mt-1 text-xs text-orange-900/80">
+                {demographicsStatus?.progress?.message ||
+                  "Reading evaluations and updating Students & Alums…"}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs tabular-nums">
+                <span>Scanned: {demographicsStatus?.progress?.scanned ?? 0}</span>
+                <span>
+                  Updated: {demographicsStatus?.progress?.updated ?? 0}
+                </span>
+                <span>
+                  Skipped: {demographicsStatus?.progress?.skipped ?? 0}
+                </span>
+                <span>Failed: {demographicsStatus?.progress?.imported ?? 0}</span>
+                {demographicsStatus?.elapsed ? (
+                  <span>Elapsed: {demographicsStatus.elapsed}</span>
+                ) : null}
+              </div>
+              <div className="mt-3 h-2 w-full rounded-full bg-white/60 overflow-hidden">
+                <div className="h-full w-[40%] bg-orange-500 animate-pulse rounded-full" />
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section>
