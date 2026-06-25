@@ -14,6 +14,7 @@ import {
 import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
   computeHoursPresentFromStaffTimes,
+  buildStaffCorrections,
 } from "./staffRecordDerived";
 import { toTimeInputValue } from "./attendanceRecordTime";
 import {
@@ -68,6 +69,12 @@ function applyStatusToPunches(
   return next;
 }
 
+function isUsableTimeLabel(value?: string | null): value is string {
+  if (!value) return false;
+  const raw = String(value).trim();
+  return Boolean(raw) && raw !== "[object Object]";
+}
+
 function setPunchTime(
   punches: Record<PunchType, PunchSlot>,
   pt: PunchType,
@@ -79,15 +86,24 @@ function setPunchTime(
     state?: PunchVisualState;
     reason?: string;
     source?: string;
+    force?: boolean;
   },
 ) {
+  const existing = punches[pt];
+  const hasPunch =
+    existing.state === "recorded" &&
+    (isUsableTimeLabel(existing.timeLabel) ||
+      isUsableTimeLabel(existing.originalTimeLabel) ||
+      isUsableTimeLabel(existing.adjustedTimeLabel));
+  if (hasPunch && !opts.force) return;
+
   punches[pt] = {
     type: pt,
     state: opts.state ?? "recorded",
-    eventId: opts.eventId,
-    timeLabel: opts.display,
-    originalTimeLabel: opts.original,
-    adjustedTimeLabel: opts.adjusted,
+    eventId: opts.eventId ?? existing.eventId,
+    timeLabel: isUsableTimeLabel(opts.display) ? opts.display : undefined,
+    originalTimeLabel: isUsableTimeLabel(opts.original) ? opts.original : undefined,
+    adjustedTimeLabel: isUsableTimeLabel(opts.adjusted) ? opts.adjusted : undefined,
     adjustmentReason: opts.reason,
     adjustmentSource: opts.source,
   };
@@ -112,6 +128,13 @@ function populateDailyRecordPunches(
 
   const punchState = punchStateFromAttendanceState(attendanceState);
   const correctionSource = daily.manualOverride ? "Manual override" : "Coach correction";
+  const staffCorrection = Boolean(
+    daily.manualOverride ||
+      daily.staffCorrectionSignIn ||
+      daily.staffCorrectionSignOut ||
+      daily.manualStartTime ||
+      daily.manualEndTime,
+  );
 
   if (amInDisplay || amInOriginal) {
     setPunchTime(punches, "am_in", {
@@ -122,6 +145,7 @@ function populateDailyRecordPunches(
       state: punchState === "missing" ? "recorded" : punchState,
       reason: amInAdjusted && amInOriginal !== amInAdjusted ? correctionSource : undefined,
       source: amInAdjusted ? correctionSource : undefined,
+      force: staffCorrection,
     });
   }
 
@@ -133,6 +157,18 @@ function populateDailyRecordPunches(
       state: punchState,
       reason: staffOut ? correctionSource : undefined,
       source: staffOut ? correctionSource : undefined,
+      force: true,
+    });
+  } else if (pmOutDisplay || pmOutOriginal) {
+    // Master rollup sign-out is usually lunch (am_out), not end-of-day (pm_out).
+    setPunchTime(punches, "am_out", {
+      display: pmOutDisplay || pmOutOriginal,
+      original: pmOutOriginal,
+      adjusted: pmOutAdjusted,
+      eventId: daily.id,
+      state: punchState === "missing" ? "recorded" : punchState,
+      reason: pmOutAdjusted && pmOutOriginal !== pmOutAdjusted ? correctionSource : undefined,
+      source: pmOutAdjusted ? correctionSource : undefined,
     });
   }
 
@@ -144,18 +180,7 @@ function populateDailyRecordPunches(
       state: punchState,
       reason: staffIn ? correctionSource : undefined,
       source: staffIn ? correctionSource : undefined,
-    });
-  }
-
-  if (pmOutDisplay || pmOutOriginal) {
-    setPunchTime(punches, "pm_out", {
-      display: pmOutDisplay || pmOutOriginal,
-      original: pmOutOriginal,
-      adjusted: pmOutAdjusted,
-      eventId: daily.id,
-      state: punchState === "missing" ? "recorded" : punchState,
-      reason: pmOutAdjusted && pmOutOriginal !== pmOutAdjusted ? correctionSource : undefined,
-      source: pmOutAdjusted ? correctionSource : undefined,
+      force: true,
     });
   }
 }
@@ -388,7 +413,10 @@ export function buildStudentDayAttendance(
         if (evPod !== podId) continue;
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
-        const timeLabel = formatAttendanceTime(ev.signInTime || ev.signOutTime);
+        const timeLabel =
+          formatAttendanceTime(ev.signInTime) ||
+          formatAttendanceTime(ev.signOutTime);
+        if (!timeLabel) continue;
         punches[pt] = {
           type: pt,
           state: "recorded",
@@ -459,7 +487,7 @@ export function buildStudentDayAttendance(
           toTimeInputValue(daily.signInTime || daily.adjustedSignIn),
           toTimeInputValue(daily.staffCorrectionSignOut || daily.manualEndTime),
           toTimeInputValue(daily.staffCorrectionSignIn || daily.manualStartTime),
-          toTimeInputValue(daily.signOutTime || daily.adjustedSignOut),
+          toTimeInputValue(daily.adjustedSignOut || daily.manualEndTime),
         );
         if (computed > 0) {
           totalHoursLabel = formatHoursLabel(computed);
@@ -500,9 +528,12 @@ export function buildStudentDayAttendance(
           staffAnnotations.manualOverride ||
             daily?.manualOverride ||
             daily?.staffCorrectionSignIn ||
-            daily?.staffCorrectionSignOut,
+            daily?.staffCorrectionSignOut ||
+            daily?.manualStartTime ||
+            daily?.manualEndTime,
         ),
         hasAutoFill: attendanceState === "auto_filled",
+        staffCorrections: buildStaffCorrections(daily, date),
       });
     }
   }

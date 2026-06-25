@@ -25,6 +25,7 @@ import {
   formatHoursValue,
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
+import { resolveDayHoursNumeric } from "../model/dayHours";
 import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
 import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 import { parseApiError } from "@/platform/api/errors";
@@ -151,7 +152,9 @@ export function StaffAttendanceRecordEditor({
     );
     setAfternoonOut(
       toTimeInputValue(
-        r?.signOutTime || r?.adjustedSignOut || day.punches.pm_out.timeLabel,
+        r?.adjustedSignOut ||
+          r?.manualEndTime ||
+          day.punches.pm_out.timeLabel,
       ),
     );
     setNotes(r?.notes || resolveAttendanceStaffNote(day) || "");
@@ -175,17 +178,17 @@ export function StaffAttendanceRecordEditor({
     () => computeSessionHours(day.date, afternoonIn, afternoonOut),
     [day.date, afternoonIn, afternoonOut],
   );
-  const hoursPresent = useMemo(
-    () =>
-      computeHoursPresentFromStaffTimes(
-        day.date,
-        morningIn,
-        morningOut,
-        afternoonIn,
-        afternoonOut,
-      ),
-    [day.date, morningIn, morningOut, afternoonIn, afternoonOut],
-  );
+  const hoursPresent = useMemo(() => {
+    const fromStaff = computeHoursPresentFromStaffTimes(
+      day.date,
+      morningIn,
+      morningOut,
+      afternoonIn,
+      afternoonOut,
+    );
+    if (fromStaff > 0) return fromStaff;
+    return resolveDayHoursNumeric(day);
+  }, [day, morningIn, morningOut, afternoonIn, afternoonOut]);
   const expectedHours = expectedHoursForDate(day.date);
 
   async function handleSave(e: React.FormEvent) {

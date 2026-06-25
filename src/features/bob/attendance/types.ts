@@ -47,6 +47,20 @@ export interface AttendanceSession {
   statusLabel: string;
 }
 
+/** Staff-entered correction times (daily master record — not youth punch events). */
+export interface StaffCorrectionSession {
+  in?: string;
+  out?: string;
+}
+
+export interface StaffCorrections {
+  morning: StaffCorrectionSession;
+  afternoon: StaffCorrectionSession;
+  hasCorrections: boolean;
+  /** Total hours from staff correction ISO fields */
+  hoursLabel?: string;
+}
+
 export type DayHealth =
   | "complete"
   | "partial"
@@ -86,6 +100,8 @@ export interface StudentDayAttendance {
   notes?: string;
   hasManualCorrection: boolean;
   hasAutoFill: boolean;
+  /** Staff correction times from daily master (matches edit drawer). */
+  staffCorrections: StaffCorrections;
 }
 
 export type IssueFilter =

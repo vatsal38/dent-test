@@ -1,7 +1,9 @@
 import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
 import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
-import type { PunchType, StudentDayAttendance } from "../types";
-import { combineDateAndTime } from "./attendanceRecordTime";
+import type { BobAttendance } from "@/platform/api/bob/attendance";
+import type { PunchType, StaffCorrections, StudentDayAttendance } from "../types";
+import { combineDateAndTime, toTimeInputValue } from "./attendanceRecordTime";
+import { formatAttendanceTime } from "./formatAttendanceTime";
 
 const STATUS_LABELS: Record<BobAttendanceStatus, string> = {
   present: "Present",
@@ -70,15 +72,74 @@ export function formatHoursValue(hours: number): string {
   return String(hours);
 }
 
+/** Staff correction slots from daily master — same field mapping as the edit drawer (no punch fallback). */
+export function buildStaffCorrections(
+  daily?: Pick<
+    BobAttendance,
+    | "signInTime"
+    | "adjustedSignIn"
+    | "staffCorrectionSignOut"
+    | "manualEndTime"
+    | "staffCorrectionSignIn"
+    | "manualStartTime"
+    | "adjustedSignOut"
+    | "manualOverride"
+  > | null,
+  date?: string,
+): StaffCorrections {
+  const morningIn = formatAttendanceTime(daily?.signInTime || daily?.adjustedSignIn);
+  const morningOut = formatAttendanceTime(
+    daily?.staffCorrectionSignOut || daily?.manualEndTime,
+  );
+  const afternoonIn = formatAttendanceTime(
+    daily?.staffCorrectionSignIn || daily?.manualStartTime,
+  );
+  const afternoonOut = formatAttendanceTime(daily?.adjustedSignOut);
+
+  const hasCorrections = Boolean(
+    daily?.manualOverride ||
+      daily?.staffCorrectionSignIn ||
+      daily?.staffCorrectionSignOut ||
+      daily?.manualStartTime ||
+      daily?.manualEndTime ||
+      daily?.signInTime ||
+      daily?.adjustedSignOut ||
+      morningOut ||
+      afternoonIn,
+  );
+
+  let hoursLabel: string | undefined;
+  if (date && hasCorrections && daily) {
+    const hours = computeHoursPresentFromStaffTimes(
+      date,
+      toTimeInputValue(daily.signInTime || daily.adjustedSignIn),
+      toTimeInputValue(daily.staffCorrectionSignOut || daily.manualEndTime),
+      toTimeInputValue(daily.staffCorrectionSignIn || daily.manualStartTime),
+      toTimeInputValue(daily.adjustedSignOut),
+    );
+    if (hours > 0) hoursLabel = `${hours}h`;
+  }
+
+  return {
+    morning: { in: morningIn, out: morningOut },
+    afternoon: { in: afternoonIn, out: afternoonOut },
+    hasCorrections,
+    hoursLabel,
+  };
+}
+
 export function syncedPunchLabel(
   day: StudentDayAttendance,
   punch: PunchType,
 ): string {
   const slot = day.punches[punch];
-  return (
-    slot.originalTimeLabel ||
-    slot.timeLabel ||
-    slot.adjustedTimeLabel ||
-    "—"
-  );
+  const candidates = [
+    slot.timeLabel,
+    slot.adjustedTimeLabel,
+    slot.originalTimeLabel,
+  ];
+  for (const label of candidates) {
+    if (label && label !== "[object Object]") return label;
+  }
+  return "—";
 }

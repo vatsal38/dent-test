@@ -27,10 +27,10 @@ function SessionBlock({
         </p>
         <div className="flex items-center gap-1.5 text-xs text-gray-800">
           <span className={`h-2 w-2 rounded-full ${inColors.dot}`} title="In" />
-          <span>{session.in.timeLabel || "—"}</span>
+          <span>{session.in.timeLabel && session.in.timeLabel !== "[object Object]" ? session.in.timeLabel : "—"}</span>
           <span className="text-gray-300">→</span>
           <span className={`h-2 w-2 rounded-full ${outColors.dot}`} title="Out" />
-          <span>{session.out.timeLabel || "—"}</span>
+          <span>{session.out.timeLabel && session.out.timeLabel !== "[object Object]" ? session.out.timeLabel : "—"}</span>
         </div>
         <p className="text-[10px] text-gray-500 mt-0.5">
           {session.hoursLabel ? `${session.hoursLabel} · ` : ""}
