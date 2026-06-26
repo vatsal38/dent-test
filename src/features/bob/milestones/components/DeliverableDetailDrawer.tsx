@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 import {
   REVIEW_STATUS_OPTIONS,
@@ -20,7 +21,9 @@ export function DeliverableDetailDrawer({
   detailSaveError,
   onClose,
   onReviewChange,
+  onSaveStaffReview,
   onOpenTeamReview,
+  defaultReviewerName = "",
 }: {
   deliverable: BobDeliverable;
   teamName?: string;
@@ -33,11 +36,29 @@ export function DeliverableDetailDrawer({
     trackerStatus?: string,
     teamName?: string,
   ) => void;
+  onSaveStaffReview: (
+    item: BobDeliverable,
+    payload: {
+      staffReviewNotes: string;
+      reviewedBy: string;
+      teamName?: string;
+    },
+  ) => void;
   onOpenTeamReview: (teamName: string) => void;
+  defaultReviewerName?: string;
 }) {
   const isTeamReview = Boolean(teamName);
   const tracker = findTrackerForTeam(deliverable, teamName);
   const teamSummaries = teamTrackerSummaries(deliverable);
+  const [reviewNotes, setReviewNotes] = useState(tracker?.staffReviewNotes || "");
+  const [reviewedBy, setReviewedBy] = useState(
+    tracker?.reviewedBy || defaultReviewerName || "",
+  );
+
+  useEffect(() => {
+    setReviewNotes(tracker?.staffReviewNotes || "");
+    setReviewedBy(tracker?.reviewedBy || defaultReviewerName || "");
+  }, [deliverable.id, teamName, tracker?.staffReviewNotes, tracker?.reviewedBy, defaultReviewerName]);
 
   return (
     <>
@@ -184,16 +205,61 @@ export function DeliverableDetailDrawer({
                 </select>
               </div>
 
-              {tracker?.staffReviewNotes ? (
+              <div className="rounded-lg border border-orange-200 bg-orange-50/40 p-3 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-800">
+                  Staff review notes
+                </p>
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
-                    Staff review notes
-                  </h3>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap rounded-lg bg-gray-50 border border-gray-200 p-3">
-                    {tracker.staffReviewNotes}
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reviewed by
+                  </label>
+                  <input
+                    type="text"
+                    value={reviewedBy}
+                    disabled={updatingId === deliverable.id}
+                    onChange={(e) => setReviewedBy(e.target.value)}
+                    placeholder="Staff name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60"
+                  />
                 </div>
-              ) : null}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Review notes
+                  </label>
+                  <textarea
+                    value={reviewNotes}
+                    disabled={updatingId === deliverable.id}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    rows={4}
+                    placeholder="What did you review? Any feedback for the team?"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={updatingId === deliverable.id}
+                  onClick={() =>
+                    onSaveStaffReview(deliverable, {
+                      staffReviewNotes: reviewNotes.trim(),
+                      reviewedBy: reviewedBy.trim(),
+                      teamName,
+                    })
+                  }
+                  className="w-full h-9 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
+                >
+                  Save review comments
+                </button>
+                {tracker?.reviewedAt ? (
+                  <p className="text-[11px] text-gray-500">
+                    Last saved{" "}
+                    {new Date(tracker.reviewedAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                    {tracker.reviewedBy ? ` by ${tracker.reviewedBy}` : ""}
+                  </p>
+                ) : null}
+              </div>
 
               {tracker?.uploads?.length ? (
                 <div>
@@ -278,6 +344,17 @@ export function DeliverableDetailDrawer({
                       {t.date || "Submission"} ·{" "}
                       {t.deliverableStatus || "Status pending"}
                     </p>
+                    {t.reviewedBy ? (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Reviewed by {t.reviewedBy}
+                        {t.reviewedAt
+                          ? ` · ${new Date(t.reviewedAt).toLocaleString(undefined, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}`
+                          : ""}
+                      </p>
+                    ) : null}
                     {t.staffReviewNotes ? (
                       <p className="text-gray-600 mt-1 whitespace-pre-wrap">
                         {t.staffReviewNotes}

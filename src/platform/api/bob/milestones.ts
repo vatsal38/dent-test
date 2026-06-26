@@ -15,6 +15,8 @@ export interface BobDeliverableTrackerRecord {
   deliverableStatus: string | null;
   reviewStatus: string;
   staffReviewNotes: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   projectDeliverable: string | null;
   amountEarned: number | null;
   uploads: BobDeliverableAttachment[];
@@ -106,6 +108,7 @@ export async function updateBobMilestone(
     trackerDeliverableStatus: string;
     staffProgressNotes: string;
     staffReviewNotes: string;
+    reviewedBy?: string;
     progressStatus: string;
     milestoneComplete: boolean;
     trackerId: string;

@@ -33,7 +33,7 @@ export const ROSTER_QUEUES: RosterQueueDef[] = [
   {
     id: "bob_cohort",
     label: "All BoB",
-    description: "BoB '26 active cohort (track assigned)",
+    description: "BoB '26 youth marked In Program, Active",
     listParams: { bobCohort: "active" },
   },
   ...ROSTER_TRACK_TAB_FILTERS.map((t) => ({

@@ -413,15 +413,15 @@ export function buildStudentDayAttendance(
         if (evPod !== podId) continue;
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
-        const timeLabel =
-          formatAttendanceTime(ev.signInTime) ||
-          formatAttendanceTime(ev.signOutTime);
+        const timeIso = ev.signInTime || ev.signOutTime || undefined;
+        const timeLabel = formatAttendanceTime(timeIso);
         if (!timeLabel) continue;
         punches[pt] = {
           type: pt,
           state: "recorded",
           eventId: ev.id,
           timeLabel,
+          youthTimeIso: timeIso,
         };
       }
 
@@ -533,7 +533,7 @@ export function buildStudentDayAttendance(
             daily?.manualEndTime,
         ),
         hasAutoFill: attendanceState === "auto_filled",
-        staffCorrections: buildStaffCorrections(daily, date),
+        staffCorrections: buildStaffCorrections(daily, date, { punches }),
       });
     }
   }

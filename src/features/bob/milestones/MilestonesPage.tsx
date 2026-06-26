@@ -283,6 +283,46 @@ export function MilestonesPage() {
     }
   }
 
+  async function handleSaveStaffReview(
+    item: BobDeliverable,
+    payload: {
+      staffReviewNotes: string;
+      reviewedBy: string;
+      teamName?: string;
+    },
+  ) {
+    const previous =
+      detail?.deliverable.id === item.id ? detail.deliverable : item;
+    const tracker = findTrackerForTeam(item, payload.teamName);
+
+    setUpdatingId(item.id);
+    setDetailSaveError(null);
+
+    try {
+      const updated = await updateMilestone.mutateAsync({
+        orgId,
+        milestoneId: item.id,
+        data: {
+          staffReviewNotes: payload.staffReviewNotes,
+          reviewedBy: payload.reviewedBy || undefined,
+          trackerId: tracker?.id,
+          teamName: payload.teamName,
+        },
+      });
+      if (detail?.deliverable.id === updated.id) {
+        setDetail({ deliverable: updated, teamName: payload.teamName });
+      }
+      await milestonesQuery.refetch();
+    } catch (err) {
+      if (detail?.deliverable.id === item.id) {
+        setDetail({ deliverable: previous, teamName: payload.teamName });
+      }
+      setDetailSaveError(parseApiError(err));
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -500,8 +540,10 @@ export function MilestonesPage() {
           teamName={detail.teamName}
           updatingId={updatingId}
           detailSaveError={detailSaveError}
+          defaultReviewerName={me?.user?.name || me?.user?.email || ""}
           onClose={() => setDetail(null)}
           onReviewChange={handleReviewChange}
+          onSaveStaffReview={handleSaveStaffReview}
           onOpenTeamReview={openTeamReview}
         />
       ) : null}

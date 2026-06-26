@@ -25,9 +25,18 @@ export function clearableIso(
   time: string,
   previous?: string | null,
 ): string | null | undefined {
+  return staffCorrectionIso(date, time, previous);
+}
+
+/** Persist only when staff entered a value, or explicitly cleared a prior correction. */
+export function staffCorrectionIso(
+  date: string,
+  time: string,
+  previousStaffValue?: string | null,
+): string | null | undefined {
   const t = String(time || "").trim();
   if (!t) {
-    if (previous) return null;
+    if (previousStaffValue) return null;
     return undefined;
   }
   return combineDateAndTime(date, t);

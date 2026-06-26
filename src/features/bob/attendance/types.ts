@@ -37,6 +37,8 @@ export interface PunchSlot {
   adjustedTimeLabel?: string;
   adjustmentReason?: string;
   adjustmentSource?: string;
+  /** Raw ISO from youth punch event (never overwritten by daily rollup). */
+  youthTimeIso?: string;
 }
 
 export interface AttendanceSession {

@@ -67,12 +67,46 @@ export function computeHoursPresentFromStaffTimes(
   return total;
 }
 
+export function syncedTimeInput(
+  day: StudentDayAttendance,
+  punch: PunchType,
+): string {
+  return toTimeInputValue(day.punches[punch].youthTimeIso);
+}
+
+export function effectiveStaffTime(
+  staffInput: string,
+  day: StudentDayAttendance,
+  punch: PunchType,
+): string {
+  if (String(staffInput || "").trim()) return staffInput;
+  return syncedTimeInput(day, punch);
+}
+
+export function computeEffectiveHoursPresent(
+  day: StudentDayAttendance,
+  staff: {
+    morningIn: string;
+    morningOut: string;
+    afternoonIn: string;
+    afternoonOut: string;
+  },
+): number {
+  return computeHoursPresentFromStaffTimes(
+    day.date,
+    effectiveStaffTime(staff.morningIn, day, "am_in"),
+    effectiveStaffTime(staff.morningOut, day, "am_out"),
+    effectiveStaffTime(staff.afternoonIn, day, "pm_in"),
+    effectiveStaffTime(staff.afternoonOut, day, "pm_out"),
+  );
+}
+
 export function formatHoursValue(hours: number): string {
   if (!hours || hours <= 0) return "0";
   return String(hours);
 }
 
-/** Staff correction slots from daily master — same field mapping as the edit drawer (no punch fallback). */
+/** Staff correction slots — overrides only; blank slots fall back to youth punches for hours. */
 export function buildStaffCorrections(
   daily?: Pick<
     BobAttendance,
@@ -83,18 +117,30 @@ export function buildStaffCorrections(
     | "staffCorrectionSignIn"
     | "manualStartTime"
     | "adjustedSignOut"
+    | "signOutTime"
     | "manualOverride"
   > | null,
   date?: string,
+  day?: Pick<StudentDayAttendance, "punches">,
 ): StaffCorrections {
-  const morningIn = formatAttendanceTime(daily?.signInTime || daily?.adjustedSignIn);
-  const morningOut = formatAttendanceTime(
+  const morningInStaff = formatAttendanceTime(daily?.signInTime);
+  const morningOutStaff = formatAttendanceTime(
     daily?.staffCorrectionSignOut || daily?.manualEndTime,
   );
-  const afternoonIn = formatAttendanceTime(
+  const afternoonInStaff = formatAttendanceTime(
     daily?.staffCorrectionSignIn || daily?.manualStartTime,
   );
-  const afternoonOut = formatAttendanceTime(daily?.adjustedSignOut);
+  const afternoonOutStaff = formatAttendanceTime(
+    daily?.adjustedSignOut || daily?.signOutTime,
+  );
+
+  const youthLabel = (punch: PunchType) =>
+    day ? formatAttendanceTime(day.punches[punch].youthTimeIso) : undefined;
+
+  const morningIn = morningInStaff || youthLabel("am_in");
+  const morningOut = morningOutStaff || youthLabel("am_out");
+  const afternoonIn = afternoonInStaff || youthLabel("pm_in");
+  const afternoonOut = afternoonOutStaff || youthLabel("pm_out");
 
   const hasCorrections = Boolean(
     daily?.manualOverride ||
@@ -104,19 +150,23 @@ export function buildStaffCorrections(
       daily?.manualEndTime ||
       daily?.signInTime ||
       daily?.adjustedSignOut ||
-      morningOut ||
-      afternoonIn,
+      daily?.signOutTime,
   );
 
   let hoursLabel: string | undefined;
-  if (date && hasCorrections && daily) {
-    const hours = computeHoursPresentFromStaffTimes(
-      date,
-      toTimeInputValue(daily.signInTime || daily.adjustedSignIn),
-      toTimeInputValue(daily.staffCorrectionSignOut || daily.manualEndTime),
-      toTimeInputValue(daily.staffCorrectionSignIn || daily.manualStartTime),
-      toTimeInputValue(daily.adjustedSignOut),
-    );
+  if (date && hasCorrections && day) {
+    const hours = computeEffectiveHoursPresent(day as StudentDayAttendance, {
+      morningIn: toTimeInputValue(daily?.signInTime),
+      morningOut: toTimeInputValue(
+        daily?.staffCorrectionSignOut || daily?.manualEndTime,
+      ),
+      afternoonIn: toTimeInputValue(
+        daily?.staffCorrectionSignIn || daily?.manualStartTime,
+      ),
+      afternoonOut: toTimeInputValue(
+        daily?.adjustedSignOut || daily?.signOutTime,
+      ),
+    });
     if (hours > 0) hoursLabel = `${hours}h`;
   }
 

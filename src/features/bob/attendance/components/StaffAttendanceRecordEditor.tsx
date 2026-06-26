@@ -15,13 +15,14 @@ import {
   useSaveBobAttendanceRecord,
 } from "@/platform/query/hooks/useBobAttendance";
 import {
-  clearableIso,
+  staffCorrectionIso,
   toTimeInputValue,
 } from "../model/attendanceRecordTime";
 import {
-  computeHoursPresentFromStaffTimes,
+  computeEffectiveHoursPresent,
   computeSessionHours,
   deriveAttendanceStatusLabel,
+  effectiveStaffTime,
   formatHoursValue,
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
@@ -42,10 +43,12 @@ function TimeField({
   label,
   value,
   onChange,
+  syncedHint,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  syncedHint?: string;
 }) {
   return (
     <div>
@@ -56,6 +59,11 @@ function TimeField({
         onChange={(e) => onChange(e.target.value)}
         className="w-full h-9 px-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
       />
+      {syncedHint ? (
+        <p className="text-[10px] text-gray-500 mt-0.5">
+          Student: {syncedHint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -131,31 +139,15 @@ export function StaffAttendanceRecordEditor({
   useEffect(() => {
     const r = source;
     setStatus((r?.status as BobAttendanceStatus) || day.dailyStatus || "");
-    setMorningIn(
-      toTimeInputValue(
-        r?.signInTime || r?.adjustedSignIn || day.punches.am_in.timeLabel,
-      ),
-    );
+    setMorningIn(toTimeInputValue(r?.signInTime));
     setMorningOut(
-      toTimeInputValue(
-        r?.staffCorrectionSignOut ||
-          r?.manualEndTime ||
-          day.punches.am_out.timeLabel,
-      ),
+      toTimeInputValue(r?.staffCorrectionSignOut || r?.manualEndTime),
     );
     setAfternoonIn(
-      toTimeInputValue(
-        r?.staffCorrectionSignIn ||
-          r?.manualStartTime ||
-          day.punches.pm_in.timeLabel,
-      ),
+      toTimeInputValue(r?.staffCorrectionSignIn || r?.manualStartTime),
     );
     setAfternoonOut(
-      toTimeInputValue(
-        r?.adjustedSignOut ||
-          r?.manualEndTime ||
-          day.punches.pm_out.timeLabel,
-      ),
+      toTimeInputValue(r?.adjustedSignOut || r?.signOutTime),
     );
     setNotes(r?.notes || resolveAttendanceStaffNote(day) || "");
     setPaid(Boolean(r?.paid));
@@ -170,23 +162,28 @@ export function StaffAttendanceRecordEditor({
     [status, day],
   );
 
+  const effectiveMorningIn = effectiveStaffTime(morningIn, day, "am_in");
+  const effectiveMorningOut = effectiveStaffTime(morningOut, day, "am_out");
+  const effectiveAfternoonIn = effectiveStaffTime(afternoonIn, day, "pm_in");
+  const effectiveAfternoonOut = effectiveStaffTime(afternoonOut, day, "pm_out");
+
   const morningHours = useMemo(
-    () => computeSessionHours(day.date, morningIn, morningOut),
-    [day.date, morningIn, morningOut],
+    () => computeSessionHours(day.date, effectiveMorningIn, effectiveMorningOut),
+    [day.date, effectiveMorningIn, effectiveMorningOut],
   );
   const afternoonHours = useMemo(
-    () => computeSessionHours(day.date, afternoonIn, afternoonOut),
-    [day.date, afternoonIn, afternoonOut],
+    () =>
+      computeSessionHours(day.date, effectiveAfternoonIn, effectiveAfternoonOut),
+    [day.date, effectiveAfternoonIn, effectiveAfternoonOut],
   );
   const hoursPresent = useMemo(() => {
-    const fromStaff = computeHoursPresentFromStaffTimes(
-      day.date,
+    const fromEffective = computeEffectiveHoursPresent(day, {
       morningIn,
       morningOut,
       afternoonIn,
       afternoonOut,
-    );
-    if (fromStaff > 0) return fromStaff;
+    });
+    if (fromEffective > 0) return fromEffective;
     return resolveDayHoursNumeric(day);
   }, [day, morningIn, morningOut, afternoonIn, afternoonOut]);
   const expectedHours = expectedHoursForDate(day.date);
@@ -211,10 +208,10 @@ export function StaffAttendanceRecordEditor({
     if (notes.trim()) payload.notes = notes.trim();
     else if (source?.notes) payload.notes = null;
 
-    const morningInIso = clearableIso(day.date, morningIn, source?.signInTime);
+    const morningInIso = staffCorrectionIso(day.date, morningIn, source?.signInTime);
     if (morningInIso !== undefined) payload.signInTime = morningInIso;
 
-    const morningOutIso = clearableIso(
+    const morningOutIso = staffCorrectionIso(
       day.date,
       morningOut,
       source?.staffCorrectionSignOut,
@@ -223,7 +220,7 @@ export function StaffAttendanceRecordEditor({
       payload.staffCorrectionSignOut = morningOutIso;
     }
 
-    const afternoonInIso = clearableIso(
+    const afternoonInIso = staffCorrectionIso(
       day.date,
       afternoonIn,
       source?.staffCorrectionSignIn,
@@ -232,10 +229,10 @@ export function StaffAttendanceRecordEditor({
       payload.staffCorrectionSignIn = afternoonInIso;
     }
 
-    const afternoonOutIso = clearableIso(
+    const afternoonOutIso = staffCorrectionIso(
       day.date,
       afternoonOut,
-      source?.signOutTime,
+      source?.adjustedSignOut || source?.signOutTime,
     );
     if (afternoonOutIso !== undefined) payload.signOutTime = afternoonOutIso;
 
@@ -281,8 +278,9 @@ export function StaffAttendanceRecordEditor({
           Staff corrections
         </p>
         <p className="text-xs text-gray-600 mt-0.5">
-          Youth sign-in times are shown below for reference. Edit staff
-          correction times — morning and afternoon hours calculate automatically.
+          Youth sign-in times are shown below for reference. Enter only the
+          punches you need to correct — leave others blank to keep the
+          student&apos;s sign-in data.
         </p>
       </div>
 
@@ -344,33 +342,37 @@ export function StaffAttendanceRecordEditor({
             label="Morning sign in"
             value={morningIn}
             onChange={setMorningIn}
+            syncedHint={syncedPunchLabel(day, "am_in")}
           />
           <TimeField
             label="Morning sign out"
             value={morningOut}
             onChange={setMorningOut}
+            syncedHint={syncedPunchLabel(day, "am_out")}
           />
           <TimeField
             label="Afternoon sign in"
             value={afternoonIn}
             onChange={setAfternoonIn}
+            syncedHint={syncedPunchLabel(day, "pm_in")}
           />
           <TimeField
             label="Afternoon sign out"
             value={afternoonOut}
             onChange={setAfternoonOut}
+            syncedHint={syncedPunchLabel(day, "pm_out")}
           />
         </div>
         <div className="grid grid-cols-2 gap-3 pt-1 border-t border-orange-100">
           <ReadOnlyField
             label="Morning session"
             value={`${morningHours}h`}
-            hint="From staff correction times"
+            hint="Staff correction + student sign-in"
           />
           <ReadOnlyField
             label="Afternoon session"
             value={`${afternoonHours}h`}
-            hint="From staff correction times"
+            hint="Staff correction + student sign-in"
           />
         </div>
       </div>
