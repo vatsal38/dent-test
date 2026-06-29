@@ -200,6 +200,8 @@ export interface AttendanceWorkspaceData {
     expected: number;
     complete: number;
     missingPunches: number;
+    /** Students not marked present today (excludes excused). */
+    missingStudents: number;
     late: number;
     openDiscrepancies: number;
     excused: number;

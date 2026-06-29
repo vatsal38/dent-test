@@ -249,7 +249,7 @@ export function AttendanceHubControls({
         />
         <MetricPill
           label="missing"
-          value={summary.missingPunches}
+          value={summary.missingStudents}
           total={summary.expected}
           tone="bad"
           active={healthFilter === "missing"}

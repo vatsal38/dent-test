@@ -12,6 +12,12 @@ export interface RosterTrackOption {
   count: number;
 }
 
+function isExcludedRosterTrackLabel(label: string): boolean {
+  const s = String(label || "").trim();
+  if (!s) return true;
+  return /^applicant$/i.test(s) || /^global$/i.test(s);
+}
+
 /**
  * Track labels for scope filters — sourced from live roster facet counts (not hardcoded).
  */
@@ -21,18 +27,21 @@ export function rosterTrackFilterOptions(
   if (!facets) return [];
 
   return (facets.bob26TrackSites ?? [])
-    .map((row) => ({
-      value: String(row.value ?? "").trim(),
-      label: String(row.value ?? "").trim(),
-      count: row.count ?? 0,
-    }))
-    .filter((row) => row.value.length > 0)
+    .map((row) => {
+      const canonical = formatBobTrackDisplayLabel(String(row.value ?? "").trim());
+      return {
+        value: canonical,
+        label: canonical,
+        count: row.count ?? 0,
+      };
+    })
+    .filter((row) => row.value.length > 0 && !isExcludedRosterTrackLabel(row.value))
     .sort((a, b) =>
       a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
     );
 }
 
-/** Same prefix/exact rules as roster API track filter (`buildTrackSiteQuery` + `is`). */
+/** Same rules as roster API track filter — canonical labels plus raw Airtable prefixes. */
 export function rosterTrackLabelMatches(
   trackFilter: string,
   label: string,
@@ -41,8 +50,31 @@ export function rosterTrackLabelMatches(
   const norm = String(label ?? "").trim();
   if (!want || !norm) return false;
   if (/^rec[a-zA-Z0-9]+$/i.test(norm)) return false;
+
+  const wantCanonical = formatBobTrackDisplayLabel(want);
+  const labelCanonical = formatBobTrackDisplayLabel(norm);
+  if (
+    wantCanonical &&
+    labelCanonical &&
+    wantCanonical.toLowerCase() === labelCanonical.toLowerCase()
+  ) {
+    return true;
+  }
+
   const escaped = want.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^\\s*${escaped}(\\s*\\+|\\s*$)`, "i").test(norm);
+  if (new RegExp(`^\\s*${escaped}(\\s*\\+|\\s*$)`, "i").test(norm)) {
+    return true;
+  }
+
+  if (wantCanonical && wantCanonical !== want) {
+    const canonEscaped = wantCanonical.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`^\\s*${canonEscaped}(\\s*\\+|\\s*$)`, "i").test(norm)) {
+      return true;
+    }
+    if (new RegExp(canonEscaped, "i").test(norm)) return true;
+  }
+
+  return false;
 }
 
 /** Match a roster student against a track filter value (facet label). */
@@ -124,4 +156,16 @@ export function resolveStudentTrackLabel(student: {
 
   const first = labels.find(Boolean);
   return first ? formatBobTrackDisplayLabel(first) : "Unassigned";
+}
+
+/** Whether a student-day counts as present for daily attendance (not hours). */
+export function isStudentPresentToday(day: {
+  attendanceState: string;
+  health: string;
+}): boolean {
+  return (
+    day.attendanceState === "present" ||
+    day.attendanceState === "late" ||
+    day.health === "complete"
+  );
 }

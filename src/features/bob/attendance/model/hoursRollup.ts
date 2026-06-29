@@ -2,7 +2,7 @@ import type { BobStudent } from "@/platform/api/bob/students";
 import type { BobAttendance } from "@/platform/api/bob/attendance";
 import { expectedHoursForDate, isProgramDay } from "@/lib/bobProgramCalendar";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
-import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
+import { resolveStudentTrackLabel, isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
 import type { StudentDayAttendance } from "../types";
 import { getWeekMonday, getWeekSunday } from "../weekDates";
 import { parseHoursLabel, resolveDayHoursNumeric } from "./dayHours";
@@ -11,6 +11,10 @@ export interface HoursRollupPeriod {
   hoursAttended: number;
   hoursPotential: number;
   hoursPct: number;
+  /** Present/absent rollup for today (student-day, not hours). */
+  presentCount?: number;
+  expectedCount?: number;
+  presentPct?: number;
 }
 
 export interface TrackHoursRollupRow {
@@ -30,6 +34,26 @@ export interface HoursAttendanceRollup {
 interface HoursBucket {
   attended: number;
   potential: number;
+}
+
+interface PresentBucket {
+  present: number;
+  expected: number;
+}
+
+function emptyPresentBucket(): PresentBucket {
+  return { present: 0, expected: 0 };
+}
+
+function pctFromPresentBucket(bucket: PresentBucket): Pick<
+  HoursRollupPeriod,
+  "presentCount" | "expectedCount" | "presentPct"
+> {
+  const presentCount = bucket.present;
+  const expectedCount = bucket.expected;
+  const presentPct =
+    expectedCount > 0 ? Math.round((presentCount / expectedCount) * 100) : 0;
+  return { presentCount, expectedCount, presentPct };
 }
 
 function emptyBucket(): HoursBucket {
@@ -80,12 +104,13 @@ function finalizeRow(
   today: HoursBucket,
   week: HoursBucket,
   program: HoursBucket,
+  todayPresent: PresentBucket,
 ): TrackHoursRollupRow {
   return {
     trackKey,
     trackLabel,
     studentCount,
-    today: pctFromBucket(today),
+    today: { ...pctFromBucket(today), ...pctFromPresentBucket(todayPresent) },
     week: pctFromBucket(week),
     program: pctFromBucket(program),
   };
@@ -130,6 +155,7 @@ export function buildHoursAttendanceRollup(input: {
       today: HoursBucket;
       week: HoursBucket;
       program: HoursBucket;
+      todayPresent: PresentBucket;
     }
   >();
   const overall = {
@@ -138,12 +164,16 @@ export function buildHoursAttendanceRollup(input: {
     today: emptyBucket(),
     week: emptyBucket(),
     program: emptyBucket(),
+    todayPresent: emptyPresentBucket(),
   };
 
   for (const student of students) {
     const trackLabel = formatBobTrackDisplayLabel(
       resolveStudentTrackLabel(student),
     );
+    if (/^applicant$/i.test(trackLabel) || /^global$/i.test(trackLabel)) {
+      continue;
+    }
     const trackKey = trackLabel || "Unassigned";
     let row = trackBuckets.get(trackKey);
     if (!row) {
@@ -153,6 +183,7 @@ export function buildHoursAttendanceRollup(input: {
         today: emptyBucket(),
         week: emptyBucket(),
         program: emptyBucket(),
+        todayPresent: emptyPresentBucket(),
       };
       trackBuckets.set(trackKey, row);
     }
@@ -167,7 +198,17 @@ export function buildHoursAttendanceRollup(input: {
     mergeBucket(row.program, programHours);
     mergeBucket(overall.program, programHours);
 
-    for (const day of todayByStudent.get(student.id) || []) {
+    const todayStudentDays = todayByStudent.get(student.id) || [];
+    if (isProgramDay(focusDate)) {
+      row.todayPresent.expected += 1;
+      overall.todayPresent.expected += 1;
+      if (todayStudentDays.some((day) => isStudentPresentToday(day))) {
+        row.todayPresent.present += 1;
+        overall.todayPresent.present += 1;
+      }
+    }
+
+    for (const day of todayStudentDays) {
       const h = hoursFromDay(day);
       mergeBucket(row.today, h);
       mergeBucket(overall.today, h);
@@ -197,6 +238,7 @@ export function buildHoursAttendanceRollup(input: {
         bucket.today,
         bucket.week,
         bucket.program,
+        bucket.todayPresent,
       ),
     )
     .sort((a, b) => a.trackLabel.localeCompare(b.trackLabel));
@@ -209,6 +251,7 @@ export function buildHoursAttendanceRollup(input: {
       overall.today,
       overall.week,
       overall.program,
+      overall.todayPresent,
     ),
     byTrack,
   };

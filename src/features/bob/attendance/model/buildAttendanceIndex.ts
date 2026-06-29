@@ -109,6 +109,20 @@ function setPunchTime(
   };
 }
 
+function parseLocalMinutesFromIso(value?: string | null): number | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/** After morning block — assign ambiguous master sign-out to afternoon when appropriate. */
+function isAfternoonSignOutTime(value?: string | null): boolean {
+  const minutes = parseLocalMinutesFromIso(value);
+  if (minutes == null) return false;
+  return minutes >= 13 * 60;
+}
+
 function populateDailyRecordPunches(
   punches: Record<PunchType, PunchSlot>,
   daily: BobAttendance,
@@ -160,8 +174,10 @@ function populateDailyRecordPunches(
       force: true,
     });
   } else if (pmOutDisplay || pmOutOriginal) {
-    // Master rollup sign-out is usually lunch (am_out), not end-of-day (pm_out).
-    setPunchTime(punches, "am_out", {
+    const signOutIso =
+      daily.adjustedSignOut || daily.signOutTime || daily.rawSignOutTime || null;
+    const outType = isAfternoonSignOutTime(signOutIso) ? "pm_out" : "am_out";
+    setPunchTime(punches, outType, {
       display: pmOutDisplay || pmOutOriginal,
       original: pmOutOriginal,
       adjusted: pmOutAdjusted,

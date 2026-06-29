@@ -14,24 +14,54 @@ function pctCell(value: number, detail?: string) {
   );
 }
 
+function presentTodayCell(period: {
+  presentPct?: number;
+  presentCount?: number;
+  expectedCount?: number;
+}) {
+  const pct = period.presentPct ?? 0;
+  const detail =
+    period.presentCount != null && period.expectedCount != null
+      ? `${period.presentCount}/${period.expectedCount} present`
+      : undefined;
+  return pctCell(pct, detail);
+}
+
 function SummaryCard({
   label,
   period,
+  mode = "hours",
 }: {
   label: string;
-  period: { hoursPct: number; hoursAttended: number; hoursPotential: number };
+  period: {
+    hoursPct: number;
+    hoursAttended: number;
+    hoursPotential: number;
+    presentPct?: number;
+    presentCount?: number;
+    expectedCount?: number;
+  };
+  mode?: "hours" | "present";
 }) {
+  const usePresent = mode === "present";
+  const pct = usePresent ? (period.presentPct ?? 0) : period.hoursPct;
+  const detail = usePresent
+    ? period.presentCount != null && period.expectedCount != null
+      ? `${period.presentCount}/${period.expectedCount} present`
+      : undefined
+    : `${period.hoursAttended}h of ${period.hoursPotential}h`;
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
         {label}
       </p>
       <p className="text-2xl font-bold text-gray-900 tabular-nums mt-1">
-        {period.hoursPct}%
+        {pct}%
       </p>
-      <p className="text-xs text-gray-500 tabular-nums mt-0.5">
-        {period.hoursAttended}h of {period.hoursPotential}h
-      </p>
+      {detail ? (
+        <p className="text-xs text-gray-500 tabular-nums mt-0.5">{detail}</p>
+      ) : null}
     </div>
   );
 }
@@ -74,7 +104,7 @@ export function AttendanceHoursRollup({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 border-b border-gray-100 bg-orange-50/40">
-        <SummaryCard label="Today" period={overall.today} />
+        <SummaryCard label="Today" period={overall.today} mode="present" />
         <SummaryCard label="This week" period={overall.week} />
         <SummaryCard label="Program to date" period={overall.program} />
       </div>
@@ -108,12 +138,7 @@ export function AttendanceHoursRollup({
                   <td className="px-3 py-2.5 text-right text-gray-600 tabular-nums">
                     {row.studentCount}
                   </td>
-                  <td className="px-3 py-2.5">
-                    {pctCell(
-                      row.today.hoursPct,
-                      `${row.today.hoursAttended}h / ${row.today.hoursPotential}h`,
-                    )}
-                  </td>
+                  <td className="px-3 py-2.5">{presentTodayCell(row.today)}</td>
                   <td className="px-3 py-2.5">
                     {pctCell(
                       row.week.hoursPct,

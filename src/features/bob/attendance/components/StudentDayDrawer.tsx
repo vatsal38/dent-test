@@ -6,7 +6,8 @@ import { resolvePodName, resolveStudentName } from "../model/resolveDisplay";
 import { AttendanceStateBadge } from "./AttendanceStateBadge";
 import { StaffAttendanceRecordEditor } from "./StaffAttendanceRecordEditor";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
-import { formatDayHoursPresent } from "../model/dayHours";
+import { useStudentDrawerUrl } from "@/features/bob/student-drawer";
+import { isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
 import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 
 export function StudentDayDrawer({
@@ -21,12 +22,13 @@ export function StudentDayDrawer({
   onSaved?: () => void;
 }) {
   const { can } = useBobAccess();
+  const { openStudent } = useStudentDrawerUrl();
   const canEdit = can("attendance.mark");
   const name = resolveStudentName(day.studentId, workspace.studentById);
   const podName = resolvePodName(day.podId, workspace.podById);
   const student = workspace.studentById.get(day.studentId);
   const programHours = student?.attendanceStats?.hoursAttended;
-  const hoursToday = formatDayHoursPresent(day);
+  const todayLabel = isStudentPresentToday(day) ? "Present" : "Absent";
   const staffNote = resolveAttendanceStaffNote(day);
 
   return (
@@ -49,15 +51,21 @@ export function StudentDayDrawer({
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           <div>
-            <p className="text-base font-semibold text-gray-900">{name}</p>
+            <button
+              type="button"
+              onClick={() => openStudent(day.studentId, "attendance")}
+              className="text-base font-semibold text-orange-700 hover:text-orange-800 hover:underline text-left"
+            >
+              {name}
+            </button>
             <p className="text-sm text-gray-500">
               {podName} · {day.date}
               {day.track ? ` · ${day.track}` : ""}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <AttendanceStateBadge state={day.attendanceState} />
-              <span className="text-sm font-medium text-gray-900 tabular-nums">
-                {hoursToday} today
+              <span className="text-sm font-medium text-gray-900">
+                {todayLabel} today
               </span>
               {programHours != null ? (
                 <span className="text-sm text-gray-500 tabular-nums">

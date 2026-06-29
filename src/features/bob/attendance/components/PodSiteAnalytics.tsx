@@ -42,7 +42,7 @@ function PodCard({ pod }: { pod: PodAttendanceStats }) {
       <MetricBar label="Present" value={pod.complete} total={pod.expected} tone="bg-emerald-500" />
       <div className="grid grid-cols-3 gap-2 text-[11px] text-gray-600">
         <span>Late {pod.late}</span>
-        <span>Missing {pod.missingPunches}</span>
+        <span>Missing {pod.missing}</span>
         <span>Excused {pod.excused}</span>
         <span>Absent {pod.absent}</span>
         <span>Auto {pod.autoFilled}</span>

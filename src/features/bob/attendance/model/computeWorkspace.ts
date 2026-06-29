@@ -25,12 +25,17 @@ import {
   UNASSIGNED_POD_ID,
 } from "./buildAttendanceIndex";
 import { resolvePodName, resolveSiteName, resolveStudentName } from "./resolveDisplay";
-import { studentMatchesRosterTrack } from "@/lib/bobRosterTrackOptions";
+import { studentMatchesRosterTrack, isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
 import {
   expectedPunchTypes,
   isAttendanceExpectedOn,
   isProgramDay,
 } from "@/lib/bobProgramCalendar";
+
+function isOperationalAttendancePod(pod: BobPod): boolean {
+  const name = String(pod.name || "").trim();
+  return Boolean(name) && !/^applicant$/i.test(name) && !/^global$/i.test(name);
+}
 
 function buildDiscrepancies(
   days: ReturnType<typeof buildStudentDayAttendance>,
@@ -152,11 +157,11 @@ function buildPodStats(
       podName: pod.name,
       siteName: resolveSiteName(pod.id, podById),
       expected: podDays.length,
-      complete: podDays.filter(
-        (d) => d.attendanceState === "present" || d.health === "complete",
-      ).length,
+      complete: podDays.filter((d) => isStudentPresentToday(d)).length,
       partial: podDays.filter((d) => d.health === "partial").length,
-      missing: podDays.filter((d) => d.health === "missing").length,
+      missing: podDays.filter(
+        (d) => d.health === "missing" || d.health === "partial",
+      ).length,
       late: podDays.filter((d) => d.isLate || d.attendanceState === "late").length,
       excused: podDays.filter((d) => d.attendanceState === "excused").length,
       absent: podDays.filter((d) => d.attendanceState === "absent").length,
@@ -358,12 +363,15 @@ export function computeAttendanceWorkspace(
       (d) => d.attendanceState === "present" || d.health === "complete",
     ).length,
     missingPunches: todayDays.reduce((n, d) => n + d.missingPunchCount, 0),
+    missingStudents: todayDays.filter(
+      (d) => !isStudentPresentToday(d) && d.attendanceState !== "excused",
+    ).length,
     late: todayDays.filter((d) => d.isLate || d.attendanceState === "late").length,
     openDiscrepancies,
     excused: todayDays.filter((d) => d.attendanceState === "excused").length,
     absent: todayDays.filter((d) => d.attendanceState === "absent").length,
     autoFilled: todayDays.filter((d) => d.attendanceState === "auto_filled").length,
-    present: todayDays.filter((d) => d.attendanceState === "present").length,
+    present: todayDays.filter((d) => isStudentPresentToday(d)).length,
   };
 
   const issues: AttendanceIssueSummary = {
@@ -376,7 +384,8 @@ export function computeAttendanceWorkspace(
     total: openDiscrepancies,
   };
 
-  const podStats = buildPodStats(days, pods, podById, focusDate);
+  const operationalPods = pods.filter(isOperationalAttendancePod);
+  const podStats = buildPodStats(days, operationalPods, podById, focusDate);
   const scoped = Boolean(
     String(podFilter || "").trim() || String(trackFilter || "").trim(),
   );
