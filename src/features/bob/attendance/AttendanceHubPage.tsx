@@ -100,6 +100,7 @@ export function AttendanceHubPage() {
   const {
     workspace,
     weekRecordsForRollup,
+    programRecordsForRollup,
     loading,
     error,
     isRefreshing,
@@ -119,8 +120,15 @@ export function AttendanceHubPage() {
         focusDate,
         todayDays: workspace.days.filter((d) => d.date === focusDate),
         weekRecords: weekRecordsForRollup,
+        programRecords: programRecordsForRollup,
       }),
-    [workspace.students, workspace.days, focusDate, weekRecordsForRollup],
+    [
+      workspace.students,
+      workspace.days,
+      focusDate,
+      weekRecordsForRollup,
+      programRecordsForRollup,
+    ],
   );
 
   const { data: rosterFacets, isLoading: rosterFacetsLoading } =
@@ -450,6 +458,7 @@ export function AttendanceHubPage() {
         onSelectDay={setSelectedDay}
         search={debouncedSearch}
         page={page}
+        onPageChange={setPage}
       />
 
       <section className={isStudentViewer ? "hidden" : "mt-8"}>

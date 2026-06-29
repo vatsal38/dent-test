@@ -29,6 +29,7 @@ export function DailyAttendanceTable({
   search = "",
   page = 1,
   pageSize = ATTENDANCE_PAGE_SIZE,
+  onPageChange,
 }: {
   days: StudentDayAttendance[];
   workspace: AttendanceWorkspaceData;
@@ -41,6 +42,7 @@ export function DailyAttendanceTable({
   search?: string;
   page?: number;
   pageSize?: number;
+  onPageChange?: (page: number) => void;
 }) {
   const isWeek = weekDates && weekDates.length > 1;
 
@@ -86,6 +88,8 @@ export function DailyAttendanceTable({
     const start = (page - 1) * pageSize;
     return rowsByStudent.slice(start, start + pageSize);
   }, [rowsByStudent, page, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(rowsByStudent.length / pageSize));
 
   if (!rowsByStudent.length) {
     return (
@@ -168,13 +172,13 @@ export function DailyAttendanceTable({
         </thead>
         <tbody className="divide-y divide-gray-100">
           {pagedRows.map((row) => {
+            const student = workspace.studentById.get(row.studentId);
             const name = resolveStudentName(
               row.studentId,
               workspace.studentById,
             );
-            const podName = resolvePodName(row.podId, workspace.podById);
+            const podName = resolvePodName(row.podId, workspace.podById, student);
             const today = row.byDate.get(focusDate);
-            const student = workspace.studentById.get(row.studentId);
             const programHours = student?.attendanceStats?.hoursAttended;
             const weekDays = isWeek
               ? Array.from(row.byDate.values())
@@ -307,6 +311,24 @@ export function DailyAttendanceTable({
           })}
         </tbody>
       </table>
+      {onPageChange && rowsByStudent.length > pageSize ? (
+        <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 bg-gray-50">
+          <p className="text-xs text-gray-500 tabular-nums">
+            Page {page} of {totalPages}
+          </p>
+          {page < totalPages ? (
+            <button
+              type="button"
+              onClick={() => onPageChange(page + 1)}
+              className="text-sm font-medium text-orange-700 hover:text-orange-800 hover:underline"
+            >
+              Scroll to next page →
+            </button>
+          ) : (
+            <span className="text-xs text-gray-400">End of roster</span>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

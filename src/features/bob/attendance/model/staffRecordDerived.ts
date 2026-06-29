@@ -106,7 +106,7 @@ export function formatHoursValue(hours: number): string {
   return String(hours);
 }
 
-/** Staff correction slots — overrides only; blank slots fall back to youth punches for hours. */
+/** Staff correction slots — staff-entered overrides only (never youth punch fallbacks). */
 export function buildStaffCorrections(
   daily?: Pick<
     BobAttendance,
@@ -123,57 +123,59 @@ export function buildStaffCorrections(
   date?: string,
   day?: Pick<StudentDayAttendance, "punches">,
 ): StaffCorrections {
-  const morningInStaff = formatAttendanceTime(daily?.signInTime);
+  const hasStaffMorningIn = Boolean(daily?.manualOverride && daily?.signInTime);
+  const morningInStaff = hasStaffMorningIn
+    ? formatAttendanceTime(daily?.signInTime)
+    : undefined;
   const morningOutStaff = formatAttendanceTime(
     daily?.staffCorrectionSignOut || daily?.manualEndTime,
   );
   const afternoonInStaff = formatAttendanceTime(
     daily?.staffCorrectionSignIn || daily?.manualStartTime,
   );
-  const afternoonOutStaff = formatAttendanceTime(
-    daily?.adjustedSignOut || daily?.signOutTime,
-  );
-
-  const youthLabel = (punch: PunchType) =>
-    day ? formatAttendanceTime(day.punches[punch].youthTimeIso) : undefined;
-
-  const morningIn = morningInStaff || youthLabel("am_in");
-  const morningOut = morningOutStaff || youthLabel("am_out");
-  const afternoonIn = afternoonInStaff || youthLabel("pm_in");
-  const afternoonOut = afternoonOutStaff || youthLabel("pm_out");
 
   const hasCorrections = Boolean(
     daily?.manualOverride ||
       daily?.staffCorrectionSignIn ||
       daily?.staffCorrectionSignOut ||
       daily?.manualStartTime ||
-      daily?.manualEndTime ||
-      daily?.signInTime ||
-      daily?.adjustedSignOut ||
-      daily?.signOutTime,
+      daily?.manualEndTime,
+  );
+
+  const morning = {
+    in: morningInStaff,
+    out: morningOutStaff,
+  };
+  const afternoon = {
+    in: afternoonInStaff,
+    out: undefined,
+  };
+
+  const hasDisplayedCorrection = Boolean(
+    morning.in || morning.out || afternoon.in || afternoon.out,
   );
 
   let hoursLabel: string | undefined;
-  if (date && hasCorrections && day) {
+  if (date && hasCorrections && hasDisplayedCorrection && day) {
     const hours = computeEffectiveHoursPresent(day as StudentDayAttendance, {
-      morningIn: toTimeInputValue(daily?.signInTime),
+      morningIn: toTimeInputValue(
+        hasStaffMorningIn ? daily?.signInTime : undefined,
+      ),
       morningOut: toTimeInputValue(
         daily?.staffCorrectionSignOut || daily?.manualEndTime,
       ),
       afternoonIn: toTimeInputValue(
         daily?.staffCorrectionSignIn || daily?.manualStartTime,
       ),
-      afternoonOut: toTimeInputValue(
-        daily?.adjustedSignOut || daily?.signOutTime,
-      ),
+      afternoonOut: "",
     });
     if (hours > 0) hoursLabel = `${hours}h`;
   }
 
   return {
-    morning: { in: morningIn, out: morningOut },
-    afternoon: { in: afternoonIn, out: afternoonOut },
-    hasCorrections,
+    morning,
+    afternoon,
+    hasCorrections: hasCorrections && hasDisplayedCorrection,
     hoursLabel,
   };
 }

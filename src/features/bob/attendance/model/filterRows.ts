@@ -20,10 +20,19 @@ export function studentMatchesSearch(
   const s = studentById.get(studentId);
   if (!s) return false;
   const name = resolveStudentName(studentId, studentById).toLowerCase();
+  const preferred = String(
+    s.preferredName ||
+      (s.airtableFields?.["Preferred Name"] as string | undefined) ||
+      "",
+  ).toLowerCase();
   const email = (s.email || "").toLowerCase();
   const school = (s.school || "").toLowerCase();
   const track = (s.track || day?.track || "").toLowerCase();
-  const podName = resolvePodName(day?.podId || s.podId || "", podById).toLowerCase();
+  const podName = resolvePodName(
+    day?.podId || s.podId || "",
+    podById,
+    s,
+  ).toLowerCase();
   const site = (s.site || day?.site || day?.branch || "").toLowerCase();
   const program = (day?.program || "").toLowerCase();
   const studentIdText = studentId.toLowerCase();
@@ -34,6 +43,7 @@ export function studentMatchesSearch(
 
   return (
     name.includes(q) ||
+    preferred.includes(q) ||
     email.includes(q) ||
     school.includes(q) ||
     track.includes(q) ||

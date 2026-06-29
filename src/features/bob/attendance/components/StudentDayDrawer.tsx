@@ -24,9 +24,9 @@ export function StudentDayDrawer({
   const { can } = useBobAccess();
   const { openStudent } = useStudentDrawerUrl();
   const canEdit = can("attendance.mark");
-  const name = resolveStudentName(day.studentId, workspace.studentById);
-  const podName = resolvePodName(day.podId, workspace.podById);
   const student = workspace.studentById.get(day.studentId);
+  const name = resolveStudentName(day.studentId, workspace.studentById);
+  const podName = resolvePodName(day.podId, workspace.podById, student);
   const programHours = student?.attendanceStats?.hoursAttended;
   const todayLabel = isStudentPresentToday(day) ? "Present" : "Absent";
   const staffNote = resolveAttendanceStaffNote(day);

@@ -48,7 +48,11 @@ function buildDiscrepancies(
     if (!isAttendanceExpectedOn(day.date)) continue;
 
     const studentName = resolveStudentName(day.studentId, studentById);
-    const podName = resolvePodName(day.podId, podById);
+    const podName = resolvePodName(
+      day.podId,
+      podById,
+      studentById.get(day.studentId),
+    );
     const requiredPunches = expectedPunchTypes(day.date);
 
     if (day.health === "missing" && requiredPunches.length > 0) {

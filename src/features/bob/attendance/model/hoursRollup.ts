@@ -1,6 +1,6 @@
 import type { BobStudent } from "@/platform/api/bob/students";
 import type { BobAttendance } from "@/platform/api/bob/attendance";
-import { expectedHoursForDate, isProgramDay } from "@/lib/bobProgramCalendar";
+import { expectedHoursForDate, isProgramDay, PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { resolveStudentTrackLabel, isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
 import type { StudentDayAttendance } from "../types";
@@ -121,8 +121,10 @@ export function buildHoursAttendanceRollup(input: {
   focusDate: string;
   todayDays: StudentDayAttendance[];
   weekRecords: BobAttendance[];
+  programRecords?: BobAttendance[];
 }): HoursAttendanceRollup {
-  const { students, focusDate, todayDays, weekRecords } = input;
+  const { students, focusDate, todayDays, weekRecords, programRecords = [] } =
+    input;
   const weekStart = getWeekMonday(new Date(`${focusDate}T12:00:00`));
   const weekEnd = getWeekSunday(weekStart);
 
@@ -133,19 +135,33 @@ export function buildHoursAttendanceRollup(input: {
     todayByStudent.set(day.studentId, list);
   }
 
-  const weekByStudentDate = new Map<string, BobAttendance[]>();
-  for (const row of weekRecords) {
-    const date = String(row.date || "").slice(0, 10);
-    if (!date || date < weekStart || date > weekEnd || !isProgramDay(date)) {
-      continue;
+  function indexRecordsByStudentDate(records: BobAttendance[]) {
+    const map = new Map<string, BobAttendance[]>();
+    for (const row of records) {
+      const date = String(row.date || "").slice(0, 10);
+      if (!date || !isProgramDay(date)) continue;
+      const sid = String(row.studentId || "");
+      if (!sid) continue;
+      const key = `${sid}|${date}`;
+      const list = map.get(key) || [];
+      list.push(row);
+      map.set(key, list);
     }
-    const sid = String(row.studentId || "");
-    if (!sid) continue;
-    const key = `${sid}|${date}`;
-    const list = weekByStudentDate.get(key) || [];
-    list.push(row);
-    weekByStudentDate.set(key, list);
+    return map;
   }
+
+  const weekByStudentDate = indexRecordsByStudentDate(
+    weekRecords.filter((row) => {
+      const date = String(row.date || "").slice(0, 10);
+      return date >= weekStart && date <= weekEnd;
+    }),
+  );
+  const programByStudentDate = indexRecordsByStudentDate(
+    programRecords.filter((row) => {
+      const date = String(row.date || "").slice(0, 10);
+      return date >= PROGRAM_START_DATE && date <= focusDate;
+    }),
+  );
 
   const trackBuckets = new Map<
     string,
@@ -190,14 +206,6 @@ export function buildHoursAttendanceRollup(input: {
     row.students += 1;
     overall.students += 1;
 
-    const stats = student.attendanceStats;
-    const programHours: HoursBucket = {
-      attended: Number(stats?.hoursAttended) || 0,
-      potential: Number(stats?.hoursPotential) || 0,
-    };
-    mergeBucket(row.program, programHours);
-    mergeBucket(overall.program, programHours);
-
     const todayStudentDays = todayByStudent.get(student.id) || [];
     if (isProgramDay(focusDate)) {
       row.todayPresent.expected += 1;
@@ -227,6 +235,20 @@ export function buildHoursAttendanceRollup(input: {
       mergeBucket(row.week, h);
       mergeBucket(overall.week, h);
     }
+
+    const programDates = new Set<string>();
+    for (const key of programByStudentDate.keys()) {
+      const [sid, date] = key.split("|");
+      if (sid === student.id) programDates.add(date);
+    }
+    for (const date of programDates) {
+      const rows = programByStudentDate.get(`${student.id}|${date}`) || [];
+      const daily = rows.find((r) => !r.signType) || rows[0];
+      if (!daily) continue;
+      const h = hoursFromAttendanceRecord(daily, date);
+      mergeBucket(row.program, h);
+      mergeBucket(overall.program, h);
+    }
   }
 
   const byTrack = Array.from(trackBuckets.entries())
@@ -246,7 +268,7 @@ export function buildHoursAttendanceRollup(input: {
   return {
     overall: finalizeRow(
       "__all__",
-      "BoB overall",
+      "Bet on Baltimore overall",
       overall.students,
       overall.today,
       overall.week,

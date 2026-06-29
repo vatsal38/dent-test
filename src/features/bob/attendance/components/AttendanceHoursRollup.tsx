@@ -154,6 +154,27 @@ export function AttendanceHoursRollup({
                 </tr>
               );
             })}
+            <tr className="bg-orange-50/70 border-t border-orange-100 font-semibold">
+              <td className="px-4 py-3 text-gray-900">
+                {formatBobTrackDisplayLabel(overall.trackLabel)}
+              </td>
+              <td className="px-3 py-3 text-right text-gray-800 tabular-nums">
+                {overall.studentCount}
+              </td>
+              <td className="px-3 py-3">{presentTodayCell(overall.today)}</td>
+              <td className="px-3 py-3">
+                {pctCell(
+                  overall.week.hoursPct,
+                  `${overall.week.hoursAttended}h / ${overall.week.hoursPotential}h`,
+                )}
+              </td>
+              <td className="px-3 py-3 pr-4">
+                {pctCell(
+                  overall.program.hoursPct,
+                  `${overall.program.hoursAttended}h / ${overall.program.hoursPotential}h`,
+                )}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

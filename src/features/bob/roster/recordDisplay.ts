@@ -2,7 +2,18 @@ import type { BobStudent } from "@/platform/api/bob/students";
 import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
 
 export function studentDisplayName(s: BobStudent): string {
-  return `${s.firstName || ""} ${s.lastName || ""}`.trim() || "Untitled";
+  const first = String(s.firstName || "").trim();
+  const last = String(s.lastName || "").trim();
+  const preferred = String(
+    s.preferredName ||
+      (s.airtableFields?.["Preferred Name"] as string | undefined) ||
+      "",
+  ).trim();
+  const firstPart =
+    preferred && preferred.toLowerCase() !== first.toLowerCase()
+      ? `${first} '${preferred}'`
+      : first;
+  return `${firstPart} ${last}`.trim() || "Untitled";
 }
 
 export function initialsOf(name: string) {

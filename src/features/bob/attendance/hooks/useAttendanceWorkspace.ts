@@ -8,8 +8,10 @@ import { parseApiError } from "@/platform/api/errors";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { filterPodsByAccess } from "@/platform/rbac/scopedFilters";
+import { PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
 import { getWeekMonday, getWeekSunday } from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
+import { filterStudentsByCoachAttendanceScope } from "../model/coachAttendanceScope";
 import {
   ATTENDANCE_FETCH_LIMIT,
   countEnrollment,
@@ -82,14 +84,21 @@ export function useAttendanceWorkspace({
     },
   );
   const students = studentsQuery.data?.students ?? [];
+  const scopedStudents = useMemo(
+    () =>
+      isStudentViewer
+        ? students
+        : filterStudentsByCoachAttendanceScope(students, access, pods),
+    [students, access, pods, isStudentViewer],
+  );
 
   const enrollmentCount = useMemo(() => {
-    if (isStudentViewer) return students.length;
-    if (effectiveTrack) return students.length;
+    if (isStudentViewer) return scopedStudents.length;
+    if (effectiveTrack) return scopedStudents.length;
     const fromPods = countEnrollment(pods, effectivePod || undefined);
     if (fromPods > 0) return fromPods;
-    return students.length;
-  }, [isStudentViewer, effectiveTrack, pods, effectivePod, students.length]);
+    return scopedStudents.length;
+  }, [isStudentViewer, effectiveTrack, pods, effectivePod, scopedStudents.length]);
 
   const studentAttendanceParams = useMemo(
     () =>
@@ -123,10 +132,27 @@ export function useAttendanceWorkspace({
     [weekMonday, studentAttendanceParams],
   );
   const weekRollupQuery = useBobAttendanceList(weekRollupParams, {
-    enabled: !weekMode,
+    enabled: !weekMode && !isStudentViewer,
   });
   const weekRecordsForRollup = filterRecordsForStudent(
     weekMode ? records : (weekRollupQuery.data?.attendance ?? []),
+    isStudentViewer ? linkedStudentId : null,
+  );
+
+  const programRollupParams = useMemo(
+    () => ({
+      startDate: PROGRAM_START_DATE,
+      endDate: focusDate,
+      limit: ATTENDANCE_FETCH_LIMIT,
+      ...studentAttendanceParams,
+    }),
+    [focusDate, studentAttendanceParams],
+  );
+  const programRollupQuery = useBobAttendanceList(programRollupParams, {
+    enabled: !isStudentViewer,
+  });
+  const programRecordsForRollup = filterRecordsForStudent(
+    programRollupQuery.data?.attendance ?? [],
     isStudentViewer ? linkedStudentId : null,
   );
 
@@ -139,10 +165,10 @@ export function useAttendanceWorkspace({
         podFilter: effectivePod || undefined,
         trackFilter: effectiveTrack || undefined,
         pods,
-        students,
+        students: scopedStudents,
         records,
         enrollmentCount,
-        studentsRequested: students.length,
+        studentsRequested: scopedStudents.length,
         studentOnlyId: isStudentViewer ? linkedStudentId : null,
       }),
     [
@@ -153,10 +179,9 @@ export function useAttendanceWorkspace({
       effectivePod,
       effectiveTrack,
       pods,
-      students,
+      scopedStudents,
       records,
       enrollmentCount,
-      students.length,
       isStudentViewer,
       linkedStudentId,
     ],
@@ -183,6 +208,7 @@ export function useAttendanceWorkspace({
   return {
     workspace,
     weekRecordsForRollup,
+    programRecordsForRollup,
     pods,
     effectivePod,
     enrollmentCount,

@@ -88,6 +88,7 @@ export interface BobStudent {
   airtableRecordId?: string | null;
   firstName: string;
   lastName: string;
+  preferredName?: string | null;
   email: string | null;
   phone: string | null;
   status: BobStudentStatus;
