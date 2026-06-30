@@ -37,6 +37,9 @@ export interface BobAttendance {
   manualOverride?: string | null;
   staffCorrectionSignIn?: string | null;
   staffCorrectionSignOut?: string | null;
+  staffCorrectedByUserId?: string | null;
+  staffCorrectedByName?: string | null;
+  staffCorrectedAt?: string | null;
   branch?: string | null;
   program?: string | null;
   track?: string | null;

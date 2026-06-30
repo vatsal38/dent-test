@@ -25,7 +25,12 @@ import {
   UNASSIGNED_POD_ID,
 } from "./buildAttendanceIndex";
 import { resolvePodName, resolveSiteName, resolveStudentName } from "./resolveDisplay";
-import { studentMatchesRosterTrack, isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
+import {
+  resolveStudentTrackLabel,
+  rosterTrackLabelMatches,
+  studentMatchesRosterTrack,
+  isStudentPresentToday,
+} from "@/lib/bobRosterTrackOptions";
 import {
   expectedPunchTypes,
   isAttendanceExpectedOn,
@@ -139,17 +144,32 @@ function buildDiscrepancies(
   );
 }
 
+function studentBelongsToPod(student: BobStudent, pod: BobPod): boolean {
+  if (student.podId === pod.id) return true;
+  if (student.podId && student.podId !== UNASSIGNED_POD_ID) return false;
+  const trackLabel = resolveStudentTrackLabel(student);
+  const podLabel = String(pod.name || pod.displayLabel || "").trim();
+  if (!podLabel || !trackLabel) return false;
+  return rosterTrackLabelMatches(podLabel, trackLabel);
+}
+
 function buildPodStats(
   days: ReturnType<typeof buildStudentDayAttendance>,
   pods: BobPod[],
   podById: Map<string, BobPod>,
   focusDate: string,
+  students: BobStudent[],
 ): PodAttendanceStats[] {
   const todayDays = days.filter(
     (d) => d.date === focusDate && isProgramDay(focusDate),
   );
   return pods.map((pod) => {
-    const podDays = todayDays.filter((d) => d.podId === pod.id);
+    const rosterStudents = students.filter((s) => studentBelongsToPod(s, pod));
+    const rosterIds = new Set(rosterStudents.map((s) => s.id));
+    const podDays = todayDays.filter(
+      (d) => d.podId === pod.id || rosterIds.has(d.studentId),
+    );
+    const dayByStudent = new Map(podDays.map((d) => [d.studentId, d]));
     const hoursSum = podDays.reduce((sum, d) => {
       const raw = d.totalHoursLabel?.replace(/[^\d.]/g, "") ?? "";
       const n = Number(raw);
@@ -160,8 +180,11 @@ function buildPodStats(
       podId: pod.id,
       podName: pod.name,
       siteName: resolveSiteName(pod.id, podById),
-      expected: podDays.length,
-      complete: podDays.filter((d) => isStudentPresentToday(d)).length,
+      expected: rosterStudents.length,
+      complete: rosterStudents.filter((s) => {
+        const day = dayByStudent.get(s.id);
+        return day ? isStudentPresentToday(day) : false;
+      }).length,
       partial: podDays.filter((d) => d.health === "partial").length,
       missing: podDays.filter(
         (d) => d.health === "missing" || d.health === "partial",
@@ -389,7 +412,7 @@ export function computeAttendanceWorkspace(
   };
 
   const operationalPods = pods.filter(isOperationalAttendancePod);
-  const podStats = buildPodStats(days, operationalPods, podById, focusDate);
+  const podStats = buildPodStats(days, operationalPods, podById, focusDate, scopedStudents);
   const scoped = Boolean(
     String(podFilter || "").trim() || String(trackFilter || "").trim(),
   );

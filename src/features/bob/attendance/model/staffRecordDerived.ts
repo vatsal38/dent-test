@@ -119,6 +119,8 @@ export function buildStaffCorrections(
     | "adjustedSignOut"
     | "signOutTime"
     | "manualOverride"
+    | "staffCorrectedByName"
+    | "staffCorrectedAt"
   > | null,
   date?: string,
   day?: Pick<StudentDayAttendance, "punches">,
@@ -177,6 +179,8 @@ export function buildStaffCorrections(
     afternoon,
     hasCorrections: hasCorrections && hasDisplayedCorrection,
     hoursLabel,
+    correctedByName: daily?.staffCorrectedByName || undefined,
+    correctedAt: daily?.staffCorrectedAt || undefined,
   };
 }
 

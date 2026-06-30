@@ -68,6 +68,10 @@ export function StaffCorrectionSummary({
   }
 
   const hoursLabel = corrections.hoursLabel;
+  const attribution =
+    corrections.correctedByName
+      ? `Updated by ${corrections.correctedByName}`
+      : null;
 
   if (compact) {
     return (
@@ -79,6 +83,9 @@ export function StaffCorrectionSummary({
         {hoursLabel ? (
           <p className="text-[10px] text-orange-700 font-medium">{hoursLabel} corrected</p>
         ) : null}
+        {attribution ? (
+          <p className="text-[10px] text-gray-500">{attribution}</p>
+        ) : null}
       </div>
     );
   }
@@ -89,6 +96,9 @@ export function StaffCorrectionSummary({
       <CorrectionBlock title="Afternoon" session={corrections.afternoon} />
       {hoursLabel ? (
         <p className="text-xs text-orange-800 font-medium">{hoursLabel} from staff corrections</p>
+      ) : null}
+      {attribution ? (
+        <p className="text-xs text-gray-500">{attribution}</p>
       ) : null}
     </div>
   );

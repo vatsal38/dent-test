@@ -84,6 +84,9 @@ export function expectedHoursForDate(iso: string): number {
   return 5;
 }
 
+/** Morning block length — used for week/program hours rollup denominators. */
+export const ROLLUP_MORNING_HOURS_PER_DAY = 2.5;
+
 export function getDaySchedule(iso: string) {
   if (!isProgramDay(iso)) {
     return { kind: "off" as const, sessions: [] as Array<{ label: string; start: string; end: string; punches: PunchType[] }> };

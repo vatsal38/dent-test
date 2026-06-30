@@ -1,6 +1,6 @@
 import type { BobStudent } from "@/platform/api/bob/students";
 import type { BobAttendance } from "@/platform/api/bob/attendance";
-import { expectedHoursForDate, isProgramDay, PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
+import { expectedHoursForDate, isProgramDay, listProgramDates, PROGRAM_START_DATE, ROLLUP_MORNING_HOURS_PER_DAY } from "@/lib/bobProgramCalendar";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { resolveStudentTrackLabel, isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
 import type { StudentDayAttendance } from "../types";
@@ -78,18 +78,25 @@ function hoursFromDay(day: StudentDayAttendance): HoursBucket {
 function hoursFromAttendanceRecord(
   row: BobAttendance,
   date: string,
-): HoursBucket {
-  const potential =
-    parseHoursLabel(row.maxHours) || expectedHoursForDate(date);
+): Pick<HoursBucket, "attended"> {
   let attended =
     parseHoursLabel(row.hoursPresent) || parseHoursLabel(row.totalHours);
   if (
     attended <= 0 &&
     (row.status === "present" || row.status === "late")
   ) {
-    attended = potential;
+    attended =
+      parseHoursLabel(row.maxHours) || expectedHoursForDate(date);
   }
-  return { attended, potential };
+  return { attended };
+}
+
+function rosterPotentialForDates(dates: string[]): number {
+  return dates.reduce(
+    (sum, date) =>
+      sum + (isProgramDay(date) ? ROLLUP_MORNING_HOURS_PER_DAY : 0),
+    0,
+  );
 }
 
 function mergeBucket(target: HoursBucket, source: HoursBucket) {
@@ -127,6 +134,17 @@ export function buildHoursAttendanceRollup(input: {
     input;
   const weekStart = getWeekMonday(new Date(`${focusDate}T12:00:00`));
   const weekEnd = getWeekSunday(weekStart);
+  const weekProgramDates = listProgramDates({
+    startDate: weekStart,
+    endDate: weekEnd,
+    throughDate: focusDate,
+  });
+  const programDates = listProgramDates({
+    startDate: PROGRAM_START_DATE,
+    throughDate: focusDate,
+  });
+  const weekPotentialPerStudent = rosterPotentialForDates(weekProgramDates);
+  const programPotentialPerStudent = rosterPotentialForDates(programDates);
 
   const todayByStudent = new Map<string, StudentDayAttendance[]>();
   for (const day of todayDays) {
@@ -232,23 +250,23 @@ export function buildHoursAttendanceRollup(input: {
       const daily = rows.find((r) => !r.signType) || rows[0];
       if (!daily) continue;
       const h = hoursFromAttendanceRecord(daily, date);
-      mergeBucket(row.week, h);
-      mergeBucket(overall.week, h);
+      row.week.attended += h.attended;
+      overall.week.attended += h.attended;
     }
+    row.week.potential += weekPotentialPerStudent;
+    overall.week.potential += weekPotentialPerStudent;
 
-    const programDates = new Set<string>();
-    for (const key of programByStudentDate.keys()) {
-      const [sid, date] = key.split("|");
-      if (sid === student.id) programDates.add(date);
-    }
     for (const date of programDates) {
       const rows = programByStudentDate.get(`${student.id}|${date}`) || [];
       const daily = rows.find((r) => !r.signType) || rows[0];
-      if (!daily) continue;
-      const h = hoursFromAttendanceRecord(daily, date);
-      mergeBucket(row.program, h);
-      mergeBucket(overall.program, h);
+      if (daily) {
+        const h = hoursFromAttendanceRecord(daily, date);
+        row.program.attended += h.attended;
+        overall.program.attended += h.attended;
+      }
     }
+    row.program.potential += programPotentialPerStudent;
+    overall.program.potential += programPotentialPerStudent;
   }
 
   const byTrack = Array.from(trackBuckets.entries())

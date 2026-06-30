@@ -61,6 +61,8 @@ export interface StaffCorrections {
   hasCorrections: boolean;
   /** Total hours from staff correction ISO fields */
   hoursLabel?: string;
+  correctedByName?: string;
+  correctedAt?: string;
 }
 
 export type DayHealth =
