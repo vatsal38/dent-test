@@ -52,7 +52,7 @@ export function WellnessCheckPage() {
   const activeWeekIndex =
     weekIndex ?? weekData?.week?.weekIndex ?? weekData?.programWeeks?.at(-1)?.weekIndex;
 
-  const trackOptions = rosterTrackFilterOptions(facetsQuery.data?.tracks ?? []);
+  const trackOptions = rosterTrackFilterOptions(facetsQuery.data ?? null);
 
   const kpis: KpiItem[] = [
     {

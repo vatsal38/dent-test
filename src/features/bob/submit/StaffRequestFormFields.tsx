@@ -1,10 +1,18 @@
 "use client";
 
 import type { RefObject } from "react";
-import type { BobStaffFormType } from "@/features/bob/submit/formsConfig";
+
+export const STAFF_FORM_TYPES = [
+  "pto_request",
+  "purchase_request",
+  "reimbursement_request",
+  "photo_upload",
+] as const;
+
+export type StaffRequestFormType = (typeof STAFF_FORM_TYPES)[number];
 
 interface StaffRequestFormFieldsProps {
-  type: BobStaffFormType;
+  type: StaffRequestFormType;
   form: Record<string, string>;
   setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   pendingFiles: File[];
@@ -345,15 +353,8 @@ export function StaffRequestFormFields({
   );
 }
 
-export const STAFF_FORM_TYPES = [
-  "pto_request",
-  "purchase_request",
-  "reimbursement_request",
-  "photo_upload",
-] as const;
-
 export function isStaffFormType(
   value: string | null | undefined,
-): value is BobStaffFormType {
-  return STAFF_FORM_TYPES.includes(value as BobStaffFormType);
+): value is StaffRequestFormType {
+  return STAFF_FORM_TYPES.includes(value as StaffRequestFormType);
 }
