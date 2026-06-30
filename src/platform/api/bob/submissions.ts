@@ -7,6 +7,12 @@ export const BOB_SUBMISSION_TYPES = [
   "anonymous_feedback",
   "progress_update",
   "parent_contact",
+  "pto_request",
+  "purchase_request",
+  "reimbursement_request",
+  "photo_upload",
+  "coach_feedback",
+  "dent_testimony",
 ] as const;
 export type BobSubmissionType = (typeof BOB_SUBMISSION_TYPES)[number];
 
@@ -53,6 +59,7 @@ export interface BobSubmission {
   status: BobSubmissionStatus;
   priority: string | null;
   studentId: string | null;
+  studentIds?: string[];
   student: string | null;
   assignedTo: string | null;
   assignedToLabel: string | null;
@@ -62,20 +69,46 @@ export interface BobSubmission {
   incidentType?: string | null;
   severity?: string | null;
   wellnessLevel?: string | null;
+  wellnessScore?: number | null;
+  wellnessReason?: string | null;
+  programWeekIndex?: number | null;
   concernSummary?: string | null;
   description?: string | null;
   team?: string | null;
   points?: number | null;
   reason?: string | null;
   awardedBy?: string | null;
+  blitzCategory?: string | null;
+  blitzScope?: string | null;
+  blitzColor?: string | null;
+  blitzTrack?: string | null;
+  blitzSource?: string | null;
+  blitzAutoKey?: string | null;
   category?: string | null;
   feedback?: string | null;
   milestone?: string | null;
   deliverableId?: string | null;
   deliverableLabel?: string | null;
+  deliverableStatus?: string | null;
+  reflection?: string | null;
+  nextWeekPlan?: string | null;
+  proofLinks?: string | null;
+  requestStartDate?: string | null;
+  requestEndDate?: string | null;
+  requestAmount?: number | null;
+  requestVendor?: string | null;
+  coachRating?: number | null;
+  curriculumFeedback?: string | null;
+  logisticsFeedback?: string | null;
+  openQuestions?: string | null;
+  testimonyFormat?: string | null;
+  publicConsent?: boolean | null;
   teamName?: string | null;
   notes?: string | null;
   parentName?: string | null;
+  parentContacted?: "yes" | "no" | null;
+  isAnonymous?: boolean;
+  createdByLabel?: string | null;
   resolutionNote?: string | null;
   attachments?: BobSubmissionAttachment[];
   statusHistory?: BobStatusHistoryEntry[];

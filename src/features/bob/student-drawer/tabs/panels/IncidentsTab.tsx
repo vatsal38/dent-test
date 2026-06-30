@@ -32,7 +32,7 @@ export function IncidentsTab() {
           Incidents and wellness checks for operational follow-up.
         </p>
         <Link
-          href={`/app/bob/submit?studentId=${encodeURIComponent(student.id)}`}
+          href={`/app/bob/submit?type=incident&studentId=${encodeURIComponent(student.id)}`}
           className="text-xs font-semibold text-orange-600"
         >
           + Log new

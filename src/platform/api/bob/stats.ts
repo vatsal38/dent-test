@@ -67,6 +67,15 @@ export interface BobCommandCenterStats {
     points?: number;
     pointsThisWeek?: number;
   }>;
+  blitzTrackTeams?: Array<{
+    id: string;
+    name: string;
+    color?: string;
+    track?: string;
+    memberCount?: number;
+    points?: number;
+    pointsThisWeek?: number;
+  }>;
 }
 
 export async function getBobCommandCenterStats(): Promise<BobCommandCenterStats> {

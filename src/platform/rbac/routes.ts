@@ -39,6 +39,11 @@ export const BOB_ROUTES: BobRouteDef[] = [
   { path: "/app/bob/pods", permission: "pods.view", fallback: "/app/bob/my-pod" },
   { path: "/app/bob/my-pod", permission: "myPod.view", fallback: "/app/bob" },
   {
+    path: "/app/bob/wellness",
+    permission: "submit.view",
+    fallback: "/app/bob/submit",
+  },
+  {
     path: "/app/bob/attendance/mark",
     permission: "attendance.mark",
     fallback: "/app/bob/attendance",
@@ -63,6 +68,16 @@ export const BOB_ROUTES: BobRouteDef[] = [
   { path: "/app/bob/inbox", permission: "inbox.view" },
   { path: "/app/bob/workflow", permission: "inbox.view" },
   { path: "/app/bob/interview", permission: "roster.view" },
+  {
+    path: "/app/bob/progress-update",
+    permission: "submit.view",
+    fallback: "/app/bob/deliverables",
+  },
+  {
+    path: "/app/bob/testimony",
+    permission: "submit.view",
+    fallback: "/app/bob/home",
+  },
   { path: "/app/bob/submit", permission: "submit.view" },
   { path: "/app/bob/home", permission: "submit.view" },
   { path: "/app/bob/reports", permission: "dashboard.reports", fallback: "/app/bob" },

@@ -75,6 +75,17 @@ export const bobKeys = {
     list: (params: import("@/platform/api/bob/attendance").BobAttendanceListParams) =>
       [...bobKeys.attendance.all(), "list", params] as const,
   },
+  wellness: {
+    all: () => [...bobKeys.all, "wellness"] as const,
+    week: (params?: import("@/platform/api/bob/wellness").BobWellnessQueryParams) =>
+      [...bobKeys.wellness.all(), "week", params ?? {}] as const,
+    stats: (
+      params?: Pick<
+        import("@/platform/api/bob/wellness").BobWellnessQueryParams,
+        "weekIndex" | "track" | "podId"
+      >,
+    ) => [...bobKeys.wellness.all(), "stats", params ?? {}] as const,
+  },
   milestones: {
     all: () => [...bobKeys.all, "milestones"] as const,
     list: (params: import("@/platform/api/bob/milestones").BobMilestonesListParams) =>

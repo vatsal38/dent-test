@@ -1,4 +1,5 @@
 import type { BobSubmission, BobSubmissionType } from "@/platform/api/bob/submissions";
+import { progressStatusLabel } from "@/features/bob/progress/progressConstants";
 import {
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
@@ -20,6 +21,15 @@ export function badgeClassesForType(type: BobSubmissionType) {
       return "bg-purple-50 text-purple-700 border-purple-200";
     case "blitz_points":
       return "bg-green-50 text-green-700 border-green-200";
+    case "pto_request":
+    case "purchase_request":
+    case "reimbursement_request":
+    case "photo_upload":
+      return "bg-slate-50 text-slate-800 border-slate-200";
+    case "coach_feedback":
+      return "bg-indigo-50 text-indigo-800 border-indigo-200";
+    case "dent_testimony":
+      return "bg-violet-50 text-violet-800 border-violet-200";
     default:
       return "bg-gray-50 text-gray-700 border-gray-200";
   }
@@ -55,6 +65,9 @@ export function formatLabel(value: string | null | undefined): string {
 
 export function cardTitle(s: BobSubmission) {
   const student = s.student?.trim();
+  const studentList =
+    student ||
+    (s.studentIds?.length ? `${s.studentIds.length} students` : "");
   if (s.type === "incident") {
     const raw = s.incidentType?.trim().toLowerCase();
     const kind =
@@ -67,34 +80,41 @@ export function cardTitle(s: BobSubmission) {
             : raw === "parent_contact"
               ? "Parent contact incident"
               : formatLabel(s.incidentType) || "Incident";
-    return student ? `${student} · ${kind}` : kind;
+    return studentList ? `${studentList} · ${kind}` : kind;
   }
   if (s.type === "wellness_check") {
-    const level = formatLabel(s.wellnessLevel);
+    const score =
+      s.wellnessScore != null ? `${s.wellnessScore}/10` : formatLabel(s.wellnessLevel);
     return student
-      ? `${student} · Wellness${level ? ` · ${level}` : ""}`
-      : level
-        ? `Wellness · ${level}`
-        : "Wellness check";
+      ? `${student} · Weekly check-in${score ? ` · ${score}` : ""}`
+      : score
+        ? `Weekly check-in · ${score}`
+        : "Weekly check-in";
   }
   if (s.type === "blitz_points") {
+    const cat = s.blitzCategory ? formatLabel(s.blitzCategory) : null;
+    const teamPart = s.team ? ` · ${s.team}` : "";
+    const catPart = cat ? ` · ${cat}` : "";
     return student
-      ? `${student} · Blitz points${s.team ? ` · ${s.team}` : ""}`
-      : s.team
-        ? `Blitz points · ${s.team}`
-        : "Blitz points";
+      ? `${student} · Blitz points${catPart}${teamPart}`
+      : `Blitz points${catPart}${teamPart}` || "Blitz points";
   }
-  if (s.type === "anonymous_feedback")
-    return s.category ? `Feedback · ${formatLabel(s.category)}` : "Anonymous feedback";
+  if (s.type === "anonymous_feedback") {
+    const prefix = s.isAnonymous ? "Anonymous feedback" : "Feedback";
+    return s.category ? `${prefix} · ${formatLabel(s.category)}` : prefix;
+  }
   if (s.type === "progress_update") {
     const focus =
       s.deliverableLabel || s.milestone
         ? ` · ${s.deliverableLabel || s.milestone}`
         : "";
+    const status = s.deliverableStatus
+      ? ` · ${progressStatusLabel(s.deliverableStatus)}`
+      : "";
     const team = s.teamName ? ` (${s.teamName})` : "";
     return student
-      ? `${student} · Progress update${focus}${team}`
-      : `Progress update${focus}${team}`;
+      ? `${student} · Progress update${focus}${status}${team}`
+      : `Progress update${focus}${status}${team}`;
   }
   if (s.type === "parent_contact")
     return student
@@ -102,6 +122,35 @@ export function cardTitle(s: BobSubmission) {
       : s.parentName
         ? `Parent contact · ${s.parentName}`
         : "Parent contact";
+  if (s.type === "pto_request") {
+    const range =
+      s.requestStartDate && s.requestEndDate
+        ? ` · ${s.requestStartDate} – ${s.requestEndDate}`
+        : "";
+    return `PTO request${range}`;
+  }
+  if (s.type === "purchase_request" || s.type === "reimbursement_request") {
+    const amount =
+      s.requestAmount != null
+        ? ` · $${s.requestAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+        : "";
+    const label = SUBMISSION_TYPE_LABELS[s.type] || s.type;
+    return `${label}${amount}`;
+  }
+  if (s.type === "photo_upload") {
+    return "Photo album links";
+  }
+  if (s.type === "coach_feedback") {
+    const rating = s.coachRating != null ? ` · ${s.coachRating}/5` : "";
+    return `Coach feedback${rating}`;
+  }
+  if (s.type === "dent_testimony") {
+    const format =
+      s.testimonyFormat === "video_link" ? " · Video" : " · Written";
+    return student
+      ? `${student} · Dent testimony${format}`
+      : `Dent testimony${format}`;
+  }
   const base = SUBMISSION_TYPE_LABELS[s.type] || s.type;
   return student ? `${student} · ${base}` : base;
 }
@@ -109,12 +158,33 @@ export function cardTitle(s: BobSubmission) {
 export function cardSummary(s: BobSubmission) {
   const parts: string[] = [];
   if (s.student) parts.push(s.student);
+  if (s.parentContacted) parts.push(`parent contacted: ${s.parentContacted}`);
+  if (s.deliverableStatus) parts.push(progressStatusLabel(s.deliverableStatus));
+  if (s.teamName) parts.push(s.teamName);
+  if (s.createdByLabel && !s.isAnonymous) parts.push(`by ${s.createdByLabel}`);
   if (s.severity) parts.push(`severity: ${s.severity}`);
-  if (s.wellnessLevel) parts.push(`wellness: ${s.wellnessLevel}`);
+  if (s.wellnessScore != null) parts.push(`score: ${s.wellnessScore}/10`);
+  else if (s.wellnessLevel) parts.push(`wellness: ${s.wellnessLevel}`);
   if (s.priority) parts.push(`priority: ${s.priority}`);
   if (s.assignedToLabel) parts.push(s.assignedToLabel);
   if (s.points != null) parts.push(`${s.points} pts`);
+  if (s.blitzCategory) parts.push(formatLabel(s.blitzCategory));
+  if (s.blitzSource === "auto") parts.push("auto");
+  if (s.blitzScope === "track" && s.blitzTrack) parts.push(s.blitzTrack);
+  if (s.requestAmount != null) {
+    parts.push(
+      `$${s.requestAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+    );
+  }
+  if (s.requestVendor) parts.push(s.requestVendor);
+  if (s.requestStartDate && s.requestEndDate) {
+    parts.push(`${s.requestStartDate} – ${s.requestEndDate}`);
+  }
+  if (s.category) parts.push(formatLabel(s.category));
+  if (s.coachRating != null) parts.push(`rating: ${s.coachRating}/5`);
+  if (s.publicConsent) parts.push("public consent");
   const body = (
+    s.reflection ||
     s.description ||
     s.concernSummary ||
     s.feedback ||

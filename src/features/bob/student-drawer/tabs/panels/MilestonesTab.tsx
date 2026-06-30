@@ -77,16 +77,24 @@ export function MilestonesTab() {
         </div>
       ) : null}
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-3">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
           Portfolio ({milestones.length})
         </h3>
-        <Link
-          href="/app/bob/deliverables"
-          className="text-xs text-orange-600 font-medium"
-        >
-          Deliverables hub →
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            href={`/app/bob/progress-update?studentId=${encodeURIComponent(student.id)}`}
+            className="text-xs font-semibold text-orange-600"
+          >
+            + Weekly update
+          </Link>
+          <Link
+            href="/app/bob/deliverables"
+            className="text-xs text-orange-600 font-medium"
+          >
+            Hub →
+          </Link>
+        </div>
       </div>
 
       <ul className="space-y-2">

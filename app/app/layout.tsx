@@ -26,6 +26,7 @@ import {
   HiOutlineFilter,
   HiOutlineUser,
   HiOutlineClipboardCheck,
+  HiOutlineHeart,
   HiOutlineDocumentText,
   HiOutlineAcademicCap,
   HiOutlineRefresh,
@@ -176,6 +177,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       intake: <HiOutlineFilter className="w-5 h-5 shrink-0" />,
       pods: <HiOutlineUserGroup className="w-5 h-5 shrink-0" />,
       attendance: <HiOutlineClipboardCheck className="w-5 h-5 shrink-0" />,
+      wellness: <HiOutlineHeart className="w-5 h-5 shrink-0" />,
       milestones: <HiOutlineClipboardList className="w-5 h-5 shrink-0" />,
       inbox: <HiOutlineClipboardList className="w-4 h-4 shrink-0" />,
       myPod: <HiOutlineUser className="w-4 h-4 shrink-0" />,
@@ -269,6 +271,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/app/bob/my-pod") ||
     pathname?.startsWith("/app/bob/inbox") ||
     pathname?.startsWith("/app/bob/submit") ||
+    pathname?.startsWith("/app/bob/wellness") ||
+    pathname?.startsWith("/app/bob/progress-update") ||
+    pathname?.startsWith("/app/bob/testimony") ||
     pathname?.startsWith("/app/bob/settings") ||
     pathname?.startsWith("/app/bob/staff");
   const bobMoreExpanded = bobMoreOpen || isBobMoreActive;

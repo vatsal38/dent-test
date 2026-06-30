@@ -3,14 +3,37 @@ import { API_BASE } from "@/platform/api/client";
 export interface BlitzTeamOption {
   value: string;
   label: string;
-  kind: "color" | "squad";
+  kind: "color" | "squad" | "track";
+  blitzScope?: "global" | "track";
+  blitzColor?: string | null;
+  blitzTrack?: string | null;
+}
+
+export interface BlitzCategoryOption {
+  id: string;
+  label: string;
+  defaultPoints: number;
+  fixedPoints: boolean;
+  weeklyCap: number | null;
 }
 
 export interface BlitzTeamOptionsResponse {
   colors: BlitzTeamOption[];
   squads: BlitzTeamOption[];
+  globalTeams: BlitzTeamOption[];
+  trackTeams: BlitzTeamOption[];
+  categories: BlitzCategoryOption[];
+  coachingWeeklyCap: number;
   options: BlitzTeamOption[];
 }
+
+export interface BobOneStopAttachment {
+  filename: string;
+  mimeType: string;
+  content: string;
+}
+
+export type BobOneStopPayload = Record<string, string | boolean | string[] | BobOneStopAttachment[] | undefined>;
 
 export async function getBlitzTeamOptions(): Promise<BlitzTeamOptionsResponse> {
   const res = await fetch(`${API_BASE}/api/bob/submit/blitz-teams`);
@@ -25,7 +48,7 @@ export async function getBlitzTeamOptions(): Promise<BlitzTeamOptionsResponse> {
 
 export async function submitBobOneStop(
   type: string,
-  payload: Record<string, string>,
+  payload: BobOneStopPayload,
 ): Promise<{ success: boolean; id?: string }> {
   const res = await fetch(`${API_BASE}/api/bob/submit`, {
     method: "POST",

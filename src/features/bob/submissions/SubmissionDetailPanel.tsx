@@ -20,6 +20,7 @@ import {
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
 } from "@/features/bob/submissions/display";
+import { progressStatusLabel } from "@/features/bob/progress/progressConstants";
 import { PRIORITY_OPTIONS } from "@/features/bob/submissions/workflow/constants";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 import { downloadBobSubmissionAttachment } from "@/platform/api/bob/submissions";
@@ -76,11 +77,21 @@ export function SubmissionDetailPanel({
   }
 
   const bodyText =
+    data.reflection ||
     data.description ||
     data.concernSummary ||
     data.feedback ||
     data.notes ||
-    data.reason;
+    data.reason ||
+    [
+      data.curriculumFeedback
+        ? `Curriculum: ${data.curriculumFeedback}`
+        : "",
+      data.logisticsFeedback ? `Logistics: ${data.logisticsFeedback}` : "",
+      data.openQuestions ? `Questions: ${data.openQuestions}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
   return (
     <div className="flex flex-col min-h-full bg-white">
@@ -95,16 +106,40 @@ export function SubmissionDetailPanel({
             <h2 className="mt-2 text-lg font-semibold text-gray-900">
               {cardTitle(data)}
             </h2>
-            {data.studentId ? (
-              <Link
-                href={`/app/bob/roster?id=${encodeURIComponent(data.studentId)}`}
-                className="text-sm text-orange-600 hover:underline font-medium"
-              >
-                {data.student || "Open student profile"} →
-              </Link>
+            {data.studentId || (data.studentIds && data.studentIds.length > 0) ? (
+              data.studentIds && data.studentIds.length > 1 ? (
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p className="font-medium text-gray-700">Students</p>
+                  <ul className="list-disc list-inside">
+                    {(data.student || "")
+                      .split(",")
+                      .map((name) => name.trim())
+                      .filter(Boolean)
+                      .map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                  </ul>
+                </div>
+              ) : data.studentId ? (
+                <Link
+                  href={`/app/bob/roster?id=${encodeURIComponent(data.studentId)}`}
+                  className="text-sm text-orange-600 hover:underline font-medium"
+                >
+                  {data.student || "Open student profile"} →
+                </Link>
+              ) : (
+                <p className="text-sm text-gray-600">{data.student || "—"}</p>
+              )
             ) : (
               <p className="text-sm text-gray-600">{data.student || "—"}</p>
             )}
+            {data.createdByLabel && !data.isAnonymous ? (
+              <p className="text-xs text-gray-500 mt-1">
+                Submitted by {data.createdByLabel}
+              </p>
+            ) : data.isAnonymous ? (
+              <p className="text-xs text-gray-500 mt-1">Submitted anonymously</p>
+            ) : null}
             {data.routingReason ? (
               <p className="text-xs text-gray-500 mt-1">
                 Routed: {data.routingReason.replace(/_/g, " ")}
@@ -129,9 +164,90 @@ export function SubmissionDetailPanel({
               Severity: {formatLabel(data.severity)}
             </span>
           ) : null}
-          {data.wellnessLevel ? (
+          {data.wellnessScore != null ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-rose-50 text-rose-800">
+              Score: {data.wellnessScore}/10
+            </span>
+          ) : data.wellnessLevel ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-rose-50 text-rose-800">
               Wellness: {formatLabel(data.wellnessLevel)}
+            </span>
+          ) : null}
+          {data.parentContacted ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-800">
+              Parent contacted: {formatLabel(data.parentContacted)}
+            </span>
+          ) : null}
+          {data.requestAmount != null ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-800">
+              ${data.requestAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            </span>
+          ) : null}
+          {data.requestStartDate && data.requestEndDate ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-800">
+              {data.requestStartDate} – {data.requestEndDate}
+            </span>
+          ) : null}
+          {data.requestVendor ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-700">
+              Vendor: {data.requestVendor}
+            </span>
+          ) : null}
+          {data.category &&
+          ["pto_request", "purchase_request", "reimbursement_request"].includes(
+            data.type,
+          ) ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-700">
+              {formatLabel(data.category)}
+            </span>
+          ) : null}
+          {data.coachRating != null ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-indigo-50 text-indigo-800">
+              Rating: {data.coachRating}/5
+            </span>
+          ) : null}
+          {data.publicConsent ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-violet-50 text-violet-800">
+              Public use consent
+            </span>
+          ) : null}
+          {data.testimonyFormat ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-violet-50 text-violet-700">
+              {formatLabel(data.testimonyFormat.replace(/_/g, " "))}
+            </span>
+          ) : null}
+          {data.deliverableStatus ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-blue-50 text-blue-800">
+              Deliverable: {progressStatusLabel(data.deliverableStatus)}
+            </span>
+          ) : null}
+          {data.blitzCategory ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-900">
+              {formatLabel(data.blitzCategory)}
+              {data.points != null ? ` · ${data.points} pts` : ""}
+            </span>
+          ) : data.points != null ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-900">
+              {data.points} pts
+            </span>
+          ) : null}
+          {data.team ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-gray-100 text-gray-700">
+              Team: {data.team}
+            </span>
+          ) : null}
+          {data.blitzSource === "rollup" ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-gray-100 text-gray-600">
+              Global rollup
+            </span>
+          ) : data.blitzSource === "auto" ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-emerald-50 text-emerald-800">
+              Auto-awarded
+            </span>
+          ) : null}
+          {data.teamName ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-gray-100 text-gray-700">
+              Team: {data.teamName}
             </span>
           ) : null}
           {data.priority &&
@@ -262,6 +378,24 @@ export function SubmissionDetailPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 text-sm">
+        {data.nextWeekPlan ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+              Next week
+            </h3>
+            <p className="whitespace-pre-wrap text-gray-800">{data.nextWeekPlan}</p>
+          </div>
+        ) : null}
+
+        {data.proofLinks ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+              Proof links
+            </h3>
+            <p className="whitespace-pre-wrap text-gray-800 break-all">{data.proofLinks}</p>
+          </div>
+        ) : null}
+
         {bodyText ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <p className="whitespace-pre-wrap">{bodyText}</p>

@@ -10,6 +10,7 @@ export type BobNavConfigItem = {
     | "intake"
     | "pods"
     | "attendance"
+    | "wellness"
     | "milestones"
     | "inbox"
     | "myPod"
@@ -70,6 +71,14 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     section: "primary",
   },
   {
+    href: "/app/bob/wellness",
+    label: "Weekly check-in",
+    iconKey: "wellness",
+    permission: "submit.view",
+    section: "primary",
+    after: "/app/bob/attendance",
+  },
+  {
     href: "/app/bob/deliverables",
     label: "Deliverables",
     iconKey: "milestones",
@@ -102,7 +111,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
   },
   {
     href: "/app/bob/submit",
-    label: "Submit",
+    label: "Forms",
     iconKey: "submit",
     permission: "submit.view",
     section: "primary",

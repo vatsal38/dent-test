@@ -120,6 +120,21 @@ export function OverviewTab() {
         />
       </DetailCardGrid>
 
+      <section className="flex flex-wrap gap-2">
+        <Link
+          href={`/app/bob/progress-update?studentId=${encodeURIComponent(student.id)}`}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100"
+        >
+          Weekly progress update
+        </Link>
+        <Link
+          href={`/app/bob/testimony?studentId=${encodeURIComponent(student.id)}`}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100"
+        >
+          Dent testimony
+        </Link>
+      </section>
+
       <section>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
           Contact & program

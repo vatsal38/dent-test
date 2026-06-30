@@ -72,10 +72,16 @@ export function CoachPodPage() {
         : "/app/bob/attendance/mark",
     },
     {
+      id: "wellness",
+      label: "Weekly check-in",
+      value: "→",
+      href: "/app/bob/wellness",
+    },
+    {
       id: "submit",
       label: "Log incident",
       value: "→",
-      href: "/app/bob/submit",
+      href: "/app/bob/submit?type=incident",
     },
   ];
 

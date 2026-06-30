@@ -56,6 +56,7 @@ export function StudentDrawerHeader() {
   if (student.track) markParams.set("track", student.track);
   markParams.set("returnTo", returnTo);
   const submitParams = new URLSearchParams({
+    type: "incident",
     studentId: student.id,
     returnTo,
   });

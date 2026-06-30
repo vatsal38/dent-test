@@ -163,7 +163,7 @@ export function SubmissionsInboxPage() {
               href="/app/bob/submit"
               className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
             >
-              New submission
+              Open forms
             </Link>
             <button
               type="button"

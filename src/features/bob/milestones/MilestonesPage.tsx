@@ -344,6 +344,14 @@ export function MilestonesPage() {
         eyebrow="Program operations"
         title="Deliverables"
         description="FY26 deliverable catalog by track — synced from Airtable. Coaches review team submissions in the tracker."
+        actions={
+          <Link
+            href="/app/bob/progress-update"
+            className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
+          >
+            Weekly progress update
+          </Link>
+        }
       />
 
       {selectedTeam ? (

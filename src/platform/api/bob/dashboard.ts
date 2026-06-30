@@ -175,6 +175,15 @@ export interface BobDashboardSnapshot {
     points?: number;
     pointsThisWeek?: number;
   }>;
+  blitzTrackTeams?: Array<{
+    id: string;
+    name: string;
+    color?: string;
+    track?: string;
+    memberCount?: number;
+    points?: number;
+    pointsThisWeek?: number;
+  }>;
   cards: {
     studentsEnrolled: number;
     youthWorksSynced: number;

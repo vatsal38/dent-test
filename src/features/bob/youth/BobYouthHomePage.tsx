@@ -5,6 +5,20 @@ import { PageHeader } from "@/design-system/patterns/PageHeader";
 
 const ACTIONS = [
   {
+    title: "Weekly progress update",
+    description:
+      "Submit your team's deliverable progress, proof, and reflection for this week.",
+    href: "/app/bob/progress-update",
+    cta: "Submit update",
+  },
+  {
+    title: "Dent testimony",
+    description:
+      "Share your story in writing or by video link — with consent for public program use.",
+    href: "/app/bob/testimony",
+    cta: "Submit testimony",
+  },
+  {
     title: "Deliverables",
     description:
       "See your project team's deliverable status and due dates.",

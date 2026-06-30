@@ -74,8 +74,8 @@ function coachLinks(podId: string | null): QuickLink[] {
       perm: "attendance.mark",
     },
     {
-      label: "Log incident",
-      desc: "Report or wellness check",
+      label: "Forms",
+      desc: "Incidents, wellness, Blitz, feedback",
       href: "/app/bob/submit",
       perm: "submit.view",
     },
@@ -114,8 +114,8 @@ const SITE_SUPPORTER_LINKS: QuickLink[] = [
     perm: "attendance.mark",
   },
   {
-    label: "Log incident",
-    desc: "Report or wellness check",
+    label: "Forms",
+    desc: "Incidents, wellness, Blitz, feedback",
     href: "/app/bob/submit",
     perm: "submit.view",
   },

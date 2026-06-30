@@ -19,20 +19,32 @@ export const SUBMISSION_STATUS_LABELS: Record<BobSubmissionStatus, string> = {
 
 export const SUBMISSION_TYPE_LABELS: Record<BobSubmissionType, string> = {
   incident: "Incident Report",
-  wellness_check: "Wellness Check",
+  wellness_check: "Weekly Check-in",
   blitz_points: "Blitz Points",
-  anonymous_feedback: "Anonymous Feedback",
+  anonymous_feedback: "Feedback",
   progress_update: "Progress Update",
   parent_contact: "Parent Contact",
+  pto_request: "PTO Request",
+  purchase_request: "Purchase Request",
+  reimbursement_request: "Reimbursement",
+  photo_upload: "Photo Album",
+  coach_feedback: "Coach Feedback",
+  dent_testimony: "Dent Testimony",
 };
 
 export const ROUTING_HINTS: Partial<Record<BobSubmissionType, string>> = {
   incident: "High severity → Program Manager; otherwise pod coach",
-  wellness_check: "Concern level escalates to Coach + Program Manager",
+  wellness_check: "Scores 1–4 escalate to leadership; weekly check-in per student",
   parent_contact: "Routed to pod coach",
   blitz_points: "Auto-completes; triggers leaderboard recalculation",
-  anonymous_feedback: "Routed to Program Manager",
+  anonymous_feedback: "Routed to Program Manager; submitter hidden when anonymous",
   progress_update: "Routed to pod coach when student is linked",
+  pto_request: "Routed to leadership with Support Squad notified",
+  purchase_request: "Routed to Support Squad with leadership copied",
+  reimbursement_request: "Routed to finance lead (Micky)",
+  photo_upload: "Routed to Support Squad for album processing",
+  coach_feedback: "Weekly survey routed to program leadership",
+  dent_testimony: "Routed to pod coach with program leadership notified",
 };
 
 export const SEVERITY_OPTIONS = ["low", "medium", "high"] as const;

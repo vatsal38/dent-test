@@ -10,6 +10,7 @@ export const OPS_INBOX_EXCLUDED_TYPES: BobSubmissionType[] = [
   "progress_update",
   "anonymous_feedback",
   "parent_contact",
+  "dent_testimony",
 ];
 
 export interface SubmissionFilterState {
