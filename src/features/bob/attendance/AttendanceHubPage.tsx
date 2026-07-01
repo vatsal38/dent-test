@@ -99,8 +99,8 @@ export function AttendanceHubPage() {
 
   const {
     workspace,
-    weekRecordsForRollup,
-    programRecordsForRollup,
+    weekDaysForRollup,
+    programDaysForRollup,
     loading,
     error,
     isRefreshing,
@@ -119,15 +119,15 @@ export function AttendanceHubPage() {
         students: workspace.students,
         focusDate,
         todayDays: workspace.days.filter((d) => d.date === focusDate),
-        weekRecords: weekRecordsForRollup,
-        programRecords: programRecordsForRollup,
+        weekDays: weekDaysForRollup,
+        programDays: programDaysForRollup,
       }),
     [
       workspace.students,
       workspace.days,
       focusDate,
-      weekRecordsForRollup,
-      programRecordsForRollup,
+      weekDaysForRollup,
+      programDaysForRollup,
     ],
   );
 

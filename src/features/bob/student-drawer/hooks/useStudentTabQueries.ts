@@ -49,7 +49,7 @@ export function useStudentAttendanceHistory(
         podId: podId ?? undefined,
         startDate: range.startDate,
         endDate: range.endDate,
-        limit: 200,
+        limit: 500,
       }),
     enabled,
     staleTime: 30_000,

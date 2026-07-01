@@ -1,6 +1,5 @@
 import type { BobStudent } from "@/platform/api/bob/students";
-import type { BobAttendance } from "@/platform/api/bob/attendance";
-import { expectedHoursForDate, isProgramDay, listProgramDates, PROGRAM_START_DATE, ROLLUP_MORNING_HOURS_PER_DAY } from "@/lib/bobProgramCalendar";
+import { expectedHoursForDate, isProgramDay, listProgramDates, PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { resolveStudentTrackLabel, isStudentPresentToday } from "@/lib/bobRosterTrackOptions";
 import type { StudentDayAttendance } from "../types";
@@ -75,28 +74,23 @@ function hoursFromDay(day: StudentDayAttendance): HoursBucket {
   return { attended, potential };
 }
 
-function hoursFromAttendanceRecord(
-  row: BobAttendance,
-  date: string,
-): Pick<HoursBucket, "attended"> {
-  let attended =
-    parseHoursLabel(row.hoursPresent) || parseHoursLabel(row.totalHours);
-  if (
-    attended <= 0 &&
-    (row.status === "present" || row.status === "late")
-  ) {
-    attended =
-      parseHoursLabel(row.maxHours) || expectedHoursForDate(date);
-  }
-  return { attended };
-}
-
 function rosterPotentialForDates(dates: string[]): number {
   return dates.reduce(
-    (sum, date) =>
-      sum + (isProgramDay(date) ? ROLLUP_MORNING_HOURS_PER_DAY : 0),
+    (sum, date) => sum + expectedHoursForDate(date),
     0,
   );
+}
+
+function indexDaysByStudentDate(days: StudentDayAttendance[]) {
+  const map = new Map<string, StudentDayAttendance[]>();
+  for (const day of days) {
+    if (!isProgramDay(day.date)) continue;
+    const key = `${day.studentId}|${day.date}`;
+    const list = map.get(key) || [];
+    list.push(day);
+    map.set(key, list);
+  }
+  return map;
 }
 
 function mergeBucket(target: HoursBucket, source: HoursBucket) {
@@ -127,11 +121,10 @@ export function buildHoursAttendanceRollup(input: {
   students: BobStudent[];
   focusDate: string;
   todayDays: StudentDayAttendance[];
-  weekRecords: BobAttendance[];
-  programRecords?: BobAttendance[];
+  weekDays: StudentDayAttendance[];
+  programDays: StudentDayAttendance[];
 }): HoursAttendanceRollup {
-  const { students, focusDate, todayDays, weekRecords, programRecords = [] } =
-    input;
+  const { students, focusDate, todayDays, weekDays, programDays } = input;
   const weekStart = getWeekMonday(new Date(`${focusDate}T12:00:00`));
   const weekEnd = getWeekSunday(weekStart);
   const weekProgramDates = listProgramDates({
@@ -153,32 +146,13 @@ export function buildHoursAttendanceRollup(input: {
     todayByStudent.set(day.studentId, list);
   }
 
-  function indexRecordsByStudentDate(records: BobAttendance[]) {
-    const map = new Map<string, BobAttendance[]>();
-    for (const row of records) {
-      const date = String(row.date || "").slice(0, 10);
-      if (!date || !isProgramDay(date)) continue;
-      const sid = String(row.studentId || "");
-      if (!sid) continue;
-      const key = `${sid}|${date}`;
-      const list = map.get(key) || [];
-      list.push(row);
-      map.set(key, list);
-    }
-    return map;
-  }
-
-  const weekByStudentDate = indexRecordsByStudentDate(
-    weekRecords.filter((row) => {
-      const date = String(row.date || "").slice(0, 10);
-      return date >= weekStart && date <= weekEnd;
-    }),
+  const weekByStudentDate = indexDaysByStudentDate(
+    weekDays.filter((day) => day.date >= weekStart && day.date <= weekEnd),
   );
-  const programByStudentDate = indexRecordsByStudentDate(
-    programRecords.filter((row) => {
-      const date = String(row.date || "").slice(0, 10);
-      return date >= PROGRAM_START_DATE && date <= focusDate;
-    }),
+  const programByStudentDate = indexDaysByStudentDate(
+    programDays.filter(
+      (day) => day.date >= PROGRAM_START_DATE && day.date <= focusDate,
+    ),
   );
 
   const trackBuckets = new Map<
@@ -246,21 +220,20 @@ export function buildHoursAttendanceRollup(input: {
     ) {
       const date = new Date(t).toISOString().slice(0, 10);
       if (!isProgramDay(date)) continue;
-      const rows = weekByStudentDate.get(`${student.id}|${date}`) || [];
-      const daily = rows.find((r) => !r.signType) || rows[0];
-      if (!daily) continue;
-      const h = hoursFromAttendanceRecord(daily, date);
-      row.week.attended += h.attended;
-      overall.week.attended += h.attended;
+      const daysForDate = weekByStudentDate.get(`${student.id}|${date}`) || [];
+      for (const day of daysForDate) {
+        const h = hoursFromDay(day);
+        row.week.attended += h.attended;
+        overall.week.attended += h.attended;
+      }
     }
     row.week.potential += weekPotentialPerStudent;
     overall.week.potential += weekPotentialPerStudent;
 
     for (const date of programDates) {
-      const rows = programByStudentDate.get(`${student.id}|${date}`) || [];
-      const daily = rows.find((r) => !r.signType) || rows[0];
-      if (daily) {
-        const h = hoursFromAttendanceRecord(daily, date);
+      const daysForDate = programByStudentDate.get(`${student.id}|${date}`) || [];
+      for (const day of daysForDate) {
+        const h = hoursFromDay(day);
         row.program.attended += h.attended;
         overall.program.attended += h.attended;
       }

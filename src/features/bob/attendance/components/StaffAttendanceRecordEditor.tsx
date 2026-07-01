@@ -20,10 +20,13 @@ import {
 } from "../model/attendanceRecordTime";
 import {
   computeEffectiveHoursPresent,
+  computeHoursPresentFromPunchSlots,
   computeSessionHours,
   deriveAttendanceStatusLabel,
   effectiveStaffTime,
   formatHoursValue,
+  isScheduledPlaceholderTime,
+  staffMorningInInput,
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
 import { resolveDayHoursNumeric } from "../model/dayHours";
@@ -139,7 +142,7 @@ export function StaffAttendanceRecordEditor({
   useEffect(() => {
     const r = source;
     setStatus((r?.status as BobAttendanceStatus) || day.dailyStatus || "");
-    setMorningIn(toTimeInputValue(r?.signInTime));
+    setMorningIn(staffMorningInInput(r));
     setMorningOut(
       toTimeInputValue(r?.staffCorrectionSignOut || r?.manualEndTime),
     );
@@ -177,15 +180,21 @@ export function StaffAttendanceRecordEditor({
     [day.date, effectiveAfternoonIn, effectiveAfternoonOut],
   );
   const hoursPresent = useMemo(() => {
+    const punchHours = computeHoursPresentFromPunchSlots(day.date, day.punches);
+    const morningInForCalc =
+      source?.signInTime && isScheduledPlaceholderTime(source.signInTime)
+        ? ""
+        : morningIn;
     const fromEffective = computeEffectiveHoursPresent(day, {
-      morningIn,
+      morningIn: morningInForCalc,
       morningOut,
       afternoonIn,
       afternoonOut,
     });
     if (fromEffective > 0) return fromEffective;
+    if (punchHours > 0) return punchHours;
     return resolveDayHoursNumeric(day);
-  }, [day, morningIn, morningOut, afternoonIn, afternoonOut]);
+  }, [day, morningIn, morningOut, afternoonIn, afternoonOut, source?.signInTime]);
   const expectedHours = expectedHoursForDate(day.date);
 
   async function handleSave(e: React.FormEvent) {

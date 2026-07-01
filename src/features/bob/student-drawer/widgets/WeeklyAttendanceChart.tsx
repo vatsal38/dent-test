@@ -1,6 +1,6 @@
 "use client";
 
-import type { BobAttendance } from "@/platform/api/bob/attendance";
+import type { StudentDayAttendance } from "@/features/bob/attendance/types";
 import { getWeekMonday } from "@/features/bob/attendance/weekDates";
 import { isProgramDay } from "@/lib/bobProgramCalendar";
 
@@ -31,27 +31,44 @@ function dayLabel(iso: string): string {
   return d.toLocaleDateString(undefined, { weekday: "short" });
 }
 
-function statusForDate(
+function statusForDay(
   iso: string,
-  byDate: Map<string, BobAttendance>,
+  byDate: Map<string, StudentDayAttendance>,
   today: string,
 ): string {
   if (iso > today) return "future";
-  const row = byDate.get(iso);
-  if (!row?.status) return "none";
-  return row.status;
+  const day = byDate.get(iso);
+  if (!day) return "none";
+  if (day.dailyStatus === "absent" || day.attendanceState === "absent") {
+    return "absent";
+  }
+  if (day.dailyStatus === "excused" || day.attendanceState === "excused") {
+    return "excused";
+  }
+  if (day.dailyStatus === "late" || day.attendanceState === "late") {
+    return "late";
+  }
+  if (
+    day.dailyStatus === "present" ||
+    day.attendanceState === "present" ||
+    day.health === "complete" ||
+    day.health === "partial"
+  ) {
+    return "present";
+  }
+  return "none";
 }
 
 export function WeeklyAttendanceChart({
-  rows,
+  days,
 }: {
-  rows: BobAttendance[];
+  days: StudentDayAttendance[];
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const byDate = new Map(rows.map((r) => [r.date, r]));
-  const days = weekProgramDays();
+  const byDate = new Map(days.map((day) => [day.date, day]));
+  const weekDays = weekProgramDays();
 
-  if (!days.length) {
+  if (!weekDays.length) {
     return (
       <p className="text-sm text-gray-500">No program days this week.</p>
     );
@@ -63,8 +80,8 @@ export function WeeklyAttendanceChart({
         This week
       </h3>
       <div className="flex items-end gap-2 h-24">
-        {days.map((iso) => {
-          const status = statusForDate(iso, byDate, today);
+        {weekDays.map((iso) => {
+          const status = statusForDay(iso, byDate, today);
           const height =
             status === "future"
               ? "20%"

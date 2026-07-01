@@ -161,6 +161,62 @@ export function useAttendanceWorkspace({
     isStudentViewer ? linkedStudentId : null,
   );
 
+  const weekRollupWorkspace = useMemo(
+    () =>
+      computeAttendanceWorkspace({
+        focusDate: getWeekSunday(weekMonday),
+        startDate: weekMonday,
+        endDate: getWeekSunday(weekMonday),
+        podFilter: effectivePod || undefined,
+        trackFilter: effectiveTrack || undefined,
+        pods,
+        students: scopedStudents,
+        records: weekRecordsForRollup,
+        enrollmentCount,
+        studentsRequested: scopedStudents.length,
+        studentOnlyId: isStudentViewer ? linkedStudentId : null,
+      }),
+    [
+      weekMonday,
+      effectivePod,
+      effectiveTrack,
+      pods,
+      scopedStudents,
+      weekRecordsForRollup,
+      enrollmentCount,
+      isStudentViewer,
+      linkedStudentId,
+    ],
+  );
+
+  const programRollupWorkspace = useMemo(
+    () =>
+      computeAttendanceWorkspace({
+        focusDate,
+        startDate: PROGRAM_START_DATE,
+        endDate: focusDate,
+        podFilter: effectivePod || undefined,
+        trackFilter: effectiveTrack || undefined,
+        pods,
+        students: scopedStudents,
+        records: programRecordsForRollup,
+        enrollmentCount,
+        studentsRequested: scopedStudents.length,
+        studentOnlyId: isStudentViewer ? linkedStudentId : null,
+      }),
+    [
+      focusDate,
+      effectivePod,
+      effectiveTrack,
+      pods,
+      scopedStudents,
+      programRecordsForRollup,
+      enrollmentCount,
+      isStudentViewer,
+      linkedStudentId,
+    ],
+  );
+
   const workspace = useMemo(
     () =>
       computeAttendanceWorkspace({
@@ -212,6 +268,8 @@ export function useAttendanceWorkspace({
 
   return {
     workspace,
+    weekDaysForRollup: weekRollupWorkspace.days,
+    programDaysForRollup: programRollupWorkspace.days,
     weekRecordsForRollup,
     programRecordsForRollup,
     pods,

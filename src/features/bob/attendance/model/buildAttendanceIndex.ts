@@ -552,7 +552,11 @@ export function buildStudentDayAttendance(
       ) {
         const computed = computeHoursPresentFromStaffTimes(
           date,
-          toTimeInputValue(daily.signInTime || daily.adjustedSignIn),
+          toTimeInputValue(
+            isScheduledPlaceholderTime(daily.signInTime)
+              ? null
+              : daily.signInTime || daily.adjustedSignIn,
+          ),
           toTimeInputValue(daily.staffCorrectionSignOut || daily.manualEndTime),
           toTimeInputValue(daily.staffCorrectionSignIn || daily.manualStartTime),
           toTimeInputValue(daily.adjustedSignOut || daily.manualEndTime),

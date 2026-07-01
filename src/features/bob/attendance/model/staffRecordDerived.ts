@@ -119,6 +119,22 @@ export function effectiveStaffTime(
   return syncedTimeInput(day, punch);
 }
 
+export function staffMorningInInput(
+  daily:
+    | Pick<BobAttendance, "signInTime" | "manualOverride">
+    | null
+    | undefined,
+): string {
+  if (
+    daily?.manualOverride &&
+    daily.signInTime &&
+    !isScheduledPlaceholderTime(daily.signInTime)
+  ) {
+    return toTimeInputValue(daily.signInTime);
+  }
+  return "";
+}
+
 export function computeEffectiveHoursPresent(
   day: StudentDayAttendance,
   staff: {

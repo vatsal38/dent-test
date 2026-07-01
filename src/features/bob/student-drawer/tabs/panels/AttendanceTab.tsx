@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { buildBobReturnTo } from "@/lib/bobReturnUrl";
+import { formatDayHoursPresent } from "@/features/bob/attendance/model/dayHours";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentAttendanceHistory } from "../../hooks/useStudentTabQueries";
+import {
+  buildStudentAttendanceDays,
+  sortStudentDaysNewestFirst,
+} from "../../lib/studentAttendanceDays";
 import { DetailCard, DetailCardGrid } from "../../widgets/DetailCard";
 import { AttendanceTabSkeleton } from "../../widgets/TabPanelSkeleton";
 import { WeeklyAttendanceChart } from "../../widgets/WeeklyAttendanceChart";
@@ -23,6 +29,10 @@ function statusLabel(date: string, status?: string | null): string {
   return status || "—";
 }
 
+function dayStatusLabel(day: ReturnType<typeof buildStudentAttendanceDays>[number]) {
+  return statusLabel(day.date, day.dailyStatus || day.attendanceState);
+}
+
 export function AttendanceTab() {
   const { student, tab } = useStudentDrawerContext();
   const pathname = usePathname();
@@ -33,20 +43,26 @@ export function AttendanceTab() {
     tab,
   );
 
+  const days = useMemo(() => {
+    if (!student) return [];
+    return sortStudentDaysNewestFirst(
+      buildStudentAttendanceDays(student, data?.attendance ?? []),
+    );
+  }, [student, data?.attendance]);
+
   if (!student) return null;
   if (isLoading) return <AttendanceTabSkeleton />;
 
-  const rows = [...(data?.attendance ?? [])].sort((a, b) =>
-    (b.date || "").localeCompare(a.date || ""),
-  );
   const stats = student.attendanceStats;
 
-  const counts = rows.reduce(
-    (acc, r) => {
+  const counts = days.reduce(
+    (acc, day) => {
       const today = new Date().toISOString().slice(0, 10);
-      if (r.date && r.date > today) return acc;
-      const s = r.status || "unknown";
-      acc[s] = (acc[s] || 0) + 1;
+      if (day.date > today) return acc;
+      const label = dayStatusLabel(day);
+      if (label === "Future" || label === "—") return acc;
+      const key = label.toLowerCase();
+      acc[key] = (acc[key] || 0) + 1;
       return acc;
     },
     {} as Record<string, number>,
@@ -97,7 +113,7 @@ export function AttendanceTab() {
       </DetailCardGrid>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <WeeklyAttendanceChart rows={rows} />
+        <WeeklyAttendanceChart days={days} />
       </div>
 
       <div className="flex justify-end">
@@ -125,27 +141,32 @@ export function AttendanceTab() {
       ) : null}
 
       <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 overflow-hidden">
-        {rows.length === 0 ? (
+        {days.length === 0 ? (
           <li className="p-6 text-sm text-gray-500 text-center">
             No attendance records in the last 6 weeks.
           </li>
         ) : (
-          rows.map((r) => {
-            const label = statusLabel(r.date, r.status);
+          days.map((day) => {
+            const label = dayStatusLabel(day);
             const styleKey =
-              label === "Future" ? "future" : r.status || "";
+              label === "Future" ? "future" : day.dailyStatus || day.attendanceState || "";
+            const hoursLabel = formatDayHoursPresent(day);
             return (
               <li
-                key={r.id}
+                key={day.key}
                 className="flex items-center justify-between gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{r.date}</p>
-                  {r.signType ? (
-                    <p className="text-xs text-gray-500">{r.signType}</p>
+                  <p className="text-sm font-medium text-gray-900">{day.date}</p>
+                  {hoursLabel !== "—" ? (
+                    <p className="text-xs text-gray-500">{hoursLabel} present</p>
                   ) : null}
-                  {r.hoursPresent ? (
-                    <p className="text-xs text-gray-500">{r.hoursPresent}h</p>
+                  {day.health === "missing" || day.health === "partial" ? (
+                    <p className="text-xs text-amber-700">
+                      {day.missingPunchCount > 0
+                        ? `${day.missingPunchCount} missing punch${day.missingPunchCount === 1 ? "" : "es"}`
+                        : "Incomplete punches"}
+                    </p>
                   ) : null}
                 </div>
                 <span
