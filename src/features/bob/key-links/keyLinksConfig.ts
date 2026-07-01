@@ -2,6 +2,10 @@ export type KeyLinkItem = {
   label: string;
   description?: string;
   url: string;
+  /** Shared login password for tool-access email accounts. */
+  password?: string;
+  /** Extra guidance shown on the card (e.g. AI usage notes). */
+  note?: string;
 };
 
 export type KeyLinkSection = {
@@ -11,11 +15,12 @@ export type KeyLinkSection = {
   links: KeyLinkItem[];
 };
 
-function mailto(email: string, description?: string): KeyLinkItem {
+function mailto(email: string, description?: string, password?: string): KeyLinkItem {
   return {
     label: email,
     description,
     url: `mailto:${email}`,
+    password,
   };
 }
 
@@ -172,12 +177,116 @@ export const KEY_LINK_SECTIONS: KeyLinkSection[] = [
     ],
   },
   {
+    id: "ai-tools",
+    title: "AI tools — key projects",
+    description:
+      "Claude projects and ChatGPT folders/GPTs for staff planning, coaching, and youth project support.",
+    links: [
+      {
+        label: "Bet on Baltimore — staff planning project",
+        description: "Claude · staff",
+        note: "Has access to BoB '26 syllabi and other key resources. Create specific chats rather than one giant thread.",
+        url: "https://claude.ai/project/019d8d19-fd49-764c-8a03-e917c4d438d4",
+      },
+      {
+        label: "Dent people supporter project",
+        description: "Claude · staff",
+        note: "For staff, especially support squad. Guidance on navigating interpersonal dynamics.",
+        url: "https://claude.ai/project/019f16f4-e728-75ea-8721-217c71c0fc91",
+      },
+      {
+        label: "Dentie.ai project",
+        description: "Claude · denters",
+        note: "Supports Denters building projects with a questioning, youth-centered approach. Has access to BoB '26 syllabi, Dent Mindsets, Secret Sauce, etc.",
+        url: "https://claude.ai/project/019f1705-fd3d-72f6-bc83-5707632c69dd",
+      },
+      {
+        label: "BoB 2026 planning project",
+        description: "ChatGPT · staff",
+        note: "For staff; has access to BoB '26 syllabi and other key resources.",
+        url: "https://chatgpt.com/g/g-p-68ffba5ac7008191bfb6e9a511d222f4-bob-2026-planning/project",
+      },
+      {
+        label: "Made@Dent coach support chat",
+        description: "ChatGPT · staff",
+        url: "https://chatgpt.com/g/g-p-68ffba5ac7008191bfb6e9a511d222f4-bob-2026-planning/shared/c/6a0c72ff-1c8c-83ea-8969-cfeac3fc7d1f?owner_user_id=user-0MWMKtLMfcbLlpAPZVWxntwz",
+      },
+      {
+        label: "Denternship coach support chat",
+        description: "ChatGPT · staff",
+        url: "https://chatgpt.com/g/g-p-68ffba5ac7008191bfb6e9a511d222f4-bob-2026-planning/shared/c/6a0b9665-fd84-83ea-a0bf-bae5559e118e?owner_user_id=user-0MWMKtLMfcbLlpAPZVWxntwz",
+      },
+      {
+        label: "AYD coach support chat",
+        description: "ChatGPT · staff",
+        url: "https://chatgpt.com/g/g-p-68ffba5ac7008191bfb6e9a511d222f4-bob-2026-planning/shared/c/69ffaf05-ef24-83ea-b48a-46bbb5bed8e5?owner_user_id=user-0MWMKtLMfcbLlpAPZVWxntwz",
+      },
+      {
+        label: "Content creation & marketing coach support chat",
+        description: "ChatGPT · staff",
+        url: "https://chatgpt.com/g/g-p-68ffba5ac7008191bfb6e9a511d222f4-bob-2026-planning/shared/c/6a255686-3f38-83ea-8068-982f3a3f272f?owner_user_id=user-0MWMKtLMfcbLlpAPZVWxntwz",
+      },
+      {
+        label: "Dentie.ai GPT",
+        description: "ChatGPT · denters",
+        note: "Supports building projects with a questioning, youth-centered approach.",
+        url: "https://chatgpt.com/g/g-684c673eaea481919448f217dd990c84-dentie-ai",
+      },
+      {
+        label: "BoB coach support",
+        description: "ChatGPT · staff",
+        note: "For coaches. Plan and adapt curriculum, lessons, and scaffolding to support youth toward learning and deliverables.",
+        url: "https://chatgpt.com/g/g-685a7aaba5688191adb592aac860f2df-bob-coach-support",
+      },
+      {
+        label: "Dent HR: relational support hub",
+        description: "ChatGPT · staff",
+        note: "For staff, especially support squad. Guidance on navigating interpersonal dynamics.",
+        url: "https://chatgpt.com/g/g-68654287b71881919ecff8f7e4961b6f-dent-hr-relational-support-hub",
+      },
+    ],
+  },
+  {
+    id: "shared-emails",
+    title: "Shared emails for tool access",
+    description:
+      "Shared login accounts for Canva, ChatGPT, and Claude. Staff are invited to Canva by their own email.",
+    links: [
+      mailto("denter-tech@denteducation.org", "Canva · denters · general", "DenterTech2024!"),
+      mailto("ayd@denteducation.org", "Canva · denters · AYD", "Bob2026!"),
+      mailto("madeatdent@denteducation.org", "Canva · denters · M@D", "Bob2026!"),
+      mailto("denternship@denteducation.org", "Canva · denters · Denternship", "Bob2026!"),
+      mailto(
+        "content-and-marketing@denteducation.org",
+        "Canva · denters · Content & marketing",
+        "Bob2026!",
+      ),
+      mailto("denter-tech@denteducation.org", "ChatGPT · denters", "DenterTech2024!"),
+      mailto("tech@denteducation.org", "ChatGPT · staff", "Makeadent2023!"),
+      mailto("ayd@denteducation.org", "Claude · AYD", "Bob2026!"),
+      mailto("madeatdent@denteducation.org", "Claude · M@D", "Bob2026!"),
+      mailto("denternship@denteducation.org", "Claude · Denternship", "Bob2026!"),
+      mailto(
+        "content-and-marketing@denteducation.org",
+        "Claude · Content & marketing",
+        "Bob2026!",
+      ),
+      mailto("tech@denteducation.org", "Claude · coaches", "Makeadent2023!"),
+      mailto("support-squad@denteducation.org", "Claude · support squad"),
+    ],
+  },
+  {
     id: "email-groups",
     title: "Google email groups",
     description: "Staff and track communication lists.",
     links: [
+      mailto("all-bob26@denteducation.org", "All students + staff"),
       mailto("all-staff-bob26@denteducation.org", "General staff"),
-      mailto("support-squad-bob-26@denteducation.org", "General staff"),
+      {
+        label: "support-squad-bob-26@denteducation.org",
+        description: "General staff",
+        url: "https://groups.google.com/a/denteducation.org/g/support-squad-bob-26",
+      },
       mailto("ayd-staff-bob26@denteducation.org", "AYD · staff"),
       mailto("ayd-bob26@denteducation.org", "AYD · youth & staff"),
       mailto("mad-staff-bob26@denteducation.org", "M@D · staff"),
@@ -202,13 +311,19 @@ export const KEY_LINK_SECTIONS: KeyLinkSection[] = [
   },
 ];
 
-/** Youth-facing sections — no staff onboarding or email groups. */
+/** Youth-facing sections — no staff onboarding, credentials, or email groups. */
 export const STUDENT_KEY_LINK_SECTION_IDS = new Set([
   "curriculum",
   "photos",
   "calendars",
   "restorative",
+  "ai-tools",
 ]);
+
+function isYouthFacingLink(link: KeyLinkItem): boolean {
+  const text = `${link.label} ${link.description ?? ""}`.toLowerCase();
+  return text.includes("denters") || text.includes("dentie");
+}
 
 export function keyLinkSectionsForRole(
   role: import("@/platform/rbac/types").BobOpsRole,
@@ -217,10 +332,18 @@ export function keyLinkSectionsForRole(
   return KEY_LINK_SECTIONS.filter((section) =>
     STUDENT_KEY_LINK_SECTION_IDS.has(section.id),
   ).map((section) => {
-    if (section.id !== "restorative") return section;
-    return {
-      ...section,
-      links: section.links.filter((link) => link.description === "Youth"),
-    };
+    if (section.id === "restorative") {
+      return {
+        ...section,
+        links: section.links.filter((link) => link.description === "Youth"),
+      };
+    }
+    if (section.id === "ai-tools") {
+      return {
+        ...section,
+        links: section.links.filter(isYouthFacingLink),
+      };
+    }
+    return section;
   });
 }

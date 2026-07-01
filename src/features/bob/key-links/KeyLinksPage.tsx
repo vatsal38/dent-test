@@ -11,6 +11,8 @@ import {
   HiOutlineExternalLink,
   HiOutlineFolder,
   HiOutlineHeart,
+  HiOutlineKey,
+  HiOutlineLightBulb,
   HiOutlineLink,
   HiOutlineMail,
   HiOutlinePhotograph,
@@ -36,6 +38,7 @@ type LinkKind =
   | 'site'
   | 'form'
   | 'email'
+  | 'ai'
   | 'link';
 
 type TrackTag = 'mad' | 'ayd' | 'denternship' | 'content' | 'general';
@@ -89,6 +92,22 @@ const SECTION_META: Record<string, SectionMeta> = {
     cardBg: 'from-rose-50 to-white',
     ring: 'ring-rose-200/80',
     dot: 'bg-rose-500',
+  },
+  'ai-tools': {
+    icon: HiOutlineLightBulb,
+    accent: 'text-indigo-700',
+    iconBg: 'bg-indigo-100',
+    cardBg: 'from-indigo-50 to-white',
+    ring: 'ring-indigo-200/80',
+    dot: 'bg-indigo-500',
+  },
+  'shared-emails': {
+    icon: HiOutlineKey,
+    accent: 'text-cyan-700',
+    iconBg: 'bg-cyan-100',
+    cardBg: 'from-cyan-50 to-white',
+    ring: 'ring-cyan-200/80',
+    dot: 'bg-cyan-500',
   },
   'email-groups': {
     icon: HiOutlineUserGroup,
@@ -183,6 +202,12 @@ const LINK_KIND_META: Record<
     iconBg: 'bg-orange-100',
     iconColor: 'text-orange-700',
   },
+  ai: {
+    label: 'AI project',
+    icon: HiOutlineLightBulb,
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-700',
+  },
   link: {
     label: 'External link',
     icon: HiOutlineExternalLink,
@@ -199,12 +224,14 @@ function getLinkKind(url: string): LinkKind {
     return 'photos';
   }
   if (lower.includes('calendar.google.com')) return 'calendar';
+  if (lower.includes('groups.google.com')) return 'email';
   if (lower.includes('docs.google.com/spreadsheets') || lower.includes('/spreadsheets/')) {
     return 'sheet';
   }
   if (lower.includes('docs.google.com') || lower.includes('canva.link')) return 'docs';
   if (lower.includes('sites.google.com')) return 'site';
   if (lower.includes('airtable.com') || lower.includes('forms.')) return 'form';
+  if (lower.includes('claude.ai') || lower.includes('chatgpt.com')) return 'ai';
   return 'link';
 }
 
@@ -219,7 +246,7 @@ function getTrackTag(label: string, description?: string): TrackTag | null {
 }
 
 function matchesQuery(link: KeyLinkItem, query: string): boolean {
-  const haystack = [link.label, link.description ?? '', link.url]
+  const haystack = [link.label, link.description ?? '', link.url, link.note ?? '', link.password ?? '']
     .join(' ')
     .toLowerCase();
   return haystack.includes(query);
@@ -263,18 +290,26 @@ function StatCard({
   );
 }
 
-function CopyEmailButton({ email }: { email: string }) {
+function CopyButton({
+  value,
+  label,
+  title,
+}: {
+  value: string;
+  label: string;
+  title: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   return (
     <button
       type="button"
-      title="Copy email address"
+      title={title}
       onClick={async (event) => {
         event.preventDefault();
         event.stopPropagation();
         try {
-          await navigator.clipboard.writeText(email);
+          await navigator.clipboard.writeText(value);
           setCopied(true);
           window.setTimeout(() => setCopied(false), 1600);
         } catch {
@@ -284,9 +319,13 @@ function CopyEmailButton({ email }: { email: string }) {
       className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-orange-700 transition hover:bg-orange-50"
     >
       <HiOutlineDuplicate className="h-3.5 w-3.5" />
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? 'Copied' : label}
     </button>
   );
+}
+
+function linkCardKey(link: KeyLinkItem) {
+  return `${link.label}::${link.description ?? ''}`;
 }
 
 function TrackBadge({ track }: { track: TrackTag }) {
@@ -304,11 +343,22 @@ function TrackBadge({ track }: { track: TrackTag }) {
 function KeyLinkCard({ link }: { link: KeyLinkItem }) {
   const isActive = link.url.trim().length > 0;
   const isMailto = link.url.startsWith('mailto:');
-  const email = isMailto ? link.url.replace(/^mailto:/, '') : '';
+  const isCredential = Boolean(link.password);
+  const email = isMailto
+    ? link.url.replace(/^mailto:/, '')
+    : link.label.includes('@')
+      ? link.label
+      : '';
   const kind = isActive ? getLinkKind(link.url) : 'link';
   const kindMeta = LINK_KIND_META[kind];
   const KindIcon = kindMeta.icon;
   const track = getTrackTag(link.label, link.description);
+  const showEmailAsTitle = isMailto && !isCredential;
+  const cardTitle = showEmailAsTitle
+    ? (link.description ?? 'Email group')
+    : isCredential
+      ? (link.description ?? link.label)
+      : link.label;
 
   const cardClass =
     'group flex h-full items-start gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md';
@@ -343,32 +393,60 @@ function KeyLinkCard({ link }: { link: KeyLinkItem }) {
       <div className="min-w-0 flex-1">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-100">
-            {kindMeta.label}
+            {isCredential ? 'Shared login' : kindMeta.label}
           </span>
           {track ? <TrackBadge track={track} /> : null}
         </div>
 
         <p className="font-semibold text-gray-900 transition-colors group-hover:text-orange-700">
-          {isMailto ? (link.description ?? 'Email group') : link.label}
+          {cardTitle}
         </p>
 
-        {!isMailto && link.description ? (
+        {!showEmailAsTitle && !isCredential && link.description ? (
           <p className="mt-1 text-sm text-gray-500">{link.description}</p>
         ) : null}
 
-        {isMailto ? (
-          <p className="mt-2 truncate text-sm text-gray-500">{email}</p>
+        {link.note ? (
+          <p className="mt-2 text-sm leading-relaxed text-gray-500">{link.note}</p>
         ) : null}
 
-        <div className="mt-3 flex items-center justify-between gap-2">
+        {isMailto || email.includes('@') ? (
+          <p className="mt-2 truncate font-mono text-sm text-gray-600">{email}</p>
+        ) : null}
+
+        {link.password ? (
+          <p className="mt-1 font-mono text-sm text-gray-500">
+            Password: <span className="text-gray-700">{link.password}</span>
+          </p>
+        ) : null}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {isMailto ? (
-            <CopyEmailButton email={email} />
-          ) : (
+            <CopyButton
+              value={email}
+              label="Copy email"
+              title="Copy email address"
+            />
+          ) : email.includes('@') ? (
+            <CopyButton
+              value={email}
+              label="Copy email"
+              title="Copy email address"
+            />
+          ) : null}
+          {link.password ? (
+            <CopyButton
+              value={link.password}
+              label="Copy password"
+              title="Copy password"
+            />
+          ) : null}
+          {!isMailto ? (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-600">
               <HiOutlineExternalLink className="h-3.5 w-3.5" />
               Open in new tab
             </span>
-          )}
+          ) : null}
         </div>
       </div>
     </>
@@ -376,9 +454,9 @@ function KeyLinkCard({ link }: { link: KeyLinkItem }) {
 
   if (isMailto) {
     return (
-      <a href={link.url} className={cardClass}>
+      <div className={cardClass}>
         {body}
-      </a>
+      </div>
     );
   }
 
@@ -389,10 +467,28 @@ function KeyLinkCard({ link }: { link: KeyLinkItem }) {
   );
 }
 
-function groupLinksByDescription(links: KeyLinkItem[]) {
+function subgroupLabel(sectionId: string, link: KeyLinkItem): string {
+  const description = link.description?.trim();
+  if (!description) return 'Resources';
+
+  if (sectionId === 'ai-tools' || sectionId === 'shared-emails') {
+    return description.split(' · ')[0] ?? description;
+  }
+
+  if (sectionId === 'email-groups') {
+    const lower = description.toLowerCase();
+    if (lower.includes('all students')) return 'All students + staff';
+    if (lower.includes('general staff')) return 'General staff';
+    return description.split(' · ')[0] ?? description;
+  }
+
+  return description;
+}
+
+function groupLinks(sectionId: string, links: KeyLinkItem[]) {
   const groups = new Map<string, KeyLinkItem[]>();
   for (const link of links) {
-    const key = link.description?.trim() || 'Resources';
+    const key = subgroupLabel(sectionId, link);
     const bucket = groups.get(key) ?? [];
     bucket.push(link);
     groups.set(key, bucket);
@@ -410,10 +506,15 @@ function KeyLinkSectionPanel({ section }: { section: KeyLinkSection }) {
     dot: 'bg-gray-400',
   };
   const SectionIcon = meta.icon;
-  const isEmailSection = section.id === 'email-groups';
-  const showSubgroups = section.id === 'onboarding' || section.id === 'email-groups';
+  const isEmailSection =
+    section.id === 'email-groups' || section.id === 'shared-emails';
+  const showSubgroups =
+    section.id === 'onboarding' ||
+    section.id === 'email-groups' ||
+    section.id === 'ai-tools' ||
+    section.id === 'shared-emails';
   const activeCount = section.links.filter((link) => link.url.trim()).length;
-  const subgroups = showSubgroups ? groupLinksByDescription(section.links) : null;
+  const subgroups = showSubgroups ? groupLinks(section.id, section.links) : null;
 
   const gridClass = isEmailSection
     ? 'grid grid-cols-1 gap-3 lg:grid-cols-2'
@@ -461,7 +562,7 @@ function KeyLinkSectionPanel({ section }: { section: KeyLinkSection }) {
                 </div>
                 <div className={gridClass}>
                   {links.map((link) => (
-                    <KeyLinkCard key={link.label} link={link} />
+                    <KeyLinkCard key={linkCardKey(link)} link={link} />
                   ))}
                 </div>
               </div>
@@ -470,7 +571,7 @@ function KeyLinkSectionPanel({ section }: { section: KeyLinkSection }) {
         ) : (
           <div className={gridClass}>
             {section.links.map((link) => (
-              <KeyLinkCard key={link.label} link={link} />
+              <KeyLinkCard key={linkCardKey(link)} link={link} />
             ))}
           </div>
         )}
@@ -514,8 +615,8 @@ export function KeyLinksPage() {
         title="Key Links"
         description={
           isStudent
-            ? "Calendars, curriculum folders, photo albums, and wellness resources for your track."
-            : "Your program hub for curriculum folders, photo albums, calendars, onboarding docs, wellness resources, and staff email groups."
+            ? "Calendars, curriculum folders, photo albums, Dentie.ai tools, and wellness resources for your track."
+            : "Your program hub for curriculum folders, photo albums, calendars, onboarding docs, AI tools, shared logins, wellness resources, and email groups."
         }
       />
 
@@ -556,7 +657,7 @@ export function KeyLinksPage() {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search folders, albums, calendars, emails..."
+                placeholder="Search folders, albums, AI tools, calendars, emails..."
                 className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 shadow-sm outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
               />
             </div>

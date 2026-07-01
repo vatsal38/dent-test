@@ -45,7 +45,7 @@ Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **cli
 - ✅ **Personal dashboard** — track attendance & deliverable achievement, my attendance, team deliverables, blitz points
 - ✅ **Roster** — view cohort; edit own profile only (`roster.editSelf`)
 - ✅ **Submit** — sign in/out, progress updates, incidents (own submissions)
-- ✅ **Key Links** — youth-facing calendars, curriculum, photos, wellness resources (no staff onboarding or email groups)
+- ✅ **Key Links** — youth-facing calendars, curriculum, photos, Dentie.ai tools, wellness resources (no staff onboarding, shared logins, or email groups)
 - ❌ **Submissions inbox** — no other students’ submissions (`inbox.view`)
 - ❌ **Staff notes** (`notes.viewStaff`)
 - ❌ Intake, tracks admin, settings, staff directory
