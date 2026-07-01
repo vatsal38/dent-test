@@ -8,10 +8,14 @@ import {
 } from "@/platform/api/bob/projectTeams";
 import { bobKeys } from "@/platform/query/queryKeys";
 
-export function useBobProjectTeamsList(params?: { track?: string }) {
+export function useBobProjectTeamsList(
+  params?: { track?: string },
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: bobKeys.projectTeams.list(params),
     queryFn: () => getBobProjectTeams(params),
+    enabled: options?.enabled ?? true,
   });
 }
 

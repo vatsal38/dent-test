@@ -60,6 +60,11 @@ export function getRosterQueue(id: string | null | undefined): RosterQueueDef {
   return ROSTER_QUEUES.find((q) => q.id === id) ?? ROSTER_QUEUES[0];
 }
 
+/** Youth-facing roster tabs — cohort and track views only. */
+export const STUDENT_ROSTER_QUEUES = ROSTER_QUEUES.filter(
+  (q) => q.id !== "onboarding_pending" && q.id !== "dropped_out",
+);
+
 function facetCount(
   options: Array<{ value: string; count: number }> | undefined,
   value: string,

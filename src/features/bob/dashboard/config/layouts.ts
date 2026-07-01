@@ -390,7 +390,7 @@ export const DASHBOARD_LAYOUTS: Record<
     sections: [
       {
         id: "student-program",
-        title: "Program overview",
+        title: "My dashboard",
         widgets: [
           {
             id: "stu-program-kpis",
@@ -398,6 +398,7 @@ export const DASHBOARD_LAYOUTS: Record<
             metrics: [
               "overallAttendancePct",
               "deliverablesSubmittedPctThisWeek",
+              "deliverablesCompleted",
             ],
             permissions: ["dashboard.view"],
             roles: ["student"],
@@ -410,26 +411,34 @@ export const DASHBOARD_LAYOUTS: Record<
         columns: 3,
         widgets: [
           {
+            id: "stu-team",
+            kind: "my_project_team",
+            title: "My project team",
+            colSpan: 4,
+            permissions: ["dashboard.view"],
+            roles: ["student"],
+          },
+          {
             id: "stu-attendance",
             kind: "attendance_summary",
             title: "My attendance",
-            colSpan: 8,
+            colSpan: 4,
             permissions: ["dashboard.view", "attendance.view"],
             roles: ["student"],
           },
           {
             id: "stu-deliverables",
             kind: "milestone_summary",
-            title: "Team deliverables",
-            colSpan: 8,
+            title: "My deliverables",
+            colSpan: 4,
             permissions: ["dashboard.view", "milestones.view"],
             roles: ["student"],
           },
           {
             id: "stu-blitz",
             kind: "blitz_teams",
-            title: "Blitz points",
-            colSpan: 4,
+            title: "Blitz team points",
+            colSpan: 12,
             permissions: ["dashboard.view"],
             roles: ["student"],
           },

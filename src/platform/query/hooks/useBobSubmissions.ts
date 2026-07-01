@@ -27,11 +27,12 @@ export function useBobSubmissionsList(params: BobSubmissionsListParams) {
   });
 }
 
-export function useBobSubmissionNotifications(orgWide = false) {
+export function useBobSubmissionNotifications(orgWide = false, enabled = true) {
   return useQuery({
     queryKey: bobKeys.submissions.notifications({ orgWide }),
     queryFn: () => getBobSubmissionNotifications({ limit: 12, orgWide }),
     refetchInterval: 45_000,
+    enabled,
   });
 }
 

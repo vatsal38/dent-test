@@ -19,3 +19,13 @@ export function canEditStudentRecord(
 export function isStudentRole(access: BobAccessContext): boolean {
   return access.role === "student";
 }
+
+/** True when a student user is viewing their own linked roster record. */
+export function isOwnStudentProfile(
+  access: BobAccessContext,
+  linkedStudentId: string | null | undefined,
+  studentId: string | null | undefined,
+): boolean {
+  if (!isStudentRole(access)) return false;
+  return Boolean(linkedStudentId && studentId && linkedStudentId === studentId);
+}

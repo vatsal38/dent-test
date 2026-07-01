@@ -27,6 +27,7 @@ import {
   isDailyAttendanceRecord,
   isPunchEventRecord,
   normalizeSignType,
+  punchEventTimeIso,
 } from "./normalizeSignType";
 import {
   mapAttendanceStateFromRecord,
@@ -62,9 +63,10 @@ function applyStatusToPunches(
     return "missing";
   };
   for (const pt of PUNCH_TYPES) {
-    if (next[pt].state === "missing") {
-      next[pt] = { ...next[pt], state: mapState(pt) };
-    }
+    if (next[pt].state !== "missing") continue;
+    const hasTime = isUsableTimeLabel(next[pt].timeLabel);
+    if (status === "present" && !hasTime) continue;
+    next[pt] = { ...next[pt], state: mapState(pt) };
   }
   return next;
 }
@@ -429,7 +431,7 @@ export function buildStudentDayAttendance(
         if (evPod !== podId) continue;
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
-        const timeIso = ev.signInTime || ev.signOutTime || undefined;
+        const timeIso = punchEventTimeIso(ev, pt);
         const timeLabel = formatAttendanceTime(timeIso);
         if (!timeLabel) continue;
         punches[pt] = {

@@ -33,7 +33,13 @@ function FormCard({
   );
 }
 
-export function FormsHub({ returnHref }: { returnHref?: string | null }) {
+export function FormsHub({
+  returnHref,
+  studentMode = false,
+}: {
+  returnHref?: string | null;
+  studentMode?: boolean;
+}) {
   function formHref(type: string) {
     const params = new URLSearchParams({ type });
     if (returnHref) params.set("returnTo", returnHref);
@@ -59,9 +65,13 @@ export function FormsHub({ returnHref }: { returnHref?: string | null }) {
         <div className="mb-8">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Forms</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {studentMode ? "Submit" : "Forms"}
+              </h1>
               <p className="text-sm text-gray-600 mt-1">
-                Program submissions, staff requests, student testimony, and attendance corrections.
+                {studentMode
+                  ? "Progress updates, testimony, and program feedback. View past submissions on My submissions."
+                  : "Program submissions, staff requests, student testimony, and attendance corrections."}
               </p>
             </div>
             {returnHref ? (
@@ -82,63 +92,94 @@ export function FormsHub({ returnHref }: { returnHref?: string | null }) {
           </div>
         </div>
 
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Program
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {BOB_PROGRAM_FORMS.map((form) => (
-              <FormCard
-                key={form.type}
-                title={form.title}
-                description={form.description}
-                href={formHref(form.type)}
-              />
-            ))}
-          </div>
-        </section>
+        {studentMode ? (
+          <>
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Submit
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {BOB_STUDENT_FORM_LINKS.map((link) => (
+                  <FormCard
+                    key={link.id}
+                    title={link.title}
+                    description={link.description}
+                    href={externalHref(link.href)}
+                    cta={`${link.cta} →`}
+                  />
+                ))}
+              </div>
+            </section>
+            <section>
+              <Link
+                href="/app/bob/my-submissions"
+                className="block rounded-xl border border-orange-200 bg-orange-50 p-5 text-sm font-medium text-orange-800 hover:bg-orange-100"
+              >
+                View my submissions →
+              </Link>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Program
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {BOB_PROGRAM_FORMS.map((form) => (
+                  <FormCard
+                    key={form.type}
+                    title={form.title}
+                    description={form.description}
+                    href={formHref(form.type)}
+                  />
+                ))}
+              </div>
+            </section>
 
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Student
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {BOB_STUDENT_FORM_LINKS.map((link) => (
-              <FormCard
-                key={link.id}
-                title={link.title}
-                description={link.description}
-                href={externalHref(link.href)}
-                cta={`${link.cta} →`}
-              />
-            ))}
-          </div>
-        </section>
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Student
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {BOB_STUDENT_FORM_LINKS.map((link) => (
+                  <FormCard
+                    key={link.id}
+                    title={link.title}
+                    description={link.description}
+                    href={externalHref(link.href)}
+                    cta={`${link.cta} →`}
+                  />
+                ))}
+              </div>
+            </section>
 
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Staff requests
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {BOB_STAFF_FORMS.map((form) => (
-              <FormCard
-                key={form.type}
-                title={form.title}
-                description={form.description}
-                href={formHref(form.type)}
-              />
-            ))}
-            {BOB_EXTERNAL_FORM_LINKS.map((link) => (
-              <FormCard
-                key={link.id}
-                title={link.title}
-                description={link.description}
-                href={externalHref(link.href)}
-                cta={`${link.cta} →`}
-              />
-            ))}
-          </div>
-        </section>
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Staff requests
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {BOB_STAFF_FORMS.map((form) => (
+                  <FormCard
+                    key={form.type}
+                    title={form.title}
+                    description={form.description}
+                    href={formHref(form.type)}
+                  />
+                ))}
+                {BOB_EXTERNAL_FORM_LINKS.map((link) => (
+                  <FormCard
+                    key={link.id}
+                    title={link.title}
+                    description={link.description}
+                    href={externalHref(link.href)}
+                    cta={`${link.cta} →`}
+                  />
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

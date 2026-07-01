@@ -61,12 +61,15 @@ export function RosterGridView({
   columns,
   labelsForField,
   onOpenStudent,
+  simplifiedView = false,
 }: {
   students: BobStudent[];
   headshot: BobRosterSchemaField | null;
   columns: BobRosterSchemaField[];
   labelsForField: (fieldName: string) => Record<string, string>;
   onOpenStudent: (id: string) => void;
+  /** Youth roster — name, track, and team only (no peer stats). */
+  simplifiedView?: boolean;
 }) {
   const fieldNames = useMemo(() => columns.map((c) => c.name), [columns]);
 
@@ -188,30 +191,34 @@ export function RosterGridView({
               ) : null}
             </div>
 
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <OnboardingStatusChips status={c.onboardingStatus} compact />
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-gray-600">
-              <div className="min-w-0">
-                <div className="text-[11px] text-gray-400">Track</div>
-                <div className="truncate font-medium text-gray-800">{c.track || "—"}</div>
-              </div>
-              <div className="min-w-0 text-right">
-                <div className="text-[11px] text-gray-400">Attendance</div>
-                <div className="font-semibold text-gray-900">
-                  {c.attendancePct != null ? `${c.attendancePct}%` : "—"}
+            {!simplifiedView ? (
+              <>
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <OnboardingStatusChips status={c.onboardingStatus} compact />
                 </div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-[11px] text-gray-400">Deliverables</div>
-                <div className="truncate font-medium text-gray-800">{c.milestone ?? "—"}</div>
-              </div>
-              <div className="min-w-0 text-right">
-                <div className="text-[11px] text-gray-400">Status</div>
-                <div className="truncate font-medium text-gray-800 capitalize">{c.atRisk ? "Needs check-in" : "On track"}</div>
-              </div>
-            </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-gray-600">
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-gray-400">Track</div>
+                    <div className="truncate font-medium text-gray-800">{c.track || "—"}</div>
+                  </div>
+                  <div className="min-w-0 text-right">
+                    <div className="text-[11px] text-gray-400">Attendance</div>
+                    <div className="font-semibold text-gray-900">
+                      {c.attendancePct != null ? `${c.attendancePct}%` : "—"}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-gray-400">Deliverables</div>
+                    <div className="truncate font-medium text-gray-800">{c.milestone ?? "—"}</div>
+                  </div>
+                  <div className="min-w-0 text-right">
+                    <div className="text-[11px] text-gray-400">Status</div>
+                    <div className="truncate font-medium text-gray-800 capitalize">{c.atRisk ? "Needs check-in" : "On track"}</div>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
         </button>
       ))}

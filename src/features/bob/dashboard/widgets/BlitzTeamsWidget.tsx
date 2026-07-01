@@ -85,9 +85,11 @@ export function BlitzTeamsWidget({
   loading,
   isRefreshing,
   placement,
+  scope,
 }: WidgetRenderProps) {
   const title = placement.title ?? "Blitz teams";
   const [tab, setTab] = useState<BlitzTab>("global");
+  const personal = scope.level === "student" && Boolean(scope.studentId);
   if (loading) return <DashboardWidgetSkeleton variant="list" />;
 
   const globalTeams = snapshot?.blitzTeams ?? [];
@@ -100,12 +102,14 @@ export function BlitzTeamsWidget({
       refreshing={isRefreshing}
       className="border-amber-200 bg-amber-50"
       action={
+        personal ? undefined : (
         <Link
           href="/app/bob/roster?queue=bob_cohort"
           className="text-sm font-medium text-gray-600 hover:text-gray-900"
         >
           Cohort roster →
         </Link>
+        )
       }
     >
       <div className="flex gap-1 mb-3 p-0.5 bg-amber-100/80 rounded-lg w-fit">

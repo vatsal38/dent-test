@@ -36,7 +36,7 @@ export function BobCommandCenterPage() {
         }
         description={
           isStudentHome
-            ? "Your attendance, deliverables, and program progress."
+            ? "Your attendance, deliverables, project team, and blitz points — personalized to your profile."
             : isSiteSupporterHome
               ? `${bobRoleLabel(role)} — oversee your assigned tracks (up to 2): attendance, deliverables, blitz points, roster, and incidents.`
               : isTrackHome && me?.primaryPod

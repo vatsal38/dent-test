@@ -42,10 +42,13 @@ Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **cli
 - ❌ Attendance discrepancy triage (support squad)
 
 ### Students (`student`)
-- ✅ **Personal dashboard** — track attendance & deliverable achievement, my attendance, team deliverables, blitz points
-- ✅ **Roster** — view cohort; edit own profile only (`roster.editSelf`)
-- ✅ **Submit** — sign in/out, progress updates, incidents (own submissions)
-- ✅ **Key Links** — youth-facing calendars, curriculum, photos, Dentie.ai tools, wellness resources (no staff onboarding, shared logins, or email groups)
+- ✅ **Personal dashboard** — attendance %, deliverables submitted & completed, project team, blitz points (scoped to linked student)
+- ✅ **Roster** — view-only cohort gallery; edit own profile only; no peer PII or stats
+- ✅ **Attendance** — personal read-only view; cannot mark or edit attendance
+- ✅ **Deliverables** — project team and track deliverables filtered to student scope
+- ✅ **My submissions** — own form activity only (`submissions.viewOwn`); no org inbox or staff notes
+- ✅ **Submit** — youth forms only (progress, testimony, feedback); no staff request forms
+- ✅ **Key Links** — youth-facing calendars, curriculum, photos, Dentie.ai tools, wellness resources
 - ❌ **Submissions inbox** — no other students’ submissions (`inbox.view`)
 - ❌ **Staff notes** (`notes.viewStaff`)
 - ❌ Intake, tracks admin, settings, staff directory
@@ -102,3 +105,4 @@ npm run seed:bob-rbac:auth
 | Program Manager | `bob.pm@dent.test` | `BobTest2026!` |
 | Site Supporter | `bob.site@dent.test` | `BobTest2026!` |
 | Coach | `bob.coach@dent.test` | `BobTest2026!` |
+| Student (demo) | `demo.student@dent.test` via **Student** demo button | Auto-links to richest active roster youth |

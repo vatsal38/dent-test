@@ -78,7 +78,10 @@ function toneClasses(tone: Tone) {
   return "border-gray-200 bg-white";
 }
 
-function buildItems(data: BobSubmissionNotificationsResponse | undefined): NotificationItem[] {
+function buildItems(
+  data: BobSubmissionNotificationsResponse | undefined,
+  submissionsHref: string,
+): NotificationItem[] {
   const items: NotificationItem[] = [];
   const cutoff = Date.now() - 7 * 86400000;
 
@@ -96,7 +99,7 @@ function buildItems(data: BobSubmissionNotificationsResponse | undefined): Notif
       subject: s.student || "Submission",
       createdAt,
       tone,
-      href: `/app/bob/inbox?submission=${encodeURIComponent(s.id)}`,
+      href: `${submissionsHref}?id=${encodeURIComponent(s.id)}`,
     });
   }
 
@@ -112,8 +115,8 @@ function buildItems(data: BobSubmissionNotificationsResponse | undefined): Notif
       createdAt: e.createdAt,
       tone: "default",
       href: e.submissionId
-        ? `/app/bob/inbox?submission=${encodeURIComponent(e.submissionId)}`
-        : "/app/bob/inbox",
+        ? `${submissionsHref}?id=${encodeURIComponent(e.submissionId)}`
+        : submissionsHref,
     });
   }
 
@@ -125,12 +128,19 @@ function buildItems(data: BobSubmissionNotificationsResponse | undefined): Notif
 export function useNotifications() {
   const access = useBobAccess();
   const orgWide = access.can("inbox.notificationsAll");
-  const { data, isLoading } = useBobSubmissionNotifications(orgWide);
+  const submissionsHref = access.can("inbox.view")
+    ? "/app/bob/inbox"
+    : "/app/bob/my-submissions";
+  const enabled = access.can("inbox.view") || access.can("submissions.viewOwn");
+  const { data, isLoading } = useBobSubmissionNotifications(orgWide, enabled);
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds());
   const [tab, setTab] = useState<"all" | "unread">("all");
 
-  const allItems = useMemo(() => buildItems(data), [data]);
+  const allItems = useMemo(
+    () => buildItems(data, submissionsHref),
+    [data, submissionsHref],
+  );
   const unreadCount = allItems.filter((item) => !readIds.has(item.id)).length;
   const badgeTone: "danger" | "warning" | "default" = allItems.some(
     (i) => !readIds.has(i.id) && i.tone === "danger",

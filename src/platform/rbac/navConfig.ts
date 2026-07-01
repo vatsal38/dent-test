@@ -1,6 +1,8 @@
 import { BOB_MY_POD, BOB_POD_PLURAL } from "@/lib/bobDisplayTerminology";
 import type { BobPermissionId } from "./permissions";
 
+import type { BobOpsRole } from "./types";
+
 export type BobNavConfigItem = {
   href: string;
   label: string;
@@ -20,6 +22,8 @@ export type BobNavConfigItem = {
     | "settings"
     | "staff";
   permission: BobPermissionId;
+  /** Hide for these roles even when permission is granted */
+  denyRoles?: BobOpsRole[];
   /** Show in primary sidebar vs "More" submenu */
   section: "primary" | "more";
   /** Insert after this href (primary nav ordering) */
@@ -75,6 +79,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     label: "Weekly check-in",
     iconKey: "wellness",
     permission: "submit.view",
+    denyRoles: ["student"],
     section: "primary",
     after: "/app/bob/attendance",
   },
@@ -110,12 +115,36 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     after: "/app/bob/key-links",
   },
   {
+    href: "/app/bob/my-submissions",
+    label: "My submissions",
+    iconKey: "inbox",
+    permission: "submissions.viewOwn",
+    section: "primary",
+    after: "/app/bob/deliverables",
+  },
+  {
     href: "/app/bob/submit",
     label: "Forms",
     iconKey: "submit",
     permission: "submit.view",
     section: "primary",
+    denyRoles: ["student"],
     after: "/app/bob/inbox",
+  },
+  {
+    href: "/app/bob/submit",
+    label: "Submit",
+    iconKey: "submit",
+    permission: "submit.view",
+    denyRoles: [
+      "admin",
+      "program_manager",
+      "site_supporter",
+      "coach",
+      "read_only",
+    ],
+    section: "primary",
+    after: "/app/bob/my-submissions",
   },
   {
     href: "/app/bob/staff",

@@ -14,6 +14,7 @@ import { QuickActionsWidget } from "./QuickActionsWidget";
 import { WellnessDistributionWidget } from "./WellnessDistributionWidget";
 import { WeeklyMilestoneProgressWidget } from "./WeeklyMilestoneProgressWidget";
 import { BlitzTeamsWidget } from "./BlitzTeamsWidget";
+import { MyProjectTeamWidget } from "./MyProjectTeamWidget";
 import { AlertsDropdownWidget } from "./AlertsDropdownWidget";
 import { ProjectTeamDeliverablesWidget } from "./ProjectTeamDeliverablesWidget";
 
@@ -34,6 +35,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetComponent> = {
   at_risk_list: AtRiskListWidget,
   weekly_milestone_progress: WeeklyMilestoneProgressWidget,
   blitz_teams: BlitzTeamsWidget,
+  my_project_team: MyProjectTeamWidget,
   quick_actions: () => <QuickActionsWidget />,
   escalation_banner: EscalationBannerWidget,
   notifications: AlertStripWidget,

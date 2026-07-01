@@ -14,6 +14,7 @@ import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldD
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { canEditStudentRecord } from "@/platform/rbac/studentProfile";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
+import { isOwnStudentProfile } from "@/platform/rbac/studentProfile";
 
 function attendancePercent(student: {
   attendanceStats?: {
@@ -54,6 +55,9 @@ export function OverviewTab() {
   const { can, access } = useBobAccess();
   const { data: me } = useBobMe();
   const allowEdit = canEditStudentRecord(can, me?.linkedStudent?.id, student?.id);
+  const viewingSelf = isOwnStudentProfile(access, me?.linkedStudent?.id, student?.id);
+  const isStudentViewer = access.role === "student";
+  const showPersonalDetails = !isStudentViewer || viewingSelf;
   const { items, isLoading } = useStudentActivityFeed(student, tab, student?.podId);
   const { fields, school, track } = useStudentLinkedFieldDisplay(student);
 
@@ -81,66 +85,80 @@ export function OverviewTab() {
 
   return (
     <div className="p-5 space-y-6">
-      <DetailCardGrid>
-        <DetailCard
-          label="Attendance"
-          value={attendancePercent(student)}
-          hint={
-            student.attendanceStats?.hoursAttended != null
-              ? `${student.attendanceStats.hoursAttended}h of ${student.attendanceStats.hoursPotential ?? "—"}h · ${student.attendanceStats?.absent ?? 0} absences`
-              : `${student.attendanceStats?.absent ?? 0} absences`
-          }
-          action={
-            <button
-              type="button"
-              onClick={() => setTab("attendance")}
-              className="text-[11px] font-medium text-orange-600"
-            >
-              View
-            </button>
-          }
-        />
-        <DetailCard
-          label="Deliverables"
-          value={deliverablePercent(student)}
-          hint={
-            student.milestoneStats?.total
-              ? `${student.milestoneStats.completed ?? student.milestoneStats.submitted ?? 0} of ${student.milestoneStats.total} due · ${student.milestoneStats.overdue ?? 0} overdue`
-              : "No due deliverables yet"
-          }
-          action={
-            <button
-              type="button"
-              onClick={() => setTab("milestones")}
-              className="text-[11px] font-medium text-orange-600"
-            >
-              View
-            </button>
-          }
-        />
-      </DetailCardGrid>
+      {showPersonalDetails ? (
+        <DetailCardGrid>
+          <DetailCard
+            label="Attendance"
+            value={attendancePercent(student)}
+            hint={
+              student.attendanceStats?.hoursAttended != null
+                ? `${student.attendanceStats.hoursAttended}h of ${student.attendanceStats.hoursPotential ?? "—"}h · ${student.attendanceStats?.absent ?? 0} absences`
+                : `${student.attendanceStats?.absent ?? 0} absences`
+            }
+            action={
+              <button
+                type="button"
+                onClick={() => setTab("attendance")}
+                className="text-[11px] font-medium text-orange-600"
+              >
+                View
+              </button>
+            }
+          />
+          <DetailCard
+            label="Deliverables"
+            value={deliverablePercent(student)}
+            hint={
+              student.milestoneStats?.total
+                ? `${student.milestoneStats.completed ?? student.milestoneStats.submitted ?? 0} of ${student.milestoneStats.total} due · ${student.milestoneStats.overdue ?? 0} overdue`
+                : "No due deliverables yet"
+            }
+            action={
+              <button
+                type="button"
+                onClick={() => setTab("milestones")}
+                className="text-[11px] font-medium text-orange-600"
+              >
+                View
+              </button>
+            }
+          />
+        </DetailCardGrid>
+      ) : null}
 
-      <section className="flex flex-wrap gap-2">
-        <Link
-          href={`/app/bob/progress-update?studentId=${encodeURIComponent(student.id)}`}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100"
-        >
-          Weekly progress update
-        </Link>
-        <Link
-          href={`/app/bob/testimony?studentId=${encodeURIComponent(student.id)}`}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100"
-        >
-          Dent testimony
-        </Link>
-      </section>
+      {showPersonalDetails ? (
+        <section className="flex flex-wrap gap-2">
+          <Link
+            href={`/app/bob/progress-update?studentId=${encodeURIComponent(student.id)}`}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100"
+          >
+            Weekly progress update
+          </Link>
+          <Link
+            href={`/app/bob/testimony?studentId=${encodeURIComponent(student.id)}`}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100"
+          >
+            Dent testimony
+          </Link>
+        </section>
+      ) : null}
 
       <section>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-          Contact & program
+          {showPersonalDetails ? "Contact & program" : "Program"}
         </h3>
         <dl className="grid gap-2 sm:grid-cols-2">
-          {rows.map((row) => (
+          {rows
+            .filter((row) =>
+              showPersonalDetails
+                ? true
+                : row.label === "Track" ||
+                  row.label === "Team" ||
+                  row.label === "Project" ||
+                  row.label === "Blitz Team" ||
+                  row.label === "Program Team",
+            )
+            .map((row) => (
             <div
               key={row.label}
               className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"

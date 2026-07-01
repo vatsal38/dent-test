@@ -4,6 +4,7 @@ import type { BobStudentsFacetsResponse } from "@/platform/api/bob/students";
 import {
   ROSTER_QUEUES,
   rosterQueueCount,
+  type RosterQueueDef,
   type RosterQueueId,
 } from "@/features/bob/roster/queues";
 
@@ -11,10 +12,12 @@ export function RosterQueueTabs({
   active,
   facets,
   onChange,
+  queues = ROSTER_QUEUES,
 }: {
   active: RosterQueueId;
   facets: BobStudentsFacetsResponse | null | undefined;
   onChange: (queue: RosterQueueId) => void;
+  queues?: RosterQueueDef[];
 }) {
   return (
     <div
@@ -22,7 +25,7 @@ export function RosterQueueTabs({
       role="tablist"
       aria-label="Roster queues"
     >
-      {ROSTER_QUEUES.map((q) => {
+      {queues.map((q) => {
         const selected = q.id === active;
         const count = rosterQueueCount(q.id, facets);
         return (

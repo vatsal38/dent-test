@@ -4,14 +4,28 @@ import { STUDENT_DRAWER_TABS_CONFIG } from "../constants";
 import { useStudentDrawerContext } from "../context/StudentDrawerContext";
 import type { StudentDrawerTabId } from "../types";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
+import { isOwnStudentProfile } from "@/platform/rbac/studentProfile";
+
+const PEER_ONLY_TABS = new Set<StudentDrawerTabId>([
+  "attendance",
+  "milestones",
+  "demographics",
+]);
 
 export function StudentDrawerTabs() {
-  const { tab, setTab } = useStudentDrawerContext();
-  const { can, role } = useBobAccess();
+  const { tab, setTab, student } = useStudentDrawerContext();
+  const { can, role, access } = useBobAccess();
+  const { data: me } = useBobMe();
+  const linkedStudentId = me?.linkedStudent?.id ?? null;
+  const viewingSelf = isOwnStudentProfile(access, linkedStudentId, student?.id);
 
   const visibleTabs = STUDENT_DRAWER_TABS_CONFIG.filter((t) => {
     if (t.denyRoles?.includes(role)) return false;
     if (t.permissions?.length && !t.permissions.some((p) => can(p))) {
+      return false;
+    }
+    if (role === "student" && !viewingSelf && PEER_ONLY_TABS.has(t.id)) {
       return false;
     }
     return true;

@@ -16,23 +16,15 @@ export function defaultScopeFromAccess(
   access: BobAccessContext,
   me?: { linkedStudent?: { id: string; name?: string | null; podId?: string | null } | null } | null,
 ): DashboardScope {
-  if (access.role === "student") {
-    const podId = access.primaryPod?.id || access.podIds[0] || me?.linkedStudent?.podId;
-    if (podId) {
-      return {
-        level: "pod",
-        podId: String(podId),
-        label: access.primaryPod?.name || "My track",
-        studentId: me?.linkedStudent?.id,
-      };
-    }
-    if (me?.linkedStudent?.id) {
-      return {
-        level: "student",
-        studentId: me.linkedStudent.id,
-        label: me.linkedStudent.name || "My profile",
-      };
-    }
+  if (access.role === "student" && me?.linkedStudent?.id) {
+    return {
+      level: "student",
+      studentId: me.linkedStudent.id,
+      podId: me.linkedStudent.podId
+        ? String(me.linkedStudent.podId)
+        : access.primaryPod?.id || access.podIds[0] || undefined,
+      label: me.linkedStudent.name || "My dashboard",
+    };
   }
   if (access.role === "site_supporter" && access.podIds.length > 1) {
     return { level: "organization", label: "My tracks" };

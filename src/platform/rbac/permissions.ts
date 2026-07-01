@@ -31,6 +31,7 @@ export const BOB_PERMISSIONS = {
   "notes.viewStaff": "View and add staff coach notes",
   "myPod.view": "View my track workspace",
   "submit.view": "Submit operational forms",
+  "submissions.viewOwn": "View own form submissions only",
   "keyLinks.view": "View key links and program resources",
   "teams.view": "View project teams",
   "staff.view": "View staff directory",
@@ -139,6 +140,7 @@ const STUDENT = pick(
   "attendance.view",
   "milestones.view",
   "submit.view",
+  "submissions.viewOwn",
   "keyLinks.view",
   "drawer.studentDetail",
 );

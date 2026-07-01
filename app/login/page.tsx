@@ -256,7 +256,9 @@ function LoginForm() {
                 ))}
               </div>
               <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                Demo accounts are for review only — data is read-only.
+                Demo accounts are for review only. The Student demo links to the
+                active roster youth with the most attendance, submissions, and team
+                data.
               </p>
             </div>
           ) : null}

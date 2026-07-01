@@ -78,6 +78,7 @@ export const BOB_ROUTES: BobRouteDef[] = [
     permission: "submit.view",
     fallback: "/app/bob/home",
   },
+  { path: "/app/bob/my-submissions", permission: "submissions.viewOwn", fallback: "/app/bob" },
   { path: "/app/bob/submit", permission: "submit.view" },
   { path: "/app/bob/home", permission: "submit.view" },
   { path: "/app/bob/reports", permission: "dashboard.reports", fallback: "/app/bob" },
@@ -145,16 +146,26 @@ export function resolveBobRouteRedirect(
   return route.fallback ?? getBobHomeHref(access, me);
 }
 
-/** Students may not create roster records via `/roster/new`. */
+/** Students may not create roster records or open peer full-record pages. */
 export function resolveStudentProfileRedirect(
   pathname: string,
   access: BobAccessContext,
-  _linkedStudentId: string | null | undefined,
+  linkedStudentId: string | null | undefined,
 ): string | null {
   if (access.role !== "student") return null;
   const normalized = pathname.split("?")[0].replace(/\/$/, "") || "/";
   if (normalized === "/app/bob/roster/new") {
     return "/app/bob/roster";
+  }
+  if (normalized === "/app/bob/wellness") {
+    return "/app/bob/home";
+  }
+  const peerDetail = normalized.match(/^\/app\/bob\/roster\/([^/]+)$/);
+  if (peerDetail) {
+    const id = decodeURIComponent(peerDetail[1]);
+    if (!linkedStudentId || id !== linkedStudentId) {
+      return "/app/bob/roster";
+    }
   }
   return null;
 }

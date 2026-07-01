@@ -108,12 +108,28 @@ export const BOB_STAFF_FORMS: BobFormDefinition[] = [
 
 export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
   {
-    id: "dent_testimony",
-    title: "Dent Testimony",
+    id: "progress_update",
+    title: "Weekly progress update",
     description:
-      "Students share a written story or video link with consent for public program use.",
+      "Submit your team's deliverable progress, proof, and reflection for this week.",
+    href: "/app/bob/progress-update",
+    cta: "Open progress form",
+  },
+  {
+    id: "dent_testimony",
+    title: "Dent testimony",
+    description:
+      "Share a written story or video link with consent for public program use.",
     href: "/app/bob/testimony",
     cta: "Open testimony form",
+  },
+  {
+    id: "anonymous_feedback",
+    title: "Feedback",
+    description:
+      "Share program or logistics feedback. Choose whether to submit anonymously.",
+    href: "/app/bob/submit?type=anonymous_feedback",
+    cta: "Open feedback form",
   },
 ];
 

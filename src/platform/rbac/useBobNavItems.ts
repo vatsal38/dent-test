@@ -41,8 +41,10 @@ export function useBobNavItems(
     if (navLoading || !me) {
       return { primary: [] as BobNavItem[], more: [] as BobNavItem[] };
     }
-    const allowed = BOB_NAV_CONFIG.filter((item) =>
-      canAccess(access, item.permission),
+    const allowed = BOB_NAV_CONFIG.filter(
+      (item) =>
+        canAccess(access, item.permission) &&
+        !item.denyRoles?.includes(access.role),
     );
     const toNav = (item: BobNavConfigItem): BobNavItem => ({
       href: item.href,

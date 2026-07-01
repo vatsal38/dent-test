@@ -15,15 +15,59 @@ function pctCell(value: number | undefined) {
   );
 }
 
+function isPersonalStudentScope(scope: WidgetRenderProps["scope"]) {
+  return scope.level === "student" && Boolean(scope.studentId);
+}
+
 export function AttendanceSummaryWidget({
   snapshot,
   loading,
   isRefreshing,
   placement,
+  scope,
 }: WidgetRenderProps) {
   const title = placement.title ?? "Attendance";
+  const personal = isPersonalStudentScope(scope);
 
   if (loading) return <DashboardWidgetSkeleton variant="table" titleWidth="w-32" />;
+
+  if (personal && snapshot) {
+    const overall = snapshot.kpis.overallAttendancePct?.value ?? snapshot.cards.overallAttendancePct ?? 0;
+    const today = snapshot.kpis.checkedInToday?.value ?? snapshot.cards.checkedInToday ?? 0;
+    return (
+      <DashboardCard
+        title={title}
+        refreshing={isRefreshing}
+        action={
+          <Link
+            href="/app/bob/attendance"
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            View my attendance →
+          </Link>
+        }
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
+              Overall attendance
+            </p>
+            <p className="mt-1 text-3xl font-bold text-emerald-950 tabular-nums">
+              {overall}%
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-600">
+              Checked in today
+            </p>
+            <p className="mt-1 text-3xl font-bold text-gray-900 tabular-nums">
+              {today ? "Yes" : "No"}
+            </p>
+          </div>
+        </div>
+      </DashboardCard>
+    );
+  }
 
   const tracks = snapshot?.attendanceBySite ?? [];
   const hasStudents = tracks.some((t) => (t.studentCount ?? t.total) > 0);

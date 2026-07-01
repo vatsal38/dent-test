@@ -33,7 +33,7 @@ import { RosterQueueTabs } from "@/features/bob/roster/RosterQueueTabs";
 import { RosterGridView } from "@/features/bob/roster/RosterGridView";
 import { useStudentDrawerUrl } from "@/features/bob/student-drawer";
 import { curatedRosterListColumns } from "@/features/bob/roster/curatedListColumns";
-import { getRosterQueue, type RosterQueueId } from "@/features/bob/roster/queues";
+import { getRosterQueue, STUDENT_ROSTER_QUEUES, type RosterQueueId } from "@/features/bob/roster/queues";
 import {
   contractStatusLabel,
   preSurveyLabel,
@@ -74,13 +74,14 @@ function listParams(
   page: number,
   pageSize: number,
   trackFilter?: string | null,
+  includeStats = true,
 ): BobStudentsListParams {
   const params: BobStudentsListParams = {
     ...queueParams,
     limit: pageSize,
     offset: (page - 1) * pageSize,
     includeAirtableFields: true,
-    includeStats: true,
+    includeStats,
   };
   const q = f.search.trim();
   if (q) params.search = q;
@@ -146,10 +147,21 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
     setPage(1);
   }, [debouncedFilters, queueId, trackFilter]);
 
+  const { access, isScoped, can } = useBobAccess();
+  const isStudentViewer = access.role === "student";
+  const effectiveView = isStudentViewer ? "grid" : view;
+
   const listParamsMemo = useMemo(
     () =>
-      listParams(debouncedFilters, queue.listParams, page, pageSize, trackFilter),
-    [debouncedFilters, queue.listParams, page, pageSize, trackFilter],
+      listParams(
+        debouncedFilters,
+        queue.listParams,
+        page,
+        pageSize,
+        trackFilter,
+        !isStudentViewer,
+      ),
+    [debouncedFilters, queue.listParams, page, pageSize, trackFilter, isStudentViewer],
   );
 
   const {
@@ -160,7 +172,6 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
     refetch,
   } = useBobStudentsList(listParamsMemo);
   const { data: facets, isLoading: facetsLoading } = useBobStudentsFacets();
-  const { access, isScoped, can } = useBobAccess();
   const { data: schemaRes } = useBobRosterSchema();
   const schema = schemaRes?.fields ?? null;
 
@@ -283,10 +294,15 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
     <div>
       {!embedded ? (
         <PageHeader
-          eyebrow="Operational roster"
-          title="Students"
-          description="Active youth on program — attendance, deliverables, and track assignments."
+          eyebrow={isStudentViewer ? "My track" : "Operational roster"}
+          title={isStudentViewer ? "Cohort roster" : "Students"}
+          description={
+            isStudentViewer
+              ? "View-only list of youth on your track — name, track, and team. Your personal attendance and deliverables are on your dashboard."
+              : "Active youth on program — attendance, deliverables, and track assignments."
+          }
           actions={
+            isStudentViewer ? undefined : (
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -314,6 +330,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
                 </Link>
               ) : null}
             </div>
+            )
           }
         />
       ) : null}
@@ -339,6 +356,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         <RosterQueueTabs
           active={queue.id}
           facets={facets ?? null}
+          queues={isStudentViewer ? STUDENT_ROSTER_QUEUES : undefined}
           onChange={(q) =>
             updateUrl((sp) => {
               sp.set("queue", q);
@@ -352,15 +370,18 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         <p className="mt-2 text-xs text-gray-500">{queue.description}</p>
       </div>
 
-      <BobImportProgress
-        className="mb-6"
-        label="roster"
-        fetchStatus={getBobRosterImportStatus}
-        startImport={startBobRosterImport}
-        onComplete={() => refetch()}
-        compact
-      />
+      {!isStudentViewer ? (
+        <BobImportProgress
+          className="mb-6"
+          label="roster"
+          fetchStatus={getBobRosterImportStatus}
+          startImport={startBobRosterImport}
+          onComplete={() => refetch()}
+          compact
+        />
+      ) : null}
 
+      {!isStudentViewer ? (
       <RosterRecordsToolbar
         filters={filters}
         facets={facets ?? null}
@@ -381,11 +402,13 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
           setFilters((f) => ({ ...EMPTY_ROSTER_FILTERS, search: f.search }))
         }
       />
+      ) : null}
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-xs text-gray-500">
           {loading ? "Updating…" : `${rows.length} of ${total} students`}
         </p>
+        {!isStudentViewer ? (
         <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
           <button
             type="button"
@@ -416,6 +439,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
             List
           </button>
         </div>
+        ) : null}
       </div>
 
       {error ? (
@@ -445,7 +469,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         onCancel={() => !deleteMutation.isPending && setDeleteTarget(null)}
       />
 
-      {view === "grid" ? (
+      {effectiveView === "grid" ? (
         scopedRosterEmpty ? (
           <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50">
             <ScopedEmptyState access={access} resource="students" />
@@ -462,6 +486,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
             columns={columns}
             labelsForField={labelsForField}
             onOpenStudent={openStudent}
+            simplifiedView={isStudentViewer}
           />
         )
       ) : (

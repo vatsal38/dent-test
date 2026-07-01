@@ -47,7 +47,7 @@ import {
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
-import { useBobProjectTeamsList } from "@/platform/query/hooks/useBobProjectTeams";
+import { useBobProjectTeamsList, useMyBobProjectTeams } from "@/platform/query/hooks/useBobProjectTeams";
 import type { BobStudent } from "@/platform/api/bob/students";
 import {
   filterDeliverablesForStudent,
@@ -106,7 +106,14 @@ export function MilestonesPage() {
     orgId,
     track: trackFilter || undefined,
   });
-  const projectTeamsQuery = useBobProjectTeamsList();
+  const isStudent = access.role === "student";
+  const projectTeamsQuery = useBobProjectTeamsList(undefined, {
+    enabled: !isStudent,
+  });
+  const myProjectTeamsQuery = useMyBobProjectTeams(isStudent);
+  const projectTeams = isStudent
+    ? (myProjectTeamsQuery.data?.data ?? [])
+    : (projectTeamsQuery.data?.data ?? []);
   const updateMilestone = useUpdateBobMilestone();
   const rawData = milestonesQuery.data?.data ?? [];
   const data = useMemo(() => {
@@ -114,9 +121,9 @@ export function MilestonesPage() {
     return filterDeliverablesForStudent(
       rawData,
       linkedStudent,
-      projectTeamsQuery.data?.data ?? [],
+      projectTeams,
     );
-  }, [rawData, linkedStudent, projectTeamsQuery.data?.data]);
+  }, [rawData, linkedStudent, projectTeams]);
   const loading = milestonesQuery.isLoading;
   const error = milestonesQuery.error
     ? parseApiError(milestonesQuery.error)
@@ -131,12 +138,12 @@ export function MilestonesPage() {
 
   const groupedByTeam = useMemo(() => {
     let grouped = groupDeliverablesByTeam(data);
-    if (!grouped.length && projectTeamsQuery.data?.data?.length) {
+    if (!grouped.length && projectTeams.length) {
       const teams = linkedStudent
-        ? projectTeamsQuery.data.data.filter(
+        ? projectTeams.filter(
             (team) => studentProjectTeamNames(linkedStudent, [team]).length > 0,
           )
-        : projectTeamsQuery.data.data;
+        : projectTeams;
       grouped = teams.map((team) => ({
         teamName: team.name,
         items: data.filter((d) =>
@@ -150,10 +157,7 @@ export function MilestonesPage() {
       }));
     }
     if (linkedStudent) {
-      const mine = studentProjectTeamNames(
-        linkedStudent,
-        projectTeamsQuery.data?.data ?? [],
-      );
+      const mine = studentProjectTeamNames(linkedStudent, projectTeams);
       if (mine.length) {
         grouped = grouped.filter((row) =>
           mine.some((name) => teamNameMatchesFilter(row.teamName, name)),
@@ -164,7 +168,7 @@ export function MilestonesPage() {
     return grouped.filter((row) =>
       teamNameMatchesFilter(row.teamName, selectedTeam),
     );
-  }, [data, selectedTeam, projectTeamsQuery.data?.data, linkedStudent]);
+  }, [data, selectedTeam, projectTeams, linkedStudent]);
 
   const pendingReviewItems = useMemo(
     () => listTeamDeliverablesNeedingReview(data),

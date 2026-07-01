@@ -43,6 +43,7 @@ export type WidgetKind =
   | "at_risk_list"
   | "weekly_milestone_progress"
   | "blitz_teams"
+  | "my_project_team"
   | "quick_actions"
   | "escalation_banner"
   | "notifications";

@@ -33,6 +33,7 @@ import {
   studentLabel,
 } from "@/features/bob/submit/StudentMultiSelect";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
 
 function isValidFormType(value: string | null): boolean {
   return isBobFormType(value);
@@ -42,17 +43,19 @@ export function SubmitPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user } = useAuth();
+    const { access } = useBobAccess();
+    const isStudent = access.role === "student";
+    const { data: me } = useBobMe();
+    const linkedStudentId = me?.linkedStudent?.id ?? null;
 
     const returnHref = decodeBobReturnTo(searchParams?.get("returnTo"));
     const prefilledStudentId = searchParams?.get("studentId") || '';
     const typeParam = searchParams?.get("type");
     const submissionType = isValidFormType(typeParam)
         ? typeParam
-        : prefilledStudentId
+        : prefilledStudentId && !isStudent
           ? 'incident'
           : null;
-
-    const { data: me } = useBobMe();
     const wellnessPodId =
         submissionType === "wellness_check" && me?.coachScope
             ? me?.primaryPod?.id ?? null
@@ -83,7 +86,8 @@ export function SubmitPage() {
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
     const needStudents =
-        submissionType === "incident" || submissionType === "wellness_check";
+        !isStudent &&
+        (submissionType === "incident" || submissionType === "wellness_check");
     const studentsQuery = useBobStudentsList(
         studentsListParams,
         { enabled: Boolean(needStudents) },
@@ -347,7 +351,11 @@ export function SubmitPage() {
     }
 
     if (!submissionType || !formDef) {
-        return <FormsHub returnHref={returnHref} />;
+        return <FormsHub returnHref={returnHref} studentMode={isStudent} />;
+    }
+
+    if (isStudent && submissionType !== "anonymous_feedback") {
+        return <FormsHub returnHref={returnHref} studentMode />;
     }
 
     if (submitted) {
@@ -596,7 +604,7 @@ export function SubmitPage() {
                                         </optgroup>
                                     ) : null}
                                     {blitzOptions?.squads?.length ? (
-                                        <optgroup label="Squads (from roster)">
+                                        <optgroup label="Squads (BoB '26)">
                                             {blitzOptions.squads.map((o) => (
                                                 <option key={`s-${o.value}`} value={o.value}>
                                                     {o.label}
