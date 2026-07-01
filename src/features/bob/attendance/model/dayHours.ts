@@ -1,4 +1,3 @@
-import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
 import type { StudentDayAttendance } from "../types";
 
 export function parseHoursLabel(label?: string | null): number {
@@ -13,15 +12,6 @@ export function resolveDayHoursNumeric(day: StudentDayAttendance): number {
     attended =
       parseHoursLabel(day.morning.hoursLabel) +
       parseHoursLabel(day.afternoon.hoursLabel);
-  }
-  if (
-    attended <= 0 &&
-    (day.attendanceState === "present" ||
-      day.health === "complete" ||
-      day.attendanceState === "late")
-  ) {
-    attended =
-      parseHoursLabel(day.expectedHoursLabel) || expectedHoursForDate(day.date);
   }
   return Math.round(attended * 100) / 100;
 }

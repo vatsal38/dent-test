@@ -287,7 +287,12 @@ export function DailyAttendanceTable({
                       onClick={() => onSelectDay(cell)}
                     >
                       <div className="flex flex-col items-center gap-1">
-                        <AttendanceStatusBadge attendanceState={cell.attendanceState} />
+                        <AttendanceStatusBadge
+                          health={cell.health}
+                          attendanceState={
+                            cell.health === "complete" ? "present" : cell.attendanceState
+                          }
+                        />
                         <span className="text-xs font-medium text-gray-700 tabular-nums">
                           {formatDayHoursPresent(cell)}
                         </span>

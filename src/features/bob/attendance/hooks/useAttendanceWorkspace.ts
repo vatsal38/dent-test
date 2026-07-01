@@ -14,6 +14,7 @@ import { computeAttendanceWorkspace } from "../model/computeWorkspace";
 import { filterStudentsByCoachAttendanceScope } from "../model/coachAttendanceScope";
 import {
   ATTENDANCE_FETCH_LIMIT,
+  ATTENDANCE_WEEK_FETCH_LIMIT,
   countEnrollment,
 } from "../model/scale";
 
@@ -106,14 +107,18 @@ export function useAttendanceWorkspace({
     [isStudentViewer, linkedStudentId],
   );
 
+  const attendanceFetchLimit = weekMode
+    ? ATTENDANCE_WEEK_FETCH_LIMIT
+    : ATTENDANCE_FETCH_LIMIT;
+
   const attendanceParams = useMemo(
     () => ({
       startDate,
       endDate,
-      limit: ATTENDANCE_FETCH_LIMIT,
+      limit: attendanceFetchLimit,
       ...studentAttendanceParams,
     }),
-    [startDate, endDate, studentAttendanceParams],
+    [startDate, endDate, studentAttendanceParams, attendanceFetchLimit],
   );
 
   const attendanceQuery = useBobAttendanceList(attendanceParams);
@@ -126,7 +131,7 @@ export function useAttendanceWorkspace({
     () => ({
       startDate: weekMonday,
       endDate: getWeekSunday(weekMonday),
-      limit: ATTENDANCE_FETCH_LIMIT,
+      limit: ATTENDANCE_WEEK_FETCH_LIMIT,
       ...studentAttendanceParams,
     }),
     [weekMonday, studentAttendanceParams],
@@ -143,7 +148,7 @@ export function useAttendanceWorkspace({
     () => ({
       startDate: PROGRAM_START_DATE,
       endDate: focusDate,
-      limit: ATTENDANCE_FETCH_LIMIT,
+      limit: ATTENDANCE_WEEK_FETCH_LIMIT,
       ...studentAttendanceParams,
     }),
     [focusDate, studentAttendanceParams],

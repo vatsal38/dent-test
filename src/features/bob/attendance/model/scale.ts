@@ -11,7 +11,11 @@ export const MAX_ALERTS_VISIBLE = 5;
 
 export const MAX_POD_ALERTS = 4;
 
-export const ATTENDANCE_FETCH_LIMIT = 500;
+/** Single-day attendance hub fetch. */
+export const ATTENDANCE_FETCH_LIMIT = 1000;
+
+/** Week grid needs ~6 records × students × 5 days — default 500 truncated Monday. */
+export const ATTENDANCE_WEEK_FETCH_LIMIT = 3000;
 
 export const STUDENT_IDS_BATCH_MAX = 500;
 

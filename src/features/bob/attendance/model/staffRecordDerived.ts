@@ -44,6 +44,42 @@ function hoursBetween(date: string, inTime: string, outTime: string): number {
   return Math.round((ms / 3600000) * 100) / 100;
 }
 
+/** Daily master often stores 4:00 PM Eastern (= 20:00 UTC) as a placeholder sign-in. */
+export function isScheduledPlaceholderTime(value?: string | null): boolean {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getUTCHours() === 20 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+}
+
+function hoursBetweenIso(date: string, inIso?: string | null, outIso?: string | null): number {
+  if (!inIso || !outIso) return 0;
+  if (isScheduledPlaceholderTime(inIso)) return 0;
+  return hoursBetween(date, toTimeInputValue(inIso), toTimeInputValue(outIso));
+}
+
+export function computeSessionHoursFromPunches(
+  date: string,
+  punches: StudentDayAttendance["punches"],
+  inType: PunchType,
+  outType: PunchType,
+): number {
+  return hoursBetweenIso(date, punches[inType].youthTimeIso, punches[outType].youthTimeIso);
+}
+
+/** Payroll hours from youth sign-in/out punches (capped at program day max, usually 5h). */
+export function computeHoursPresentFromPunchSlots(
+  date: string,
+  punches: StudentDayAttendance["punches"],
+): number {
+  const morning = computeSessionHoursFromPunches(date, punches, "am_in", "am_out");
+  const afternoon = computeSessionHoursFromPunches(date, punches, "pm_in", "pm_out");
+  const total = Math.round((morning + afternoon) * 100) / 100;
+  const cap = expectedHoursForDate(date);
+  if (cap > 0 && total > cap) return cap;
+  return total;
+}
+
 export function computeSessionHours(
   date: string,
   inTime: string,

@@ -15,10 +15,14 @@ import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
   computeHoursPresentFromStaffTimes,
   buildStaffCorrections,
+  computeHoursPresentFromPunchSlots,
+  computeSessionHoursFromPunches,
+  isScheduledPlaceholderTime,
 } from "./staffRecordDerived";
 import { toTimeInputValue } from "./attendanceRecordTime";
 import {
   expectedPunchTypes,
+  expectedHoursForDate,
   isAttendanceExpectedOn,
   isProgramDay,
   isShowcaseDay,
@@ -111,6 +115,26 @@ function setPunchTime(
   };
 }
 
+function punchBelongsToEnrollment(
+  ev: BobAttendance,
+  studentId: string,
+  podId: string,
+  studentById: Map<string, BobStudent>,
+): boolean {
+  if (ev.studentId !== studentId) return false;
+  const recordPod = ev.podId ? String(ev.podId) : null;
+  if (!recordPod || recordPod === UNASSIGNED_POD_ID) return true;
+  const studentPod = studentById.get(studentId)?.podId;
+  if (studentPod && String(studentPod) === recordPod) return true;
+  return recordPod === podId;
+}
+
+function isLowTrustRollupHours(value?: string | null): boolean {
+  if (!value) return true;
+  const n = Number(String(value).replace(/[^\d.]/g, ""));
+  return !Number.isFinite(n) || n < 0.25;
+}
+
 function parseLocalMinutesFromIso(value?: string | null): number | null {
   if (!value) return null;
   const d = new Date(value);
@@ -152,7 +176,7 @@ function populateDailyRecordPunches(
       daily.manualEndTime,
   );
 
-  if (amInDisplay || amInOriginal) {
+  if ((amInDisplay || amInOriginal) && !isScheduledPlaceholderTime(daily.signInTime)) {
     setPunchTime(punches, "am_in", {
       display: amInDisplay || amInOriginal,
       original: amInOriginal,
@@ -178,16 +202,24 @@ function populateDailyRecordPunches(
   } else if (pmOutDisplay || pmOutOriginal) {
     const signOutIso =
       daily.adjustedSignOut || daily.signOutTime || daily.rawSignOutTime || null;
-    const outType = isAfternoonSignOutTime(signOutIso) ? "pm_out" : "am_out";
-    setPunchTime(punches, outType, {
-      display: pmOutDisplay || pmOutOriginal,
-      original: pmOutOriginal,
-      adjusted: pmOutAdjusted,
-      eventId: daily.id,
-      state: punchState === "missing" ? "recorded" : punchState,
-      reason: pmOutAdjusted && pmOutOriginal !== pmOutAdjusted ? correctionSource : undefined,
-      source: pmOutAdjusted ? correctionSource : undefined,
-    });
+    const signInIso = daily.adjustedSignIn || daily.signInTime || daily.rawSignInTime || null;
+    const rollupLooksBogus =
+      isScheduledPlaceholderTime(signInIso) &&
+      signOutIso &&
+      signInIso &&
+      Math.abs(new Date(signOutIso).getTime() - new Date(signInIso).getTime()) < 45 * 60 * 1000;
+    if (!rollupLooksBogus) {
+      const outType = isAfternoonSignOutTime(signOutIso) ? "pm_out" : "am_out";
+      setPunchTime(punches, outType, {
+        display: pmOutDisplay || pmOutOriginal,
+        original: pmOutOriginal,
+        adjusted: pmOutAdjusted,
+        eventId: daily.id,
+        state: punchState === "missing" ? "recorded" : punchState,
+        reason: pmOutAdjusted && pmOutOriginal !== pmOutAdjusted ? correctionSource : undefined,
+        source: pmOutAdjusted ? correctionSource : undefined,
+      });
+    }
   }
 
   if (manualStart || staffIn) {
@@ -229,6 +261,7 @@ function deriveHealth(
   attendanceState: AttendanceState,
   dailyStatus?: BobAttendanceStatus,
   date?: string,
+  computedHours = 0,
 ): { health: DayHealth; missingPunchCount: number; isLate: boolean } {
   if (date && isProgramDay(date) && !isAttendanceExpectedOn(date)) {
     return { health: "future", missingPunchCount: 0, isLate: false };
@@ -251,6 +284,17 @@ function deriveHealth(
     return { health: "auto_filled", missingPunchCount, isLate };
   if (isLate && missingPunchCount === 0)
     return { health: "late", missingPunchCount, isLate };
+  const payrollReady =
+    computedHours >= 1.5 ||
+    (computedHours >= 0.5 &&
+      (attendanceState === "present" ||
+        dailyStatus === "present" ||
+        attendanceState === "late" ||
+        dailyStatus === "late"));
+  if (payrollReady && missingPunchCount === 0)
+    return { health: "complete", missingPunchCount, isLate };
+  if (payrollReady && missingPunchCount > 0)
+    return { health: "complete", missingPunchCount, isLate };
   if (attendanceState === "present" && missingPunchCount === 0)
     return { health: "complete", missingPunchCount, isLate };
   if (attendanceState === "missing_punch" || missingPunchCount > 0)
@@ -425,10 +469,8 @@ export function buildStudentDayAttendance(
       let punches = emptyPunches();
 
       for (const ev of punchEvents) {
-        if (ev.studentId !== studentId || ev.date !== date) continue;
-        const evPod =
-          ev.podId || studentById.get(studentId)?.podId || podId;
-        if (evPod !== podId) continue;
+        if (ev.date !== date) continue;
+        if (!punchBelongsToEnrollment(ev, studentId, podId, studentById)) continue;
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
         const timeIso = punchEventTimeIso(ev, pt);
@@ -463,7 +505,6 @@ export function buildStudentDayAttendance(
           punches.am_out = { ...punches.am_out, state: "na" };
         }
       } else if (requiredPunches.length === 0) {
-        // Outside program calendar — only gray out empty slots; keep synced punch times green.
         for (const pt of PUNCH_TYPES) {
           if (punches[pt].state === "missing") {
             punches[pt] = { ...punches[pt], state: "na" };
@@ -471,35 +512,44 @@ export function buildStudentDayAttendance(
         }
       }
 
+      const punchHours = computeHoursPresentFromPunchSlots(date, punches);
+      const morningHours = computeSessionHoursFromPunches(date, punches, "am_in", "am_out");
+      const afternoonHours = computeSessionHoursFromPunches(date, punches, "pm_in", "pm_out");
+
       const { health, missingPunchCount, isLate } = deriveHealth(
         punches,
         attendanceState,
         daily?.status,
         date,
+        punchHours,
       );
 
       const morning = buildSession(
         punches,
         "am_in",
         "am_out",
-        formatHoursLabel(daily?.amHours),
+        morningHours > 0 ? formatHoursLabel(morningHours) : formatHoursLabel(daily?.amHours),
         attendanceState,
       );
       const afternoon = buildSession(
         punches,
         "pm_in",
         "pm_out",
-        formatHoursLabel(daily?.pmHours),
+        afternoonHours > 0 ? formatHoursLabel(afternoonHours) : formatHoursLabel(daily?.pmHours),
         attendanceState,
       );
 
       const student = studentById.get(studentId);
 
       let totalHoursLabel =
-        formatHoursLabel(daily?.hoursPresent) ||
-        formatHoursLabel(daily?.totalHours);
+        punchHours > 0
+          ? formatHoursLabel(punchHours)
+          : formatHoursLabel(daily?.hoursPresent) || formatHoursLabel(daily?.totalHours);
 
-      if (!totalHoursLabel && daily) {
+      if (
+        (!totalHoursLabel || isLowTrustRollupHours(daily?.hoursPresent)) &&
+        daily
+      ) {
         const computed = computeHoursPresentFromStaffTimes(
           date,
           toTimeInputValue(daily.signInTime || daily.adjustedSignIn),
@@ -532,7 +582,9 @@ export function buildStudentDayAttendance(
         missingPunchCount,
         isLate,
         totalHoursLabel,
-        expectedHoursLabel: formatHoursLabel(daily?.maxHours),
+        expectedHoursLabel: formatHoursLabel(
+          expectedHoursForDate(date) || daily?.maxHours,
+        ),
         program: daily?.program ?? undefined,
         site: daily?.branch ?? student?.site ?? undefined,
         branch: daily?.branch ?? undefined,
