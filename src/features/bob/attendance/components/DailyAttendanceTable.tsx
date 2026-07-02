@@ -8,6 +8,7 @@ import { initialsOf } from "@/features/bob/roster/recordDisplay";
 import { AttendanceStatusBadge } from "./AttendanceStatusBadge";
 import { SessionSummary } from "./SessionSummary";
 import { FinalAttendanceSummary } from "./FinalAttendanceSummary";
+import { StaffCorrectionSummary } from "./StaffCorrectionSummary";
 import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
 import { studentMatchesSearch } from "../model/filterRows";
 import {
@@ -127,6 +128,9 @@ export function DailyAttendanceTable({
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[280px]">
                   Youth sign-in
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-orange-800 uppercase min-w-[280px]">
+                  Staff corrections
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase min-w-[280px]">
                   Final record
@@ -250,6 +254,18 @@ export function DailyAttendanceTable({
                         className="text-left w-full"
                       >
                         <SessionSummary day={today} compact />
+                      </button>
+                    </td>
+                    <td className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelectDay(today)}
+                        className="text-left w-full rounded-md border border-orange-100 bg-orange-50/30 px-2 py-1.5 hover:bg-orange-50/60"
+                      >
+                        <StaffCorrectionSummary
+                          corrections={today.staffCorrections}
+                          compact
+                        />
                       </button>
                     </td>
                     <td className="px-4 py-2">
