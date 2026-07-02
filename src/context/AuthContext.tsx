@@ -20,7 +20,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { auth, googleProvider } from "@/lib/firebase";
 import { bootstrap, BootstrapResponse } from "@/lib/api";
 import { getStoredDemoToken, setStoredDemoToken } from "@/lib/demoAuth";
-import { postDemoLogin, type DemoLoginRole } from "@/platform/api/auth";
+import {
+  postDemoLogin,
+  postStudentLogin,
+  StudentLoginError,
+  type DemoLoginRole,
+} from "@/platform/api/auth";
 import {
   clearBobSessionCache,
   invalidateBobSession,
@@ -131,13 +136,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyBootstrapResponse],
   );
 
-  const bootstrapDemoSession = useCallback(
+  const bootstrapTokenSession = useCallback(
     async (token: string) => {
       try {
         const response: BootstrapResponse = await bootstrap();
-        applyBootstrapResponse(response, `demo:${token.slice(-24)}`);
+        const sessionKey = token.startsWith("student.")
+          ? `student:${token.slice(-24)}`
+          : `demo:${token.slice(-24)}`;
+        applyBootstrapResponse(response, sessionKey);
       } catch (error) {
-        console.error("Demo bootstrap error:", error);
+        console.error("Token bootstrap error:", error);
         setAppUser(null);
         setOrganization(null);
         setDemoToken(null);
@@ -151,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = getStoredDemoToken();
     if (stored) {
       setDemoToken(stored);
-      bootstrapDemoSession(stored).finally(() => setIsLoading(false));
+      bootstrapTokenSession(stored).finally(() => setIsLoading(false));
       return;
     }
 
@@ -169,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [bootstrapUser, bootstrapDemoSession, queryClient]);
+  }, [bootstrapUser, bootstrapTokenSession, queryClient]);
 
   const signInWithGoogle = useCallback(async () => {
     try {
@@ -186,19 +194,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithEmail = useCallback(
     async (email: string, password: string) => {
       try {
-        const result = await signInWithEmailAndPassword(
-          auth,
-          email.trim(),
-          password,
-        );
-        if (result.user) {
-          await bootstrapUser(result.user);
+        const studentResult = await postStudentLogin(email, password);
+        setStoredDemoToken(studentResult.token);
+        setDemoToken(studentResult.token);
+        setFirebaseUser(null);
+        await bootstrapTokenSession(studentResult.token);
+        return;
+      } catch (studentErr) {
+        if (
+          studentErr instanceof StudentLoginError &&
+          studentErr.code === "NOT_STUDENT_ACCOUNT"
+        ) {
+          const result = await signInWithEmailAndPassword(
+            auth,
+            email.trim(),
+            password,
+          );
+          if (result.user) {
+            await bootstrapUser(result.user);
+          }
+          return;
         }
-      } catch (error) {
-        throw error;
+        throw studentErr;
       }
     },
-    [bootstrapUser],
+    [bootstrapUser, bootstrapTokenSession],
   );
 
   const signInWithDemo = useCallback(
@@ -207,9 +227,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStoredDemoToken(result.token);
       setDemoToken(result.token);
       setFirebaseUser(null);
-      await bootstrapDemoSession(result.token);
+      await bootstrapTokenSession(result.token);
     },
-    [bootstrapDemoSession],
+    [bootstrapTokenSession],
   );
 
   const logout = useCallback(async () => {
@@ -241,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     organization,
     isAuthenticated: !!(demoToken || firebaseUser) && !!appUser,
     isLoading,
-    isDemoSession: Boolean(demoToken),
+    isDemoSession: Boolean(demoToken?.startsWith("demo.")),
     signInWithGoogle,
     signInWithEmail,
     signInWithDemo,

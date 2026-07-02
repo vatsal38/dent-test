@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { isDemoModeEnabledClient } from '@/lib/demoAuth';
 import { isDentOpsPath } from '@/platform/rbac/dentOpsRoutes';
 import type { DemoLoginRole } from '@/platform/api/auth';
+import { StudentLoginError } from '@/platform/api/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/Skeleton';
@@ -20,6 +21,10 @@ const DEMO_ROLES: { role: DemoLoginRole; label: string }[] = [
 ];
 
 function firebaseAuthErrorMessage(error: unknown): string {
+  if (error instanceof StudentLoginError) {
+    if (error.status === 401) return 'Invalid email or password.';
+    return error.message;
+  }
   const code =
     error && typeof error === 'object' && 'code' in error
       ? String((error as { code: string }).code)
