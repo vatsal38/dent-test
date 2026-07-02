@@ -35,6 +35,7 @@ import {
   expectedPunchTypes,
   isAttendanceExpectedOn,
   isProgramDay,
+  listProgramDates,
 } from "@/lib/bobProgramCalendar";
 
 function isOperationalAttendancePod(pod: BobPod): boolean {
@@ -323,10 +324,18 @@ export function computeAttendanceWorkspace(
   const podById = new Map(pods.map((p) => [p.id, p]));
   const rangeStart = startDate || focusDate;
   const rangeEnd = endDate || focusDate;
-  const dates =
+  const rawDates =
     rangeStart === rangeEnd
       ? [rangeStart]
       : getDaysInRange(rangeStart, rangeEnd);
+  const dates =
+    rawDates.length === 1
+      ? rawDates.filter(isProgramDay)
+      : listProgramDates({
+          startDate: rangeStart,
+          endDate: rangeEnd,
+          throughDate: rangeEnd,
+        });
 
   const trackTerm = String(trackFilter || "").trim();
 

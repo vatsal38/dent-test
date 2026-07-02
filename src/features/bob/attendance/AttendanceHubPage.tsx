@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AttendanceHubSkeleton } from "./components/AttendancePageSkeletons";
 import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
-import { getDaysInRange, getWeekMonday, getWeekSunday } from "./weekDates";
+import { getWeekMonday, getWeekSunday } from "./weekDates";
 import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { filterDaysByHealth } from "./model/computeWorkspace";
@@ -43,6 +43,7 @@ import {
   PROGRAM_START_DATE,
   resolveAttendancePickerMinDate,
   resolveDefaultAttendanceFocusDate,
+  listProgramDates,
 } from "@/lib/bobProgramCalendar";
 
 export function AttendanceHubPage() {
@@ -179,7 +180,11 @@ export function AttendanceHubPage() {
     if (viewMode !== "week") return [focusDate];
     const mon = getWeekMonday(new Date(focusDate + "T12:00:00"));
     const sun = getWeekSunday(mon);
-    return getDaysInRange(mon, sun);
+    return listProgramDates({
+      startDate: mon,
+      endDate: sun,
+      throughDate: sun,
+    });
   }, [viewMode, focusDate]);
 
   const tableDays = useMemo(() => {

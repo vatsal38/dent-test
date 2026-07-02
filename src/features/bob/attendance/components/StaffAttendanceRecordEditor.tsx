@@ -28,8 +28,10 @@ import {
   hasStaffAfternoonOutCorrection,
   hasStaffMorningInCorrection,
   isScheduledPlaceholderTime,
+  staffAfternoonInInput,
   staffAfternoonOutInput,
   staffMorningInInput,
+  staffMorningOutInput,
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
 import { resolveDayHoursNumeric } from "../model/dayHours";
@@ -146,13 +148,9 @@ export function StaffAttendanceRecordEditor({
     const r = source;
     setStatus((r?.status as BobAttendanceStatus) || day.dailyStatus || "");
     setMorningIn(staffMorningInInput(r));
-    setMorningOut(
-      toTimeInputValue(r?.staffCorrectionSignOut || r?.manualEndTime),
-    );
-    setAfternoonIn(
-      toTimeInputValue(r?.staffCorrectionSignIn || r?.manualStartTime),
-    );
-    setAfternoonOut(staffAfternoonOutInput(r));
+    setMorningOut(staffMorningOutInput(r));
+    setAfternoonIn(staffAfternoonInInput(r));
+    setAfternoonOut(staffAfternoonOutInput(r, day));
     setNotes(r?.notes || resolveAttendanceStaffNote(day) || "");
     setPaid(Boolean(r?.paid));
     setPaidAmount(r?.paidAmount != null ? String(r.paidAmount) : "");
@@ -223,7 +221,12 @@ export function StaffAttendanceRecordEditor({
       morningIn,
       hasStaffMorningInCorrection(source) ? source?.signInTime : null,
     );
-    if (morningInIso !== undefined) payload.signInTime = morningInIso;
+    if (morningInIso !== undefined) {
+      payload.signInTime = morningInIso;
+      if (morningInIso) {
+        payload.manualOverride = new Date().toISOString();
+      }
+    }
 
     const morningOutIso = staffCorrectionIso(
       day.date,
@@ -246,8 +249,8 @@ export function StaffAttendanceRecordEditor({
     const afternoonOutIso = staffCorrectionIso(
       day.date,
       afternoonOut,
-      hasStaffAfternoonOutCorrection(source)
-        ? source?.adjustedSignOut || source?.signOutTime
+      hasStaffAfternoonOutCorrection(source, day)
+        ? source?.signOutTime || source?.adjustedSignOut
         : null,
     );
     if (afternoonOutIso !== undefined) payload.signOutTime = afternoonOutIso;

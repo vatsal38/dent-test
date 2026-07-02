@@ -65,6 +65,14 @@ export interface StaffCorrections {
   correctedAt?: string;
 }
 
+/** Youth sign-in + staff corrections merged — payroll-facing final times. */
+export interface FinalAttendanceRecord {
+  morning: StaffCorrectionSession & { hours?: string };
+  afternoon: StaffCorrectionSession & { hours?: string };
+  totalHours?: string;
+  correctedByName?: string;
+}
+
 export type DayHealth =
   | "complete"
   | "partial"
@@ -106,6 +114,8 @@ export interface StudentDayAttendance {
   hasAutoFill: boolean;
   /** Staff correction times from daily master (matches edit drawer). */
   staffCorrections: StaffCorrections;
+  /** Final times after youth sign-in + staff corrections. */
+  finalRecord: FinalAttendanceRecord;
 }
 
 export type IssueFilter =

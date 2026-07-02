@@ -15,11 +15,15 @@ import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
   computeEffectiveHoursPresent,
   buildStaffCorrections,
+  buildFinalAttendanceRecord,
   computeHoursPresentFromPunchSlots,
   computeSessionHoursFromPunches,
+  hasExplicitStaffCorrection,
   isScheduledPlaceholderTime,
+  staffAfternoonInInput,
   staffAfternoonOutInput,
   staffMorningInInput,
+  staffMorningOutInput,
 } from "./staffRecordDerived";
 import { toTimeInputValue } from "./attendanceRecordTime";
 import {
@@ -556,13 +560,9 @@ export function buildStudentDayAttendance(
           { date, punches } as StudentDayAttendance,
           {
             morningIn: staffMorningInInput(daily),
-            morningOut: toTimeInputValue(
-              daily.staffCorrectionSignOut || daily.manualEndTime,
-            ),
-            afternoonIn: toTimeInputValue(
-              daily.staffCorrectionSignIn || daily.manualStartTime,
-            ),
-            afternoonOut: staffAfternoonOutInput(daily),
+            morningOut: staffMorningOutInput(daily),
+            afternoonIn: staffAfternoonInInput(daily),
+            afternoonOut: staffAfternoonOutInput(daily, { punches }),
           },
         );
         if (computed > 0) {
@@ -602,16 +602,18 @@ export function buildStudentDayAttendance(
         staffCorrectionSignIn: daily?.staffCorrectionSignIn ?? undefined,
         staffCorrectionSignOut: daily?.staffCorrectionSignOut ?? undefined,
         notes: staffAnnotations.notes ?? daily?.notes ?? undefined,
-        hasManualCorrection: Boolean(
-          staffAnnotations.manualOverride ||
-            daily?.manualOverride ||
-            daily?.staffCorrectionSignIn ||
-            daily?.staffCorrectionSignOut ||
-            daily?.manualStartTime ||
-            daily?.manualEndTime,
-        ),
+        hasManualCorrection: hasExplicitStaffCorrection(daily),
         hasAutoFill: attendanceState === "auto_filled",
         staffCorrections: buildStaffCorrections(daily, date, { punches }),
+        finalRecord: buildFinalAttendanceRecord(
+          {
+            date,
+            punches,
+            morning,
+            afternoon,
+          } as StudentDayAttendance,
+          daily,
+        ),
       });
     }
   }

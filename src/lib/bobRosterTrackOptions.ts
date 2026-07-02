@@ -158,11 +158,53 @@ export function resolveStudentTrackLabel(student: {
   return first ? formatBobTrackDisplayLabel(first) : "Unassigned";
 }
 
+/** Whether a student-day has real sign-in/out or hours evidence (not roster baseline / status-only). */
+function hasRecordedAttendanceEvidence(day: {
+  punches?: Record<
+    string,
+    { youthTimeIso?: string; timeLabel?: string }
+  >;
+  totalHoursLabel?: string;
+}): boolean {
+  if (day.punches) {
+    for (const slot of Object.values(day.punches)) {
+      if (slot.youthTimeIso) return true;
+      if (
+        slot.timeLabel &&
+        slot.timeLabel !== "—" &&
+        slot.timeLabel !== "[object Object]"
+      ) {
+        return true;
+      }
+    }
+  }
+  const raw = String(day.totalHoursLabel || "").replace(/[^\d.]/g, "");
+  const hours = Number(raw);
+  return Number.isFinite(hours) && hours >= 0.5;
+}
+
 /** Whether a student-day counts as present for daily attendance (not hours). */
 export function isStudentPresentToday(day: {
   attendanceState: string;
   health: string;
+  punches?: Record<
+    string,
+    { youthTimeIso?: string; timeLabel?: string }
+  >;
+  totalHoursLabel?: string;
 }): boolean {
+  if (
+    day.attendanceState === "excused" ||
+    day.attendanceState === "absent" ||
+    day.attendanceState === "auto_filled"
+  ) {
+    return false;
+  }
+
+  if (!hasRecordedAttendanceEvidence(day)) {
+    return false;
+  }
+
   return (
     day.attendanceState === "present" ||
     day.attendanceState === "late" ||

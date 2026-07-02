@@ -7,6 +7,11 @@ export function parseHoursLabel(label?: string | null): number {
 }
 
 export function resolveDayHoursNumeric(day: StudentDayAttendance): number {
+  const finalLabel = day.finalRecord?.totalHours;
+  if (finalLabel) {
+    const fromFinal = parseHoursLabel(finalLabel);
+    if (fromFinal > 0) return Math.round(fromFinal * 100) / 100;
+  }
   let attended = parseHoursLabel(day.totalHoursLabel);
   if (attended <= 0) {
     attended =

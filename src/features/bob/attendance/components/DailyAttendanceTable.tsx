@@ -7,7 +7,7 @@ import { resolvePodName, resolveStudentName } from "../model/resolveDisplay";
 import { initialsOf } from "@/features/bob/roster/recordDisplay";
 import { AttendanceStatusBadge } from "./AttendanceStatusBadge";
 import { SessionSummary } from "./SessionSummary";
-import { StaffCorrectionSummary } from "./StaffCorrectionSummary";
+import { FinalAttendanceSummary } from "./FinalAttendanceSummary";
 import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
 import { studentMatchesSearch } from "../model/filterRows";
 import {
@@ -126,10 +126,10 @@ export function DailyAttendanceTable({
                   Program hrs
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[280px]">
-                  Sessions
+                  Youth sign-in
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-orange-700 uppercase min-w-[280px]">
-                  Staff corrections
+                <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase min-w-[280px]">
+                  Final record
                 </th>
               </>
             ) : null}
@@ -256,11 +256,10 @@ export function DailyAttendanceTable({
                       <button
                         type="button"
                         onClick={() => onSelectDay(today)}
-                        className="text-left w-full rounded-md border border-orange-100 bg-orange-50/30 px-2 py-1.5 hover:bg-orange-50/60"
+                        className="text-left w-full rounded-md border border-emerald-100 bg-emerald-50/30 px-2 py-1.5 hover:bg-emerald-50/60"
                       >
-                        <StaffCorrectionSummary
-                          corrections={today.staffCorrections}
-                          date={today.date}
+                        <FinalAttendanceSummary
+                          record={today.finalRecord}
                           compact
                         />
                       </button>
