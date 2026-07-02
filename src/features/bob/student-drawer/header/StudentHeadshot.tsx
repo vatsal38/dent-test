@@ -71,7 +71,7 @@ export function StudentHeadshot({
           <img
             src={photoUrl}
             alt={name}
-            className="max-h-[85vh] max-w-full rounded-xl shadow-2xl object-contain"
+            className="max-h-[90vh] max-w-[min(100%,28rem)] w-auto h-auto rounded-xl shadow-2xl object-contain"
             referrerPolicy="no-referrer"
             onClick={(e) => e.stopPropagation()}
           />

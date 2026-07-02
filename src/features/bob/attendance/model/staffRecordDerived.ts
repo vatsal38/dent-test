@@ -119,20 +119,69 @@ export function effectiveStaffTime(
   return syncedTimeInput(day, punch);
 }
 
+function sameIsoMoment(a?: string | null, b?: string | null): boolean {
+  if (!a || !b) return false;
+  const left = new Date(a).getTime();
+  const right = new Date(b).getTime();
+  return Number.isFinite(left) && Number.isFinite(right) && left === right;
+}
+
+export function hasStaffMorningInCorrection(
+  daily:
+    | Pick<
+        BobAttendance,
+        "signInTime" | "manualOverride" | "adjustedSignIn" | "rawSignInTime"
+      >
+    | null
+    | undefined,
+): boolean {
+  if (!daily?.signInTime || isScheduledPlaceholderTime(daily.signInTime)) return false;
+  if (daily.manualOverride) return true;
+  if (daily.adjustedSignIn && !sameIsoMoment(daily.adjustedSignIn, daily.rawSignInTime)) {
+    return true;
+  }
+  return Boolean(
+    daily.rawSignInTime && !sameIsoMoment(daily.signInTime, daily.rawSignInTime),
+  );
+}
+
 export function staffMorningInInput(
   daily:
-    | Pick<BobAttendance, "signInTime" | "manualOverride">
+    | Pick<
+        BobAttendance,
+        "signInTime" | "manualOverride" | "adjustedSignIn" | "rawSignInTime"
+      >
     | null
     | undefined,
 ): string {
-  if (
-    daily?.manualOverride &&
-    daily.signInTime &&
-    !isScheduledPlaceholderTime(daily.signInTime)
-  ) {
+  if (daily?.signInTime && hasStaffMorningInCorrection(daily)) {
     return toTimeInputValue(daily.signInTime);
   }
   return "";
+}
+
+export function hasStaffAfternoonOutCorrection(
+  daily:
+    | Pick<BobAttendance, "signOutTime" | "adjustedSignOut" | "rawSignOutTime">
+    | null
+    | undefined,
+): boolean {
+  if (daily?.adjustedSignOut) return true;
+  return Boolean(
+    daily?.signOutTime &&
+      daily?.rawSignOutTime &&
+      !sameIsoMoment(daily.signOutTime, daily.rawSignOutTime),
+  );
+}
+
+export function staffAfternoonOutInput(
+  daily:
+    | Pick<BobAttendance, "signOutTime" | "adjustedSignOut" | "rawSignOutTime">
+    | null
+    | undefined,
+): string {
+  if (!hasStaffAfternoonOutCorrection(daily)) return "";
+  return toTimeInputValue(daily?.adjustedSignOut || daily?.signOutTime);
 }
 
 export function computeEffectiveHoursPresent(
@@ -163,6 +212,7 @@ export function buildStaffCorrections(
   daily?: Pick<
     BobAttendance,
     | "signInTime"
+    | "rawSignInTime"
     | "adjustedSignIn"
     | "staffCorrectionSignOut"
     | "manualEndTime"
@@ -170,6 +220,7 @@ export function buildStaffCorrections(
     | "manualStartTime"
     | "adjustedSignOut"
     | "signOutTime"
+    | "rawSignOutTime"
     | "manualOverride"
     | "staffCorrectedByName"
     | "staffCorrectedAt"
@@ -177,7 +228,7 @@ export function buildStaffCorrections(
   date?: string,
   day?: Pick<StudentDayAttendance, "punches">,
 ): StaffCorrections {
-  const hasStaffMorningIn = Boolean(daily?.manualOverride && daily?.signInTime);
+  const hasStaffMorningIn = hasStaffMorningInCorrection(daily);
   const morningInStaff = hasStaffMorningIn
     ? formatAttendanceTime(daily?.signInTime)
     : undefined;
@@ -187,13 +238,17 @@ export function buildStaffCorrections(
   const afternoonInStaff = formatAttendanceTime(
     daily?.staffCorrectionSignIn || daily?.manualStartTime,
   );
+  const afternoonOutStaff = hasStaffAfternoonOutCorrection(daily)
+    ? formatAttendanceTime(daily?.adjustedSignOut || daily?.signOutTime)
+    : undefined;
 
   const hasCorrections = Boolean(
-    daily?.manualOverride ||
+    hasStaffMorningIn ||
       daily?.staffCorrectionSignIn ||
       daily?.staffCorrectionSignOut ||
       daily?.manualStartTime ||
-      daily?.manualEndTime,
+    daily?.manualEndTime ||
+    afternoonOutStaff,
   );
 
   const morning = {
@@ -202,7 +257,7 @@ export function buildStaffCorrections(
   };
   const afternoon = {
     in: afternoonInStaff,
-    out: undefined,
+    out: afternoonOutStaff,
   };
 
   const hasDisplayedCorrection = Boolean(
@@ -211,18 +266,21 @@ export function buildStaffCorrections(
 
   let hoursLabel: string | undefined;
   if (date && hasCorrections && hasDisplayedCorrection && day) {
-    const hours = computeEffectiveHoursPresent(day as StudentDayAttendance, {
-      morningIn: toTimeInputValue(
-        hasStaffMorningIn ? daily?.signInTime : undefined,
-      ),
-      morningOut: toTimeInputValue(
-        daily?.staffCorrectionSignOut || daily?.manualEndTime,
-      ),
-      afternoonIn: toTimeInputValue(
-        daily?.staffCorrectionSignIn || daily?.manualStartTime,
-      ),
-      afternoonOut: "",
-    });
+    const hours = computeEffectiveHoursPresent(
+      { ...(day as object), date } as StudentDayAttendance,
+      {
+        morningIn: toTimeInputValue(
+          hasStaffMorningIn ? daily?.signInTime : undefined,
+        ),
+        morningOut: toTimeInputValue(
+          daily?.staffCorrectionSignOut || daily?.manualEndTime,
+        ),
+        afternoonIn: toTimeInputValue(
+          daily?.staffCorrectionSignIn || daily?.manualStartTime,
+        ),
+        afternoonOut: staffAfternoonOutInput(daily),
+      },
+    );
     if (hours > 0) hoursLabel = `${hours}h`;
   }
 

@@ -108,6 +108,22 @@ export const BOB_STAFF_FORMS: BobFormDefinition[] = [
 
 export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
   {
+    id: "attendance_correction",
+    title: "Report absence / fix sign-in times",
+    description:
+      "Request approval for a planned absence or correct sign-in or sign-out times.",
+    href: "/app/bob/attendance/correction",
+    cta: "Open correction form",
+  },
+  {
+    id: "project_team",
+    title: "Submit your project team",
+    description:
+      "Tell us who is on your BoB project team for this summer.",
+    href: "https://airtable.com/appKnMenSN4RSG1ZV/paglydsT6YY4EKMiO/form",
+    cta: "Open team form",
+  },
+  {
     id: "progress_update",
     title: "Weekly progress update",
     description:

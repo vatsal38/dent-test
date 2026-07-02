@@ -25,7 +25,10 @@ import {
   deriveAttendanceStatusLabel,
   effectiveStaffTime,
   formatHoursValue,
+  hasStaffAfternoonOutCorrection,
+  hasStaffMorningInCorrection,
   isScheduledPlaceholderTime,
+  staffAfternoonOutInput,
   staffMorningInInput,
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
@@ -149,9 +152,7 @@ export function StaffAttendanceRecordEditor({
     setAfternoonIn(
       toTimeInputValue(r?.staffCorrectionSignIn || r?.manualStartTime),
     );
-    setAfternoonOut(
-      toTimeInputValue(r?.adjustedSignOut || r?.signOutTime),
-    );
+    setAfternoonOut(staffAfternoonOutInput(r));
     setNotes(r?.notes || resolveAttendanceStaffNote(day) || "");
     setPaid(Boolean(r?.paid));
     setPaidAmount(r?.paidAmount != null ? String(r.paidAmount) : "");
@@ -217,7 +218,11 @@ export function StaffAttendanceRecordEditor({
     if (notes.trim()) payload.notes = notes.trim();
     else if (source?.notes) payload.notes = null;
 
-    const morningInIso = staffCorrectionIso(day.date, morningIn, source?.signInTime);
+    const morningInIso = staffCorrectionIso(
+      day.date,
+      morningIn,
+      hasStaffMorningInCorrection(source) ? source?.signInTime : null,
+    );
     if (morningInIso !== undefined) payload.signInTime = morningInIso;
 
     const morningOutIso = staffCorrectionIso(
@@ -241,7 +246,9 @@ export function StaffAttendanceRecordEditor({
     const afternoonOutIso = staffCorrectionIso(
       day.date,
       afternoonOut,
-      source?.adjustedSignOut || source?.signOutTime,
+      hasStaffAfternoonOutCorrection(source)
+        ? source?.adjustedSignOut || source?.signOutTime
+        : null,
     );
     if (afternoonOutIso !== undefined) payload.signOutTime = afternoonOutIso;
 
@@ -382,6 +389,55 @@ export function StaffAttendanceRecordEditor({
             label="Afternoon session"
             value={`${afternoonHours}h`}
             hint="Staff correction + student sign-in"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          Final attendance record
+        </p>
+        <p className="text-xs text-emerald-900/80">
+          Student sign-in times plus any staff corrections. These are the final
+          times used to calculate attendance hours.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <ReadOnlyField
+            label="Morning sign in"
+            value={effectiveMorningIn || "—"}
+            hint="Student + staff correction"
+          />
+          <ReadOnlyField
+            label="Morning sign out"
+            value={effectiveMorningOut || "—"}
+            hint="Student + staff correction"
+          />
+          <ReadOnlyField
+            label="Afternoon sign in"
+            value={effectiveAfternoonIn || "—"}
+            hint="Student + staff correction"
+          />
+          <ReadOnlyField
+            label="Afternoon sign out"
+            value={effectiveAfternoonOut || "—"}
+            hint="Student + staff correction"
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-3 pt-1 border-t border-emerald-100">
+          <ReadOnlyField
+            label="Morning session"
+            value={`${morningHours}h`}
+            hint="Final hours"
+          />
+          <ReadOnlyField
+            label="Afternoon session"
+            value={`${afternoonHours}h`}
+            hint="Final hours"
+          />
+          <ReadOnlyField
+            label="Total hours"
+            value={`${hoursPresent}h`}
+            hint="Final daily total"
           />
         </div>
       </div>

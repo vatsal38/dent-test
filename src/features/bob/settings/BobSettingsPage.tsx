@@ -114,8 +114,8 @@ export function BobSettingsPage() {
     setMessage(null);
     try {
       await startEvaluationsDemographicsSync({
-        sinceHours: 72,
-        limit: 15,
+        sinceHours: 168,
+        limit: 100,
       });
       await pollDemographicsStatus();
     } catch (err) {

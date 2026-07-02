@@ -80,7 +80,9 @@ export function cardTitle(s: BobSubmission) {
             : raw === "parent_contact"
               ? "Parent contact incident"
               : formatLabel(s.incidentType) || "Incident";
-    return studentList ? `${studentList} · ${kind}` : kind;
+    const by =
+      s.createdByLabel && !s.isAnonymous ? ` · ${s.createdByLabel}` : "";
+    return studentList ? `${studentList} · ${kind}${by}` : `${kind}${by}`;
   }
   if (s.type === "wellness_check") {
     const score =

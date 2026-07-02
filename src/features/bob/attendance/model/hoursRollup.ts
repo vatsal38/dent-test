@@ -214,12 +214,7 @@ export function buildHoursAttendanceRollup(input: {
       mergeBucket(overall.today, h);
     }
 
-    for (let t = new Date(`${weekStart}T12:00:00`).getTime();
-      t <= new Date(`${weekEnd}T12:00:00`).getTime();
-      t += 86400000
-    ) {
-      const date = new Date(t).toISOString().slice(0, 10);
-      if (!isProgramDay(date)) continue;
+    for (const date of weekProgramDates) {
       const daysForDate = weekByStudentDate.get(`${student.id}|${date}`) || [];
       for (const day of daysForDate) {
         const h = hoursFromDay(day);

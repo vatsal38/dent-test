@@ -126,6 +126,9 @@ export function AttendanceHubControls({
   trackSelectRef,
   hideTrackFilter = false,
   hideSearch = false,
+  hideWeekMode = false,
+  hideHealthFilters = false,
+  hideSummaryBar = false,
   minDate,
   maxDate,
 }: {
@@ -151,6 +154,9 @@ export function AttendanceHubControls({
   trackSelectRef?: Ref<HTMLSelectElement>;
   hideTrackFilter?: boolean;
   hideSearch?: boolean;
+  hideWeekMode?: boolean;
+  hideHealthFilters?: boolean;
+  hideSummaryBar?: boolean;
   minDate?: string;
   maxDate?: string;
 }) {
@@ -181,15 +187,19 @@ export function AttendanceHubControls({
           className={`h-8 px-2 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500 min-w-[140px] max-w-[220px] ${hideTrackFilter ? "hidden" : ""}`}
         />
 
-        <Segmented
-          value={viewMode}
-          options={[
-            { id: "day", label: "Day" },
-            { id: "week", label: "Week" },
-          ]}
-          onChange={(id) => onViewModeChange(id as "day" | "week")}
-        />
+        {!hideWeekMode ? (
+          <Segmented
+            value={viewMode}
+            options={[
+              { id: "day", label: "Day" },
+              { id: "week", label: "Week" },
+            ]}
+            onChange={(id) => onViewModeChange(id as "day" | "week")}
+          />
+        ) : null}
 
+        {!hideHealthFilters ? (
+        <>
         <div className="hidden sm:block h-5 w-px bg-gray-200" />
 
         <Segmented
@@ -197,6 +207,8 @@ export function AttendanceHubControls({
           options={PRIMARY_FILTERS}
           onChange={(id) => onHealthFilterChange(id as IssueFilter)}
         />
+        </>
+        ) : null}
 
         <div className="flex-1 min-w-[140px]" />
 
@@ -237,6 +249,7 @@ export function AttendanceHubControls({
         )}
       </div>
 
+      {!hideSummaryBar ? (
       <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-gray-50 border-t border-gray-100">
         <MetricPill label="expected" value={summary.expected} />
         <MetricPill
@@ -292,6 +305,7 @@ export function AttendanceHubControls({
           </button>
         ) : null}
       </div>
+      ) : null}
     </div>
   );
 }

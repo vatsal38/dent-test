@@ -33,6 +33,15 @@ function filterRecordsForStudent<T extends { studentId?: string | null }>(
   return rows.filter((r) => String(r.studentId || "") === studentId);
 }
 
+const STUDENT_ATTENDANCE_HISTORY_DAYS = 42;
+
+function studentHistoryStart(focusDate: string): string {
+  const d = new Date(`${focusDate}T12:00:00`);
+  d.setDate(d.getDate() - STUDENT_ATTENDANCE_HISTORY_DAYS);
+  const iso = d.toISOString().slice(0, 10);
+  return iso < PROGRAM_START_DATE ? PROGRAM_START_DATE : iso;
+}
+
 export function useAttendanceWorkspace({
   focusDate,
   weekMode = false,
@@ -47,8 +56,16 @@ export function useAttendanceWorkspace({
   const effectiveTrack = isStudentViewer ? "" : trackFilter;
 
   const weekMonday = getWeekMonday(new Date(focusDate + "T12:00:00"));
-  const startDate = weekMode ? weekMonday : focusDate;
-  const endDate = weekMode ? getWeekSunday(weekMonday) : focusDate;
+  const startDate = isStudentViewer
+    ? studentHistoryStart(focusDate)
+    : weekMode
+      ? weekMonday
+      : focusDate;
+  const endDate = isStudentViewer
+    ? focusDate
+    : weekMode
+      ? getWeekSunday(weekMonday)
+      : focusDate;
 
   const podsQuery = useBobPodsList(
     { limit: 100 },
@@ -107,9 +124,11 @@ export function useAttendanceWorkspace({
     [isStudentViewer, linkedStudentId],
   );
 
-  const attendanceFetchLimit = weekMode
-    ? ATTENDANCE_WEEK_FETCH_LIMIT
-    : ATTENDANCE_FETCH_LIMIT;
+  const attendanceFetchLimit = isStudentViewer
+    ? 500
+    : weekMode
+      ? ATTENDANCE_WEEK_FETCH_LIMIT
+      : ATTENDANCE_FETCH_LIMIT;
 
   const attendanceParams = useMemo(
     () => ({
@@ -221,8 +240,8 @@ export function useAttendanceWorkspace({
     () =>
       computeAttendanceWorkspace({
         focusDate,
-        startDate: weekMode ? startDate : undefined,
-        endDate: weekMode ? endDate : undefined,
+        startDate: isStudentViewer || weekMode ? startDate : undefined,
+        endDate: isStudentViewer || weekMode ? endDate : undefined,
         podFilter: effectivePod || undefined,
         trackFilter: effectiveTrack || undefined,
         pods,
@@ -237,6 +256,7 @@ export function useAttendanceWorkspace({
       weekMode,
       startDate,
       endDate,
+      isStudentViewer,
       effectivePod,
       effectiveTrack,
       pods,

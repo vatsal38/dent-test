@@ -50,7 +50,7 @@ export function AttendanceSummaryWidget({
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
-              Overall attendance
+              My attendance
             </p>
             <p className="mt-1 text-3xl font-bold text-emerald-950 tabular-nums">
               {overall}%

@@ -13,11 +13,13 @@ import {
 } from "../types";
 import { formatAttendanceTime, formatHoursLabel } from "./formatAttendanceTime";
 import {
-  computeHoursPresentFromStaffTimes,
+  computeEffectiveHoursPresent,
   buildStaffCorrections,
   computeHoursPresentFromPunchSlots,
   computeSessionHoursFromPunches,
   isScheduledPlaceholderTime,
+  staffAfternoonOutInput,
+  staffMorningInInput,
 } from "./staffRecordDerived";
 import { toTimeInputValue } from "./attendanceRecordTime";
 import {
@@ -550,16 +552,18 @@ export function buildStudentDayAttendance(
         (!totalHoursLabel || isLowTrustRollupHours(daily?.hoursPresent)) &&
         daily
       ) {
-        const computed = computeHoursPresentFromStaffTimes(
-          date,
-          toTimeInputValue(
-            isScheduledPlaceholderTime(daily.signInTime)
-              ? null
-              : daily.signInTime || daily.adjustedSignIn,
-          ),
-          toTimeInputValue(daily.staffCorrectionSignOut || daily.manualEndTime),
-          toTimeInputValue(daily.staffCorrectionSignIn || daily.manualStartTime),
-          toTimeInputValue(daily.adjustedSignOut || daily.manualEndTime),
+        const computed = computeEffectiveHoursPresent(
+          { date, punches } as StudentDayAttendance,
+          {
+            morningIn: staffMorningInInput(daily),
+            morningOut: toTimeInputValue(
+              daily.staffCorrectionSignOut || daily.manualEndTime,
+            ),
+            afternoonIn: toTimeInputValue(
+              daily.staffCorrectionSignIn || daily.manualStartTime,
+            ),
+            afternoonOut: staffAfternoonOutInput(daily),
+          },
         );
         if (computed > 0) {
           totalHoursLabel = formatHoursLabel(computed);

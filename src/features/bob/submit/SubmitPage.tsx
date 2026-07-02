@@ -56,9 +56,10 @@ export function SubmitPage() {
         : prefilledStudentId && !isStudent
           ? 'incident'
           : null;
+    const assignedCount = me?.assignedPods?.length ?? 0;
     const wellnessPodId =
-        submissionType === "wellness_check" && me?.coachScope
-            ? me?.primaryPod?.id ?? null
+        submissionType === "wellness_check" && me?.coachScope && assignedCount <= 1
+            ? me?.primaryPod?.id ?? me?.assignedPods?.[0]?.id ?? null
             : null;
     const { data: wellnessPod } = useBobPodDetail(wellnessPodId);
     const wellnessPodStudentIds = wellnessPod?.students ?? [];

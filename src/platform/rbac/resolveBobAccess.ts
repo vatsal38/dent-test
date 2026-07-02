@@ -24,7 +24,10 @@ export function resolveBobAccess(
     scopeType,
     isScoped: Boolean(me?.coachScope),
     identifiers: me?.coachIdentifiers ?? [],
-    podIds: me?.podIds ?? [],
+    podIds:
+      me?.assignedPods?.length
+        ? me.assignedPods.map((p) => p.id)
+        : me?.podIds ?? [],
     siteNames: me?.siteNames ?? [],
     primaryPod: me?.primaryPod ?? null,
     user: me?.user ?? null,

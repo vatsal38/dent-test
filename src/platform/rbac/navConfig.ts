@@ -91,12 +91,20 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     section: "primary",
   },
   {
+    href: "/app/bob/blitz",
+    label: "Blitz points",
+    iconKey: "milestones",
+    permission: "dashboard.view",
+    section: "primary",
+    after: "/app/bob/deliverables",
+  },
+  {
     href: "/app/bob/teams",
     label: "Project teams",
     iconKey: "teams",
     permission: "teams.view",
     section: "primary",
-    after: "/app/bob/deliverables",
+    after: "/app/bob/blitz",
   },
   {
     href: "/app/bob/key-links",

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 import { KpiGrid, type KpiItem } from "@/design-system/patterns/KpiGrid";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import {
   useBobWellnessStats,
@@ -15,13 +16,18 @@ import { Skeleton } from "@/components/Skeleton";
 
 export function WellnessCheckPage() {
   const { data: me } = useBobMe();
+  const { access } = useBobAccess();
   const facetsQuery = useBobStudentsFacets();
   const [weekIndex, setWeekIndex] = useState<number | undefined>(undefined);
   const [trackFilter, setTrackFilter] = useState("");
   const [search, setSearch] = useState("");
 
-  const podId =
-    me?.coachScope && me?.primaryPod?.id ? me.primaryPod.id : undefined;
+  const podId = useMemo(() => {
+    if (!me?.coachScope) return undefined;
+    const assigned = me.assignedPods ?? [];
+    if (assigned.length > 1 || access.podIds.length > 1) return undefined;
+    return me.primaryPod?.id ?? assigned[0]?.id ?? access.podIds[0];
+  }, [me?.coachScope, me?.assignedPods, me?.primaryPod?.id, access.podIds]);
 
   const weekParams = useMemo(
     () => ({

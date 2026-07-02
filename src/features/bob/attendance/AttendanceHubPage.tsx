@@ -14,6 +14,7 @@ import { AttendanceHubControls } from "./components/AttendanceHubControls";
 import { AttendanceHoursRollup } from "./components/AttendanceHoursRollup";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
 import { DailyAttendanceTable } from "./components/DailyAttendanceTable";
+import { StudentMyAttendanceCards } from "./components/StudentMyAttendanceCards";
 import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
 import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
 import { StudentDayDrawer } from "./components/StudentDayDrawer";
@@ -250,9 +251,17 @@ export function AttendanceHubPage() {
         onClose={() => setSyncError(null)}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-        <h1 className="text-lg font-bold text-gray-900">
-          {isStudentViewer ? "My attendance" : "Attendance"}
-        </h1>
+        <div>
+          <h1 className="text-lg font-bold text-gray-900">
+            {isStudentViewer ? "My attendance" : "Attendance"}
+          </h1>
+          {isStudentViewer ? (
+            <p className="text-xs text-gray-500 mt-0.5 max-w-xl">
+              Sign-in and sign-out times for each program day. Use the date to
+              scroll through recent weeks.
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {!isStudentViewer ? (
             <>
@@ -440,26 +449,39 @@ export function AttendanceHubPage() {
         trackSelectRef={trackSelectRef}
         hideTrackFilter={isStudentViewer}
         hideSearch={isStudentViewer}
+        hideWeekMode={isStudentViewer}
+        hideHealthFilters={isStudentViewer}
+        hideSummaryBar={isStudentViewer}
         minDate={datePickerMin}
         maxDate={PROGRAM_END_DATE}
       />
 
-      <AttendanceHoursRollup
-        rollup={hoursRollup}
-        focusDate={focusDate}
-        trackFilter={trackFilter}
-      />
+      {isStudentViewer ? (
+        <StudentMyAttendanceCards
+          days={workspace.days}
+          student={workspace.students[0]}
+          focusDate={focusDate}
+        />
+      ) : (
+        <>
+          <AttendanceHoursRollup
+            rollup={hoursRollup}
+            focusDate={focusDate}
+            trackFilter={trackFilter}
+          />
 
-      <DailyAttendanceTable
-        days={tableDays}
-        workspace={workspace}
-        focusDate={focusDate}
-        weekDates={viewMode === "week" ? weekDates : undefined}
-        onSelectDay={setSelectedDay}
-        search={debouncedSearch}
-        page={page}
-        onPageChange={setPage}
-      />
+          <DailyAttendanceTable
+            days={tableDays}
+            workspace={workspace}
+            focusDate={focusDate}
+            weekDates={viewMode === "week" ? weekDates : undefined}
+            onSelectDay={setSelectedDay}
+            search={debouncedSearch}
+            page={page}
+            onPageChange={setPage}
+          />
+        </>
+      )}
 
       <section className={isStudentViewer ? "hidden" : "mt-8"}>
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
