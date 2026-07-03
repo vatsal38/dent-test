@@ -1,10 +1,16 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BobStudent } from "@/platform/api/bob/students";
 
 function studentLabel(s: BobStudent) {
   return [s.firstName, s.lastName].filter(Boolean).join(" ") || s.id;
+}
+
+function compareStudentsByName(a: BobStudent, b: BobStudent): number {
+  return studentLabel(a).localeCompare(studentLabel(b), undefined, {
+    sensitivity: "base",
+  });
 }
 
 export function StudentMultiSelect({
@@ -22,15 +28,35 @@ export function StudentMultiSelect({
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  const selected = useMemo(
-    () => students.filter((s) => selectedIds.includes(s.id)),
-    [students, selectedIds],
+  const sortedStudents = useMemo(
+    () => [...students].sort(compareStudentsByName),
+    [students],
   );
 
+  const selected = useMemo(
+    () =>
+      sortedStudents
+        .filter((s) => selectedIds.includes(s.id))
+        .sort(compareStudentsByName),
+    [sortedStudents, selectedIds],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return students.slice(0, 50);
+    if (!search.trim()) return sortedStudents.slice(0, 50);
     const q = search.trim().toLowerCase();
-    return students
+    return sortedStudents
       .filter(
         (s) =>
           (s.firstName || "").toLowerCase().includes(q) ||
@@ -40,13 +66,13 @@ export function StudentMultiSelect({
           s.id.toLowerCase().includes(q),
       )
       .slice(0, 50);
-  }, [students, search]);
+  }, [sortedStudents, search]);
 
   function toggleStudent(s: BobStudent) {
     const next = selectedIds.includes(s.id)
       ? selectedIds.filter((id) => id !== s.id)
       : [...selectedIds, s.id];
-    const labels = students
+    const labels = sortedStudents
       .filter((st) => next.includes(st.id))
       .map(studentLabel)
       .join(", ");
@@ -55,7 +81,7 @@ export function StudentMultiSelect({
 
   function removeStudent(id: string) {
     const next = selectedIds.filter((sid) => sid !== id);
-    const labels = students
+    const labels = sortedStudents
       .filter((st) => next.includes(st.id))
       .map(studentLabel)
       .join(", ");
@@ -148,4 +174,4 @@ export function StudentMultiSelect({
   );
 }
 
-export { studentLabel };
+export { studentLabel, compareStudentsByName };

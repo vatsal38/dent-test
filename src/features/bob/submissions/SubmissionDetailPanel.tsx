@@ -106,7 +106,31 @@ export function SubmissionDetailPanel({
             <h2 className="mt-2 text-lg font-semibold text-gray-900">
               {cardTitle(data)}
             </h2>
-            {data.studentId || (data.studentIds && data.studentIds.length > 0) ? (
+            {data.type === "dent_testimony" &&
+            data.testimonySubject === "staff" &&
+            (data.staffMemberName || data.staffMemberId) ? (
+              <Link
+                href={
+                  data.staffMemberId
+                    ? `/app/bob/staff?staffId=${encodeURIComponent(data.staffMemberId)}`
+                    : "/app/bob/staff"
+                }
+                className="text-sm text-orange-600 hover:underline font-medium"
+              >
+                {data.staffMemberName || "View staff roster"} →
+              </Link>
+            ) : data.type === "pto_request" && (data.staffMemberName || data.staffMemberId) ? (
+              <Link
+                href={
+                  data.staffMemberId
+                    ? `/app/bob/staff?staffId=${encodeURIComponent(data.staffMemberId)}`
+                    : "/app/bob/staff"
+                }
+                className="text-sm text-orange-600 hover:underline font-medium"
+              >
+                {data.staffMemberName || "View staff roster"} →
+              </Link>
+            ) : data.studentId || (data.studentIds && data.studentIds.length > 0) ? (
               data.studentIds && data.studentIds.length > 1 ? (
                 <div className="text-sm text-gray-600 space-y-1">
                   <p className="font-medium text-gray-700">Students</p>

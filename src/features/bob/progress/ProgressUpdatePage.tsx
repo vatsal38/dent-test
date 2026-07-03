@@ -17,7 +17,7 @@ import { useBobProjectTeamsList } from "@/platform/query/hooks/useBobProjectTeam
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import {
   filterDeliverablesForStudent,
-  studentProjectTeamNames,
+  projectTeamsForStudent,
 } from "@/features/bob/milestones/deliverableStudentScope";
 import { studentLabel } from "@/features/bob/submit/StudentMultiSelect";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
@@ -83,12 +83,9 @@ export function ProgressUpdatePage() {
     );
   }, [selectedStudent, milestonesQuery.data?.data, teamsQuery.data?.data]);
 
-  const teamNames = useMemo(() => {
+  const projectTeams = useMemo(() => {
     if (!selectedStudent) return [];
-    return studentProjectTeamNames(
-      selectedStudent,
-      teamsQuery.data?.data ?? [],
-    );
+    return projectTeamsForStudent(selectedStudent, teamsQuery.data?.data ?? []);
   }, [selectedStudent, teamsQuery.data?.data]);
 
   useEffect(() => {
@@ -97,10 +94,15 @@ export function ProgressUpdatePage() {
   }, [effectiveStudentId, selectedStudentId]);
 
   useEffect(() => {
-    if (teamNames.length === 1 && !form.teamName) {
-      setForm((f) => ({ ...f, teamName: teamNames[0] }));
+    if (projectTeams.length === 1 && !form.projectTeamId) {
+      const team = projectTeams[0];
+      setForm((f) => ({
+        ...f,
+        projectTeamId: team.id,
+        teamName: team.name,
+      }));
     }
-  }, [teamNames, form.teamName]);
+  }, [projectTeams, form.projectTeamId]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -138,6 +140,10 @@ export function ProgressUpdatePage() {
       setError("Please select a student.");
       return;
     }
+    if (!form.projectTeamId || !form.teamName) {
+      setError("Please select your project team.");
+      return;
+    }
     if (!form.deliverableId) {
       setError("Please select a deliverable.");
       return;
@@ -159,6 +165,7 @@ export function ProgressUpdatePage() {
         studentId,
         student: selectedStudent ? studentLabel(selectedStudent) : "",
         teamName: form.teamName,
+        projectTeamId: form.projectTeamId,
         deliverableId: form.deliverableId,
         deliverableLabel: deliverable
           ? deliverableOptionLabel(deliverable)
@@ -320,33 +327,47 @@ export function ProgressUpdatePage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Project team
           </label>
-          {teamNames.length > 0 ? (
+          {projectTeams.length > 0 ? (
             <select
-              value={form.teamName ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, teamName: e.target.value }))
-              }
+              value={form.projectTeamId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                const team = projectTeams.find((t) => t.id === id);
+                setForm((f) => ({
+                  ...f,
+                  projectTeamId: id,
+                  teamName: team?.name || "",
+                  deliverableId: "",
+                  deliverableLabel: "",
+                }));
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               required
             >
-              <option value="">Select team</option>
-              {teamNames.map((name) => (
-                <option key={name} value={name}>
-                  {name}
+              <option value="">Select project team</option>
+              {projectTeams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
                 </option>
               ))}
             </select>
           ) : (
-            <input
-              type="text"
-              value={form.teamName ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, teamName: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              placeholder="Team name"
-            />
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              No project team found for this student.{" "}
+              <Link
+                href="https://airtable.com/appKnMenSN4RSG1ZV/paglydsT6YY4EKMiO/form"
+                className="font-medium text-orange-700 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Submit your project team first
+              </Link>
+              , then return here.
+            </div>
           )}
+          <p className="mt-1 text-xs text-gray-500">
+            Weekly progress is submitted individually; deliverables are reviewed at the team level.
+          </p>
         </div>
 
         <div>

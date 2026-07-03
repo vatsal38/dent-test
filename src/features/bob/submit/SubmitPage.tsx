@@ -31,9 +31,11 @@ import {
 import {
   StudentMultiSelect,
   studentLabel,
+  compareStudentsByName,
 } from "@/features/bob/submit/StudentMultiSelect";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 
 function isValidFormType(value: string | null): boolean {
   return isBobFormType(value);
@@ -95,6 +97,8 @@ export function SubmitPage() {
     );
     const students = studentsQuery.data?.students ?? [];
     const studentsLoading = studentsQuery.isLoading;
+    const { data: staffData } = useBobStaffList();
+    const staffList = staffData?.staff ?? [];
 
     const [studentDropdownOpen, setStudentDropdownOpen] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
@@ -113,14 +117,14 @@ export function SubmitPage() {
         return [
             ...(blitzOptions.trackTeams ?? []),
             ...(blitzOptions.globalTeams ?? blitzOptions.colors ?? []),
-            ...(blitzOptions.squads ?? []),
         ];
     }, [blitzOptions]);
 
     const filteredStudents = useMemo(() => {
-        if (!studentSearch.trim()) return students.slice(0, 50);
+        const sorted = [...students].sort(compareStudentsByName);
+        if (!studentSearch.trim()) return sorted.slice(0, 50);
         const q = studentSearch.trim().toLowerCase();
-        return students.filter(
+        return sorted.filter(
             (s) =>
                 (s.firstName || '').toLowerCase().includes(q) ||
                 (s.lastName || '').toLowerCase().includes(q) ||
@@ -154,6 +158,21 @@ export function SubmitPage() {
             cancelled = true;
         };
     }, [submissionType]);
+
+    useEffect(() => {
+        setStudentDropdownOpen(false);
+        setStudentSearch('');
+    }, [submissionType]);
+
+    useEffect(() => {
+        if (submissionType !== 'pto_request' || form.ptoFor) return;
+        setForm((f) => ({
+            ...f,
+            ptoFor: 'self',
+            staffMemberId: user?.id || '',
+            staffMemberName: submitterName,
+        }));
+    }, [submissionType, form.ptoFor, user?.id, submitterName]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -201,6 +220,8 @@ export function SubmitPage() {
         setPendingFiles([]);
         setSubmitted(false);
         setError(null);
+        setStudentDropdownOpen(false);
+        setStudentSearch('');
     }
 
     function backToHub() {
@@ -305,6 +326,13 @@ export function SubmitPage() {
             }
             if (!form.description?.trim()) {
                 setError('Please share how your week went.');
+                return;
+            }
+        }
+        if (submissionType === 'pto_request') {
+            const ptoFor = form.ptoFor || 'self';
+            if (ptoFor === 'other' && !form.staffMemberId) {
+                setError('Please select the staff member who is out.');
                 return;
             }
         }
@@ -587,7 +615,7 @@ export function SubmitPage() {
                                         {blitzOptionsLoading ? 'Loading teams…' : 'Select team'}
                                     </option>
                                     {blitzOptions?.trackTeams?.length ? (
-                                        <optgroup label="Track teams (color + program track)">
+                                        <optgroup label="Track teams">
                                             {blitzOptions.trackTeams.map((o) => (
                                                 <option key={`t-${o.value}`} value={o.value}>
                                                     {o.label}
@@ -596,18 +624,9 @@ export function SubmitPage() {
                                         </optgroup>
                                     ) : null}
                                     {blitzOptions?.globalTeams?.length || blitzOptions?.colors?.length ? (
-                                        <optgroup label="Global color teams">
+                                        <optgroup label="Global teams">
                                             {(blitzOptions.globalTeams ?? blitzOptions.colors ?? []).map((o) => (
                                                 <option key={`g-${o.value}`} value={o.value}>
-                                                    {o.label}
-                                                </option>
-                                            ))}
-                                        </optgroup>
-                                    ) : null}
-                                    {blitzOptions?.squads?.length ? (
-                                        <optgroup label="Squads (BoB '26)">
-                                            {blitzOptions.squads.map((o) => (
-                                                <option key={`s-${o.value}`} value={o.value}>
                                                     {o.label}
                                                 </option>
                                             ))}
@@ -657,7 +676,7 @@ export function SubmitPage() {
                     )}
                     {submissionType === 'anonymous_feedback' && (
                         <>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={form.category ?? ''} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"><option value="">Select</option><option value="program">Program</option><option value="logistics">Logistics</option><option value="other">Other</option></select></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={form.category ?? ''} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"><option value="">Select</option><option value="program">Program</option><option value="logistics">Logistics</option><option value="partners">Partners (FFT, field trips, etc.)</option><option value="staff">Staff</option><option value="events">Events</option><option value="other">Other</option></select></div>
                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label><textarea value={form.feedback ?? ''} onChange={(e) => setForm((f) => ({ ...f, feedback: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" rows={4} placeholder="Share your feedback" required /></div>
                             <label className="flex items-start gap-2 text-sm text-gray-700">
                                 <input
@@ -671,7 +690,7 @@ export function SubmitPage() {
                                     <span className="block text-xs text-gray-500 mt-0.5">
                                         {submitAnonymously
                                             ? 'Your name will not be shown with this feedback.'
-                                            : `Submitted as ${submitterName}.`}
+                                            : `Otherwise, submit as ${submitterName}.`}
                                     </span>
                                 </span>
                             </label>
@@ -685,6 +704,9 @@ export function SubmitPage() {
                             pendingFiles={pendingFiles}
                             setPendingFiles={setPendingFiles}
                             fileInputRef={fileInputRef}
+                            staffList={staffList}
+                            currentUserId={user?.id}
+                            currentUserName={submitterName}
                         />
                     ) : null}
                     {submissionType && isCoachFeedbackType(submissionType) ? (

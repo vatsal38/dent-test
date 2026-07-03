@@ -104,6 +104,10 @@ export interface BobSubmission {
   testimonyFormat?: string | null;
   publicConsent?: boolean | null;
   teamName?: string | null;
+  projectTeamId?: string | null;
+  staffMemberId?: string | null;
+  staffMemberName?: string | null;
+  testimonySubject?: string | null;
   notes?: string | null;
   parentName?: string | null;
   parentContacted?: "yes" | "no" | null;

@@ -1,6 +1,8 @@
 "use client";
 
 import type { RefObject } from "react";
+import type { BobStaffMember } from "@/platform/api/bob/staff";
+import { staffDisplayName } from "@/features/bob/pods/staffDisplay";
 
 export const STAFF_FORM_TYPES = [
   "pto_request",
@@ -18,6 +20,9 @@ interface StaffRequestFormFieldsProps {
   pendingFiles: File[];
   setPendingFiles: React.Dispatch<React.SetStateAction<File[]>>;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  staffList?: BobStaffMember[];
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 function AttachmentPicker({
@@ -87,10 +92,81 @@ export function StaffRequestFormFields({
   pendingFiles,
   setPendingFiles,
   fileInputRef,
+  staffList = [],
+  currentUserId,
+  currentUserName,
 }: StaffRequestFormFieldsProps) {
   if (type === "pto_request") {
+    const ptoFor = form.ptoFor || "self";
+    const sortedStaff = [...staffList].sort((a, b) =>
+      staffDisplayName(a).localeCompare(staffDisplayName(b)),
+    );
+
     return (
       <>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            You or staff member out
+          </label>
+          <select
+            value={ptoFor}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next === "self") {
+                setForm((f) => ({
+                  ...f,
+                  ptoFor: "self",
+                  staffMemberId: currentUserId || "",
+                  staffMemberName: currentUserName || "",
+                }));
+              } else {
+                setForm((f) => ({
+                  ...f,
+                  ptoFor: "other",
+                  staffMemberId: "",
+                  staffMemberName: "",
+                }));
+              }
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+          >
+            <option value="self">
+              Me{currentUserName ? ` (${currentUserName})` : ""}
+            </option>
+            <option value="other">Another staff member</option>
+          </select>
+        </div>
+        {ptoFor === "other" ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Staff member
+            </label>
+            <select
+              value={form.staffMemberId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                const member = sortedStaff.find((s) => s.id === id);
+                setForm((f) => ({
+                  ...f,
+                  staffMemberId: id,
+                  staffMemberName: member?.name || member?.email || "",
+                }));
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+              required
+            >
+              <option value="">Select staff member</option>
+              {sortedStaff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {staffDisplayName(s)}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Submit on behalf of someone who is out and cannot submit themselves.
+            </p>
+          </div>
+        ) : null}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Type
@@ -161,7 +237,7 @@ export function StaffRequestFormFields({
       <>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            What are you purchasing?
+            What do you want to purchase?
           </label>
           <textarea
             value={form.description ?? ""}

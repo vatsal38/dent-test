@@ -129,7 +129,8 @@ export function cardTitle(s: BobSubmission) {
       s.requestStartDate && s.requestEndDate
         ? ` · ${s.requestStartDate} – ${s.requestEndDate}`
         : "";
-    return `PTO request${range}`;
+    const who = s.staffMemberName?.trim();
+    return who ? `${who} · PTO request${range}` : `PTO request${range}`;
   }
   if (s.type === "purchase_request" || s.type === "reimbursement_request") {
     const amount =
@@ -149,8 +150,12 @@ export function cardTitle(s: BobSubmission) {
   if (s.type === "dent_testimony") {
     const format =
       s.testimonyFormat === "video_link" ? " · Video" : " · Written";
-    return student
-      ? `${student} · Dent testimony${format}`
+    const who =
+      s.testimonySubject === "staff"
+        ? s.staffMemberName?.trim()
+        : student;
+    return who
+      ? `${who} · Dent testimony${format}`
       : `Dent testimony${format}`;
   }
   const base = SUBMISSION_TYPE_LABELS[s.type] || s.type;

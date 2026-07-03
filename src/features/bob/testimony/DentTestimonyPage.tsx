@@ -8,12 +8,15 @@ import { submitBobOneStop, type BobOneStopPayload } from "@/platform/api/bob/sub
 import { useAuth } from "@/context/AuthContext";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
+import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { studentLabel } from "@/features/bob/submit/StudentMultiSelect";
+import { staffDisplayName } from "@/features/bob/pods/staffDisplay";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
 
 type TestimonyFormat = "written" | "video_link";
+type TestimonySubject = "student" | "staff";
 
 export function DentTestimonyPage() {
   const searchParams = useSearchParams();
@@ -29,11 +32,15 @@ export function DentTestimonyPage() {
     : prefilledStudentId || null;
 
   const [format, setFormat] = useState<TestimonyFormat>("written");
+  const [subjectType, setSubjectType] = useState<TestimonySubject>(
+    isStudent ? "student" : "student",
+  );
   const [form, setForm] = useState<Record<string, string>>({});
   const [consent, setConsent] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
     effectiveStudentId || "",
   );
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +55,13 @@ export function DentTestimonyPage() {
     { enabled: !isStudent },
   );
   const students = studentsQuery.data?.students ?? [];
+  const { data: staffData } = useBobStaffList();
+  const staffList = staffData?.staff ?? [];
+
+  const selectedStaff = useMemo(
+    () => staffList.find((s) => s.id === selectedStaffId) ?? null,
+    [staffList, selectedStaffId],
+  );
 
   const selectedStudent = useMemo(() => {
     if (isStudent && me?.linkedStudent) {
@@ -77,10 +91,17 @@ export function DentTestimonyPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const studentId = isStudent ? linkedStudentId : selectedStudentId;
-    if (!studentId) {
-      setError("Please select a student.");
-      return;
+    if (subjectType === "staff") {
+      if (!selectedStaffId) {
+        setError("Please select a staff member.");
+        return;
+      }
+    } else {
+      const studentId = isStudent ? linkedStudentId : selectedStudentId;
+      if (!studentId) {
+        setError("Please select a student.");
+        return;
+      }
     }
     if (!consent) {
       setError("Please confirm consent for public use.");
@@ -98,9 +119,9 @@ export function DentTestimonyPage() {
     setSubmitting(true);
     setError(null);
     try {
+      const studentId = isStudent ? linkedStudentId : selectedStudentId;
       const payload: BobOneStopPayload = {
-        studentId,
-        student: selectedStudent ? studentLabel(selectedStudent) : "",
+        testimonySubject: subjectType,
         testimonyFormat: format,
         publicConsent: consent,
         reflection: format === "written" ? form.reflection : undefined,
@@ -108,6 +129,13 @@ export function DentTestimonyPage() {
         proofLinks: format === "video_link" ? form.proofLinks : undefined,
         notes: form.notes,
       };
+      if (subjectType === "staff") {
+        payload.staffMemberId = selectedStaffId;
+        payload.staffMemberName = selectedStaff?.name || selectedStaff?.email || "";
+      } else {
+        payload.studentId = studentId || "";
+        payload.student = selectedStudent ? studentLabel(selectedStudent) : "";
+      }
       if (pendingFiles.length > 0) {
         payload.attachments = await Promise.all(
           pendingFiles.map(async (file) => ({
@@ -151,7 +179,7 @@ export function DentTestimonyPage() {
       <PageHeader
         eyebrow="Bet on Baltimore"
         title="Dent Testimony"
-        description="Share your story in writing or via video link. Your coach and program team will review it."
+        description="Share a student or staff story in writing or via video link. Your program team will review it."
       />
 
       <form
@@ -165,6 +193,62 @@ export function DentTestimonyPage() {
         ) : null}
 
         {!isStudent ? (
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-2">
+              Who is this testimony for?
+            </span>
+            <div className="flex flex-wrap gap-3">
+              {(
+                [
+                  { id: "student", label: "Student" },
+                  { id: "staff", label: "Staff member" },
+                ] as const
+              ).map((opt) => (
+                <label
+                  key={opt.id}
+                  className="inline-flex items-center gap-2 text-sm text-gray-700"
+                >
+                  <input
+                    type="radio"
+                    name="testimonySubject"
+                    checked={subjectType === opt.id}
+                    onChange={() => {
+                      setSubjectType(opt.id);
+                      setError(null);
+                    }}
+                    className="text-orange-500 focus:ring-orange-500"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {subjectType === "staff" && !isStudent ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Staff member
+            </label>
+            <select
+              value={selectedStaffId}
+              onChange={(e) => setSelectedStaffId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+              required
+            >
+              <option value="">Select staff member</option>
+              {[...staffList]
+                .sort((a, b) =>
+                  staffDisplayName(a).localeCompare(staffDisplayName(b)),
+                )
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {staffDisplayName(s)}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ) : !isStudent ? (
           <div ref={studentDropdownRef} className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Student
