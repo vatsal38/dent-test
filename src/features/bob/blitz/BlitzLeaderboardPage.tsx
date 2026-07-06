@@ -27,7 +27,7 @@ export function BlitzLeaderboardPage() {
       <PageHeader
         eyebrow="Bet on Baltimore"
         title="Blitz points"
-        description="Global color teams and track squads from the roster. Track auto-points roll up to global colors."
+        description="Global color teams and track squads from the roster. Track auto-points roll up to global colors; the activity log shows track awards only."
         actions={
           <Link
             href="/app/bob/submit?type=blitz_points"

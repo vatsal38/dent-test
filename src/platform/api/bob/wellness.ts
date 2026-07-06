@@ -11,6 +11,7 @@ export interface BobWellnessWeekRow {
   studentId: string;
   studentName: string;
   track: string;
+  blitzSquad?: string | null;
   podId: string | null;
   completed: boolean;
   wellnessScore: number | null;
@@ -19,10 +20,21 @@ export interface BobWellnessWeekRow {
   submittedAt: string | null;
 }
 
+export interface BobWellnessBlitzSquadGroup {
+  name: string;
+  rows: BobWellnessWeekRow[];
+  summary: {
+    total: number;
+    completed: number;
+    pending: number;
+  };
+}
+
 export interface BobWellnessWeekResponse {
   week: BobWellnessWeekInfo | null;
   programWeeks: BobWellnessWeekInfo[];
   rows: BobWellnessWeekRow[];
+  blitzSquadGroups?: BobWellnessBlitzSquadGroup[];
   summary: {
     total: number;
     completed: number;

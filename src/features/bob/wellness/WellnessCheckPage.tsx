@@ -204,74 +204,99 @@ export function WellnessCheckPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                  <th className="px-4 py-3 font-medium">Student</th>
-                  <th className="px-4 py-3 font-medium">Track</th>
-                  <th className="px-4 py-3 font-medium text-center">
-                    Completed
-                  </th>
-                  <th className="px-4 py-3 font-medium text-center">Score</th>
-                  <th className="px-4 py-3 font-medium">Why</th>
-                  <th className="px-4 py-3 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {(weekData?.rows ?? []).map((row) => (
-                  <tr key={row.studentId} className="hover:bg-gray-50/80">
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      <Link
-                        href={`/app/bob/roster?id=${encodeURIComponent(row.studentId)}`}
-                        className="hover:text-orange-600"
-                      >
-                        {row.studentName}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{row.track}</td>
-                    <td className="px-4 py-3 text-center">
-                      {row.completed ? (
-                        <span className="text-emerald-600 font-semibold" title="Completed">
-                          ✓
-                        </span>
-                      ) : (
-                        <span className="text-rose-500 font-semibold" title="Not yet">
-                          ✗
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center tabular-nums font-semibold text-gray-900">
-                      {row.wellnessScore ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
-                      {row.wellnessReason || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {row.completed ? (
-                        <span className="text-xs text-gray-400">Done</span>
-                      ) : (
-                        <Link
-                          href={`/app/bob/submit?type=wellness_check&studentId=${encodeURIComponent(row.studentId)}`}
-                          className="text-xs font-semibold text-orange-600 hover:underline"
-                        >
-                          Check in
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {!weekData?.rows?.length ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-gray-500"
-                    >
-                      No students match your filters.
-                    </td>
-                  </tr>
+            {(weekData?.blitzSquadGroups?.length
+              ? weekData.blitzSquadGroups
+              : [{ name: "", rows: weekData?.rows ?? [], summary: weekData?.summary }]
+            ).map((group) => {
+              const summary = group.summary ?? {
+                total: group.rows.length,
+                completed: group.rows.filter((r) => r.completed).length,
+                pending: group.rows.filter((r) => !r.completed).length,
+              };
+              return (
+              <div key={group.name || "all"}>
+                {group.name ? (
+                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    {group.name}
+                    <span className="ml-2 font-normal normal-case text-gray-500">
+                      {summary.completed}/{summary.total} completed
+                    </span>
+                  </div>
                 ) : null}
-              </tbody>
-            </table>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                      <th className="px-4 py-3 font-medium">Student</th>
+                      <th className="px-4 py-3 font-medium">Track</th>
+                      {!weekData?.blitzSquadGroups?.length ? (
+                        <th className="px-4 py-3 font-medium">Blitz team</th>
+                      ) : null}
+                      <th className="px-4 py-3 font-medium text-center">
+                        Completed
+                      </th>
+                      <th className="px-4 py-3 font-medium text-center">Score</th>
+                      <th className="px-4 py-3 font-medium">Why</th>
+                      <th className="px-4 py-3 font-medium text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {group.rows.map((row) => (
+                      <tr key={row.studentId} className="hover:bg-gray-50/80">
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          <Link
+                            href={`/app/bob/roster?id=${encodeURIComponent(row.studentId)}`}
+                            className="hover:text-orange-600"
+                          >
+                            {row.studentName}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{row.track}</td>
+                        {!weekData?.blitzSquadGroups?.length ? (
+                          <td className="px-4 py-3 text-gray-600">
+                            {row.blitzSquad || "—"}
+                          </td>
+                        ) : null}
+                        <td className="px-4 py-3 text-center">
+                          {row.completed ? (
+                            <span className="text-emerald-600 font-semibold" title="Completed">
+                              ✓
+                            </span>
+                          ) : (
+                            <span className="text-rose-500 font-semibold" title="Not yet">
+                              ✗
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center tabular-nums font-semibold text-gray-900">
+                          {row.wellnessScore ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
+                          {row.wellnessReason || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {row.completed ? (
+                            <span className="text-xs text-gray-400">Done</span>
+                          ) : (
+                            <Link
+                              href={`/app/bob/submit?type=wellness_check&studentId=${encodeURIComponent(row.studentId)}`}
+                              className="text-xs font-semibold text-orange-600 hover:underline"
+                            >
+                              Check in
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+            })}
+            {!weekData?.rows?.length ? (
+              <p className="px-4 py-10 text-center text-gray-500">
+                No students match your filters.
+              </p>
+            ) : null}
           </div>
         )}
       </div>
