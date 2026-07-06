@@ -82,7 +82,13 @@ GET /api/bob/me  →  resolveBobAccess()  →  ROLE_PERMISSIONS matrix
 
 ## Staff roster seeding
 
-Run `npm run seed:bob-staff` from `dent-be` to sync Mongo users from the BoB '26 staff roster:
+Run `npm run seed:bob-staff` from `dent-be` to sync the BoB '26 staff roster.
+
+- Admin roster users keep **Google sign-in** with their `@denteducation.org` account.
+- Non-admin roster users get **Firebase email/password** login with the default password `BobTest2026!` unless overridden by `BOB_STAFF_SEED_PASSWORD`.
+- Use `npm run seed:bob-staff:auth` to provision only Firebase password users for non-admin staff.
+- Use `npm run seed:bob-staff:mongo` to skip Firebase and only sync Mongo + pod assignments.
+- To reset passwords for **existing** Firebase users, set `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json` (Firebase service account JSON) and re-run `npm run seed:bob-staff:auth`.
 
 | Airtable role | Platform `bobRole` | Ops role |
 |---------------|-------------------|----------|
