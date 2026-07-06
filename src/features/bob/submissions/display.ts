@@ -1,5 +1,6 @@
 import type { BobSubmission, BobSubmissionType } from "@/platform/api/bob/submissions";
 import { progressStatusLabel } from "@/features/bob/progress/progressConstants";
+import { feedbackCategoryLabel } from "@/features/bob/submit/feedbackCategories";
 import {
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
@@ -30,6 +31,8 @@ export function badgeClassesForType(type: BobSubmissionType) {
       return "bg-indigo-50 text-indigo-800 border-indigo-200";
     case "dent_testimony":
       return "bg-violet-50 text-violet-800 border-violet-200";
+    case "attendance_correction":
+      return "bg-sky-50 text-sky-800 border-sky-200";
     default:
       return "bg-gray-50 text-gray-700 border-gray-200";
   }
@@ -60,6 +63,10 @@ export function formatLabel(value: string | null | undefined): string {
   if (!value) return "";
   const s = String(value).trim();
   if (!s) return "";
+  const lower = s.toLowerCase();
+  if (lower === "low" || lower === "medium" || lower === "high") {
+    return lower.toUpperCase();
+  }
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -103,7 +110,9 @@ export function cardTitle(s: BobSubmission) {
   }
   if (s.type === "anonymous_feedback") {
     const prefix = s.isAnonymous ? "Anonymous feedback" : "Feedback";
-    return s.category ? `${prefix} · ${formatLabel(s.category)}` : prefix;
+    return s.category
+      ? `${prefix} · ${feedbackCategoryLabel(s.category)}`
+      : prefix;
   }
   if (s.type === "progress_update") {
     const focus =
@@ -129,23 +138,31 @@ export function cardTitle(s: BobSubmission) {
       s.requestStartDate && s.requestEndDate
         ? ` · ${s.requestStartDate} – ${s.requestEndDate}`
         : "";
+    const days =
+      s.requestDayCount != null
+        ? ` · ${s.requestDayCount} day${s.requestDayCount === 1 ? "" : "s"}`
+        : "";
     const who = s.staffMemberName?.trim();
-    return who ? `${who} · PTO request${range}` : `PTO request${range}`;
+    return who ? `${who} · PTO request${range}${days}` : `PTO request${range}${days}`;
   }
   if (s.type === "purchase_request" || s.type === "reimbursement_request") {
     const amount =
       s.requestAmount != null
         ? ` · $${s.requestAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
         : "";
+    const route =
+      s.type === "reimbursement_request" && s.fromLocation && s.toLocation
+        ? ` · ${s.fromLocation} → ${s.toLocation}`
+        : "";
     const label = SUBMISSION_TYPE_LABELS[s.type] || s.type;
-    return `${label}${amount}`;
+    return `${label}${amount}${route}`;
   }
   if (s.type === "photo_upload") {
     return "Photo album links";
   }
   if (s.type === "coach_feedback") {
     const rating = s.coachRating != null ? ` · ${s.coachRating}/5` : "";
-    return `Coach feedback${rating}`;
+    return `Weekly coach feedback${rating}`;
   }
   if (s.type === "dent_testimony") {
     const format =
@@ -157,6 +174,14 @@ export function cardTitle(s: BobSubmission) {
     return who
       ? `${who} · Dent testimony${format}`
       : `Dent testimony${format}`;
+  }
+  if (s.type === "attendance_correction") {
+    const kind = s.category || s.incidentType || "Request";
+    const date =
+      s.requestStartDate ? ` · ${s.requestStartDate}` : "";
+    return student
+      ? `${student} · ${kind}${date}`
+      : `${kind}${date}`;
   }
   const base = SUBMISSION_TYPE_LABELS[s.type] || s.type;
   return student ? `${student} · ${base}` : base;
@@ -186,6 +211,11 @@ export function cardSummary(s: BobSubmission) {
   if (s.requestVendor) parts.push(s.requestVendor);
   if (s.requestStartDate && s.requestEndDate) {
     parts.push(`${s.requestStartDate} – ${s.requestEndDate}`);
+  }
+  if (s.requestDayCount != null) {
+    parts.push(
+      `${s.requestDayCount} program day${s.requestDayCount === 1 ? "" : "s"}`,
+    );
   }
   if (s.category) parts.push(formatLabel(s.category));
   if (s.coachRating != null) parts.push(`rating: ${s.coachRating}/5`);

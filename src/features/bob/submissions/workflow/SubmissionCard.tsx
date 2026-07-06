@@ -8,7 +8,10 @@ import {
   formatWhen,
   severityBadge,
 } from "@/features/bob/submissions/display";
-import { SUBMISSION_TYPE_LABELS } from "@/features/bob/submissions/workflow/constants";
+import {
+  levelLabel,
+  SUBMISSION_TYPE_LABELS,
+} from "@/features/bob/submissions/workflow/constants";
 
 export function SubmissionCard({
   submission,
@@ -84,12 +87,12 @@ export function SubmissionCard({
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded border uppercase ${sevClass}`}
               >
-                {submission.severity}
+                {levelLabel(submission.severity)}
               </span>
             ) : null}
             {submission.priority ? (
               <span className="text-[10px] px-1.5 py-0.5 rounded border bg-gray-50 text-gray-600">
-                {submission.priority}
+                {levelLabel(submission.priority)}
               </span>
             ) : null}
             {submission.secondaryAssignees?.length ? (

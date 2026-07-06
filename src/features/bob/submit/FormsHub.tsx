@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  BOB_EXTERNAL_FORM_LINKS,
+  BOB_PROGRAM_FORM_LINKS,
   BOB_PROGRAM_FORMS,
   BOB_STAFF_FORMS,
   BOB_STUDENT_FORM_LINKS,
@@ -71,7 +71,7 @@ export function FormsHub({
               <p className="text-sm text-gray-600 mt-1">
                 {studentMode
                   ? "Progress updates, testimony, and program feedback. View past submissions on My submissions."
-                  : "Program submissions, staff requests, student testimony, and attendance corrections."}
+                  : "Program submissions, student forms, and staff requests."}
               </p>
             </div>
             {returnHref ? (
@@ -94,6 +94,22 @@ export function FormsHub({
 
         {studentMode ? (
           <>
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Program
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {BOB_PROGRAM_FORM_LINKS.map((link) => (
+                  <FormCard
+                    key={link.id}
+                    title={link.title}
+                    description={link.description}
+                    href={externalHref(link.href)}
+                    cta={`${link.cta} →`}
+                  />
+                ))}
+              </div>
+            </section>
             <section className="mb-8">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                 Submit
@@ -134,6 +150,15 @@ export function FormsHub({
                     href={formHref(form.type)}
                   />
                 ))}
+                {BOB_PROGRAM_FORM_LINKS.map((link) => (
+                  <FormCard
+                    key={link.id}
+                    title={link.title}
+                    description={link.description}
+                    href={externalHref(link.href)}
+                    cta={`${link.cta} →`}
+                  />
+                ))}
               </div>
             </section>
 
@@ -165,15 +190,6 @@ export function FormsHub({
                     title={form.title}
                     description={form.description}
                     href={formHref(form.type)}
-                  />
-                ))}
-                {BOB_EXTERNAL_FORM_LINKS.map((link) => (
-                  <FormCard
-                    key={link.id}
-                    title={link.title}
-                    description={link.description}
-                    href={externalHref(link.href)}
-                    cta={`${link.cta} →`}
                   />
                 ))}
               </div>

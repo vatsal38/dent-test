@@ -32,7 +32,7 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   },
   overallAttendancePct: {
     key: "overallAttendancePct",
-    label: "Overall attendance %",
+    label: "My attendance %",
     format: (v) => `${v}%`,
     href: () => "/app/bob/attendance",
   },
@@ -122,13 +122,21 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
 export function metricsToKpiItems(
   snapshot: BobDashboardSnapshot,
   keys: BobDashboardMetricKey[],
+  options?: { studentPersonal?: boolean },
 ): KpiItem[] {
+  const studentLabels: Partial<Record<BobDashboardMetricKey, string>> = {
+    overallAttendancePct: "My attendance %",
+    deliverablesSubmitted: "Deliverables submitted",
+    deliverablesSubmittedPctThisWeek: "Deliverable achievement this week",
+    deliverablesCompleted: "Completed this week",
+  };
+
   return keys.map((key) => {
     const def = METRIC_CATALOG[key];
     const raw = snapshot.kpis[key]?.value ?? snapshot.cards[key as keyof typeof snapshot.cards] ?? 0;
     return {
       id: key,
-      label: def.label,
+      label: options?.studentPersonal && studentLabels[key] ? studentLabels[key]! : def.label,
       value: def.format(typeof raw === "number" ? raw : Number(raw) || 0),
       href: def.href?.({
         podId: snapshot.scope.podId ?? undefined,

@@ -8,6 +8,7 @@ import {
 } from "@/platform/api/bob/submissions";
 import type { BobSubmissionFacets } from "@/platform/api/bob/submissions";
 import {
+  levelLabel,
   PRIORITY_OPTIONS,
   SEVERITY_OPTIONS,
   SUBMISSION_STATUS_LABELS,
@@ -85,7 +86,7 @@ export function SubmissionFilters({
           <option value="">Any priority</option>
           {PRIORITY_OPTIONS.map((p) => (
             <option key={p} value={p}>
-              {p}
+              {levelLabel(p)}
               {facets?.priority[p] != null ? ` (${facets.priority[p]})` : ""}
             </option>
           ))}
@@ -100,7 +101,7 @@ export function SubmissionFilters({
           <option value="">Any severity</option>
           {SEVERITY_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {levelLabel(s)}
             </option>
           ))}
         </select>

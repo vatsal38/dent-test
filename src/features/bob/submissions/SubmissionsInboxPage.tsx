@@ -21,6 +21,7 @@ import {
   type SubmissionFilterState,
 } from "@/features/bob/submissions/workflow/filters";
 import { useSubmissionKanban } from "@/features/bob/submissions/workflow/useSubmissionKanban";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 import {
   useBobSubmissionFacets,
@@ -67,9 +68,17 @@ export function SubmissionsInboxPage() {
   };
 
   const myId = auth.currentUser?.uid || null;
+  const { access } = useBobAccess();
+  const canViewPto =
+    access.role === "admin" ||
+    access.role === "program_manager" ||
+    access.role === "site_supporter";
   const listParams = useMemo(
-    () => filtersToListParams(filters, debouncedSearch, myId),
-    [filters, debouncedSearch, myId],
+    () =>
+      filtersToListParams(filters, debouncedSearch, myId, {
+        excludePto: !canViewPto,
+      }),
+    [filters, debouncedSearch, myId, canViewPto],
   );
 
   const { data, isLoading, error, refetch } = useBobSubmissionsList(listParams);

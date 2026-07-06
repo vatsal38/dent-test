@@ -62,6 +62,7 @@ export function RosterGridView({
   labelsForField,
   onOpenStudent,
   simplifiedView = false,
+  ownStudentId = null,
 }: {
   students: BobStudent[];
   headshot: BobRosterSchemaField | null;
@@ -70,6 +71,8 @@ export function RosterGridView({
   onOpenStudent: (id: string) => void;
   /** Youth roster — name, track, and team only (no peer stats). */
   simplifiedView?: boolean;
+  /** In simplified view, only this student opens the detail drawer (own profile). */
+  ownStudentId?: string | null;
 }) {
   const fieldNames = useMemo(() => columns.map((c) => c.name), [columns]);
 
@@ -134,13 +137,17 @@ export function RosterGridView({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      {cards.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          onClick={() => onOpenStudent(c.id)}
-          className="text-left rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-        >
+      {cards.map((c) => {
+        const isOwnProfile =
+          simplifiedView && ownStudentId && c.id === ownStudentId;
+        const canOpen = !simplifiedView || Boolean(isOwnProfile);
+        const cardClass =
+          "text-left rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden " +
+          (canOpen
+            ? "hover:shadow-md transition-shadow cursor-pointer"
+            : "cursor-default");
+
+        const inner = (
           <div className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -219,9 +226,34 @@ export function RosterGridView({
                 </div>
               </>
             ) : null}
+
+            {isOwnProfile ? (
+              <p className="mt-3 text-[11px] font-medium text-orange-700">
+                View my profile →
+              </p>
+            ) : null}
           </div>
-        </button>
-      ))}
+        );
+
+        if (!canOpen) {
+          return (
+            <div key={c.id} className={cardClass} aria-label={c.name}>
+              {inner}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onOpenStudent(c.id)}
+            className={cardClass}
+          >
+            {inner}
+          </button>
+        );
+      })}
     </div>
   );
 }

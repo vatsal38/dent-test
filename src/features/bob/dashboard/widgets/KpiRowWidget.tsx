@@ -19,7 +19,9 @@ export function KpiRowWidget({ snapshot, loading, placement }: WidgetRenderProps
   }
   if (!snapshot) return null;
 
-  const items = metricsToKpiItems(snapshot, keys);
+  const studentPersonal =
+    snapshot.scope?.studentId != null && keys.includes("overallAttendancePct");
+  const items = metricsToKpiItems(snapshot, keys, { studentPersonal });
 
   return <KpiGrid items={items} columns={Math.min(5, Math.max(2, keys.length)) as 2 | 3 | 4 | 5} />;
 }

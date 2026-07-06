@@ -67,6 +67,7 @@ export const bobKeys = {
   staff: {
     all: () => [...bobKeys.all, "staff"] as const,
     list: () => [...bobKeys.staff.all(), "list"] as const,
+    roster: () => [...bobKeys.staff.all(), "roster"] as const,
   },
   attendance: {
     all: () => [...bobKeys.all, "attendance"] as const,

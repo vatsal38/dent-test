@@ -75,11 +75,15 @@ export function filtersToListParams(
   filters: SubmissionFilterState,
   debouncedSearch: string,
   myUserId: string | null,
+  options?: { excludePto?: boolean },
 ): BobSubmissionsListParams {
+  const excluded = [...(options?.excludePto ? ["pto_request" as const] : [])];
   const excludeTypes =
     !filters.type && !filters.includeAllTypes
-      ? OPS_INBOX_EXCLUDED_TYPES
-      : undefined;
+      ? [...OPS_INBOX_EXCLUDED_TYPES, ...excluded]
+      : excluded.length
+        ? excluded
+        : undefined;
 
   return {
     type: filters.type || undefined,

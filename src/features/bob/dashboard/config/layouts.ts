@@ -397,8 +397,8 @@ export const DASHBOARD_LAYOUTS: Record<
             kind: "kpi_row",
             metrics: [
               "overallAttendancePct",
+              "deliverablesSubmitted",
               "deliverablesSubmittedPctThisWeek",
-              "deliverablesCompleted",
             ],
             permissions: ["dashboard.view"],
             roles: ["student"],
@@ -432,6 +432,22 @@ export const DASHBOARD_LAYOUTS: Record<
             title: "My deliverables",
             colSpan: 4,
             permissions: ["dashboard.view", "milestones.view"],
+            roles: ["student"],
+          },
+        ],
+      },
+      {
+        id: "student-program-wide",
+        title: "Program snapshot",
+        columns: 1,
+        widgets: [
+          {
+            id: "stu-all-tracks-attendance",
+            kind: "attendance_summary",
+            title: "Attendance by track",
+            colSpan: 12,
+            programWide: true,
+            permissions: ["dashboard.view", "attendance.view"],
             roles: ["student"],
           },
           {

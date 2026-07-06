@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { auth } from "@/lib/firebase";
 import {
   BOB_SUBMISSION_STATUSES,
   type BobSubmissionStatus,
@@ -20,9 +19,19 @@ import {
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
 } from "@/features/bob/submissions/display";
+import {
+  assigneeSelectOptions,
+  filterAssignableStaffForSubmission,
+} from "@/features/bob/submissions/assigneeOptions";
 import { progressStatusLabel } from "@/features/bob/progress/progressConstants";
-import { PRIORITY_OPTIONS } from "@/features/bob/submissions/workflow/constants";
+import {
+  levelLabel,
+  PRIORITY_OPTIONS,
+} from "@/features/bob/submissions/workflow/constants";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
+import { useBobStaffRoster } from "@/platform/query/hooks/useBobStaffRoster";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
+import { useBobStudentDetail } from "@/platform/query/hooks/useBobStudents";
 import { downloadBobSubmissionAttachment } from "@/platform/api/bob/submissions";
 import {
   useAddBobSubmissionAttachment,
@@ -55,6 +64,10 @@ export function SubmissionDetailPanel({
   const { data, isLoading } = useBobSubmissionDetail(submissionId);
   const { data: events = [] } = useBobSubmissionEvents(submissionId);
   const { data: staffData } = useBobStaffList();
+  const { data: rosterData } = useBobStaffRoster();
+  const { data: me } = useBobMe();
+  const studentId = data?.studentId ?? null;
+  const { data: student } = useBobStudentDetail(studentId);
   const updateMutation = useUpdateBobSubmission();
   const commentMutation = useAddBobSubmissionComment();
   const attachmentMutation = useAddBobSubmissionAttachment();
@@ -63,9 +76,26 @@ export function SubmissionDetailPanel({
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const myId = auth.currentUser?.uid || null;
+  const myId = me?.user?.id ?? null;
+  const myLabel = me?.user?.name || me?.user?.email || null;
   const saving = updateMutation.isPending;
   const staff = staffData?.staff ?? [];
+  const roster = rosterData?.staff ?? [];
+
+  const assigneeOptions = useMemo(() => {
+    if (!data) return staff;
+    const filtered = filterAssignableStaffForSubmission(
+      staff,
+      roster,
+      student?.track ?? null,
+      student?.podId ?? null,
+    );
+    return assigneeSelectOptions(
+      filtered,
+      data.assignedTo,
+      data.assignedToLabel,
+    );
+  }, [staff, roster, student?.track, student?.podId, data]);
 
   if (isLoading || !data) {
     return (
@@ -157,7 +187,9 @@ export function SubmissionDetailPanel({
             ) : (
               <p className="text-sm text-gray-600">{data.student || "—"}</p>
             )}
-            {data.createdByLabel && !data.isAnonymous ? (
+            {data.type === "incident" && data.isAnonymous ? (
+              <p className="text-xs text-gray-500 mt-1">Submitted anonymously</p>
+            ) : data.createdByLabel && !data.isAnonymous ? (
               <p className="text-xs text-gray-500 mt-1">
                 Submitted by {data.createdByLabel}
               </p>
@@ -210,11 +242,19 @@ export function SubmissionDetailPanel({
           {data.requestStartDate && data.requestEndDate ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-800">
               {data.requestStartDate} – {data.requestEndDate}
+              {data.requestDayCount != null
+                ? ` · ${data.requestDayCount} program day${data.requestDayCount === 1 ? "" : "s"}`
+                : ""}
             </span>
           ) : null}
           {data.requestVendor ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-700">
               Vendor: {data.requestVendor}
+            </span>
+          ) : null}
+          {data.fromLocation && data.toLocation ? (
+            <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-700">
+              {data.fromLocation} → {data.toLocation}
             </span>
           ) : null}
           {data.category &&
@@ -277,7 +317,7 @@ export function SubmissionDetailPanel({
           {data.priority &&
           data.priority.toLowerCase() !== (data.severity || "").toLowerCase() ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-gray-100">
-              Priority: {formatLabel(data.priority)}
+              Priority: {levelLabel(data.priority)}
             </span>
           ) : null}
         </div>
@@ -291,7 +331,7 @@ export function SubmissionDetailPanel({
                 id: data.id,
                 data: {
                   assignedTo: myId,
-                  assignedToLabel: "Me",
+                  assignedToLabel: myLabel,
                   status: data.status === "new" ? "triaged" : data.status,
                 },
               })
@@ -323,7 +363,7 @@ export function SubmissionDetailPanel({
           disabled={saving}
           onChange={(e) => {
             const id = e.target.value;
-            const person = staff.find((s) => s.id === id);
+            const person = assigneeOptions.find((s) => s.id === id);
             updateMutation.mutate({
               id: data.id,
               data: {
@@ -335,7 +375,7 @@ export function SubmissionDetailPanel({
           className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
         >
           <option value="">Unassigned</option>
-          {staff.map((s) => (
+          {assigneeOptions.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name || s.email} ({s.bobRole})
             </option>
@@ -393,7 +433,7 @@ export function SubmissionDetailPanel({
               <option value="">—</option>
               {PRIORITY_OPTIONS.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {levelLabel(p)}
                 </option>
               ))}
             </select>

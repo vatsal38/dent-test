@@ -13,6 +13,7 @@ export const BOB_SUBMISSION_TYPES = [
   "photo_upload",
   "coach_feedback",
   "dent_testimony",
+  "attendance_correction",
 ] as const;
 export type BobSubmissionType = (typeof BOB_SUBMISSION_TYPES)[number];
 
@@ -95,8 +96,11 @@ export interface BobSubmission {
   proofLinks?: string | null;
   requestStartDate?: string | null;
   requestEndDate?: string | null;
+  requestDayCount?: number | null;
   requestAmount?: number | null;
   requestVendor?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
   coachRating?: number | null;
   curriculumFeedback?: string | null;
   logisticsFeedback?: string | null;

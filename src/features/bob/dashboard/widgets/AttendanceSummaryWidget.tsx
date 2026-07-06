@@ -27,7 +27,8 @@ export function AttendanceSummaryWidget({
   scope,
 }: WidgetRenderProps) {
   const title = placement.title ?? "Attendance";
-  const personal = isPersonalStudentScope(scope);
+  const personal =
+    isPersonalStudentScope(scope) && !placement.programWide;
 
   if (loading) return <DashboardWidgetSkeleton variant="table" titleWidth="w-32" />;
 

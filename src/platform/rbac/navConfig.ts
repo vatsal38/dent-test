@@ -119,6 +119,7 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     label: "Submissions",
     iconKey: "inbox",
     permission: "inbox.view",
+    denyRoles: ["student"],
     section: "primary",
     after: "/app/bob/key-links",
   },

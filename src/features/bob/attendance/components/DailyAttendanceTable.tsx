@@ -17,6 +17,7 @@ import {
   sumDayHours,
 } from "../model/dayHours";
 import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
+import { DailyAttendanceMobileCards } from "./DailyAttendanceMobileCards";
 
 export function DailyAttendanceTable({
   days,
@@ -104,8 +105,37 @@ export function DailyAttendanceTable({
 
   const columns = isWeek ? weekDates! : [focusDate];
 
+  const pagination =
+    onPageChange && rowsByStudent.length > pageSize ? (
+      <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 bg-gray-50 rounded-b-lg">
+        <p className="text-xs text-gray-500 tabular-nums">
+          Page {page} of {totalPages}
+        </p>
+        {page < totalPages ? (
+          <button
+            type="button"
+            onClick={() => onPageChange(page + 1)}
+            className="text-sm font-medium text-orange-700 hover:text-orange-800 hover:underline"
+          >
+            Scroll to next page →
+          </button>
+        ) : (
+          <span className="text-xs text-gray-400">End of roster</span>
+        )}
+      </div>
+    ) : null;
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+    <div>
+      <DailyAttendanceMobileCards
+        rows={pagedRows}
+        workspace={workspace}
+        focusDate={focusDate}
+        weekDates={weekDates}
+        isWeek={Boolean(isWeek)}
+        onSelectDay={onSelectDay}
+      />
+      <div className="hidden md:block bg-white border border-gray-200 rounded-lg overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -331,21 +361,23 @@ export function DailyAttendanceTable({
           })}
         </tbody>
       </table>
-      {onPageChange && rowsByStudent.length > pageSize ? (
-        <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 bg-gray-50">
+      {pagination}
+      </div>
+      {pagination ? (
+        <div className="md:hidden mt-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
           <p className="text-xs text-gray-500 tabular-nums">
             Page {page} of {totalPages}
           </p>
           {page < totalPages ? (
             <button
               type="button"
-              onClick={() => onPageChange(page + 1)}
-              className="text-sm font-medium text-orange-700 hover:text-orange-800 hover:underline"
+              onClick={() => onPageChange!(page + 1)}
+              className="mt-2 w-full rounded-lg border border-orange-200 bg-white py-2 text-sm font-medium text-orange-700"
             >
-              Scroll to next page →
+              Load more students
             </button>
           ) : (
-            <span className="text-xs text-gray-400">End of roster</span>
+            <p className="mt-1 text-xs text-gray-400">End of roster</p>
           )}
         </div>
       ) : null}

@@ -28,6 +28,7 @@ import {
   CoachFeedbackFormFields,
   isCoachFeedbackType,
 } from "@/features/bob/submit/CoachFeedbackFormFields";
+import { FEEDBACK_CATEGORIES } from "@/features/bob/submit/feedbackCategories";
 import {
   StudentMultiSelect,
   studentLabel,
@@ -166,13 +167,20 @@ export function SubmitPage() {
 
     useEffect(() => {
         if (submissionType !== 'pto_request' || form.ptoFor) return;
+        const selfStaff =
+            staffList.find((s) => s.id === user?.id) ||
+            staffList.find(
+                (s) =>
+                    user?.email &&
+                    s.email?.toLowerCase() === user.email.toLowerCase(),
+            );
         setForm((f) => ({
             ...f,
             ptoFor: 'self',
-            staffMemberId: user?.id || '',
-            staffMemberName: submitterName,
+            staffMemberId: selfStaff?.id || user?.id || '',
+            staffMemberName: selfStaff?.name || submitterName,
         }));
-    }, [submissionType, form.ptoFor, user?.id, submitterName]);
+    }, [submissionType, form.ptoFor, user?.id, user?.email, staffList, submitterName]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -269,6 +277,10 @@ export function SubmitPage() {
         </div>
     );
 
+    const showSubmittedBy =
+        submissionType !== "anonymous_feedback" &&
+        !(submissionType === "incident" && submitAnonymously);
+
     const submittedByField = (
         <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Submitted by</label>
@@ -353,6 +365,26 @@ export function SubmitPage() {
             }
             if (submissionType === 'anonymous_feedback') {
                 payload.submitAnonymously = submitAnonymously;
+            }
+            if (submissionType === 'incident') {
+                payload.submitAnonymously = submitAnonymously;
+            }
+            if (submissionType === 'pto_request') {
+                const ptoFor = form.ptoFor || 'self';
+                payload.ptoFor = ptoFor;
+                if (ptoFor === 'self') {
+                    const selfStaff =
+                        staffList.find((s) => s.id === user?.id) ||
+                        staffList.find(
+                            (s) =>
+                                user?.email &&
+                                s.email?.toLowerCase() === user.email.toLowerCase(),
+                        );
+                    payload.staffMemberId =
+                        form.staffMemberId || selfStaff?.id || user?.id;
+                    payload.staffMemberName =
+                        form.staffMemberName || selfStaff?.name || submitterName;
+                }
             }
             if (submissionType === 'blitz_points' && blitzCategoryMeta?.fixedPoints) {
                 payload.points = String(blitzCategoryMeta.defaultPoints);
@@ -444,7 +476,7 @@ export function SubmitPage() {
                         <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
                     )}
 
-                    {submissionType !== 'anonymous_feedback' ? submittedByField : null}
+                    {showSubmittedBy ? submittedByField : null}
 
                     {submissionType === 'incident' && (
                         <>
@@ -481,7 +513,23 @@ export function SubmitPage() {
                                     ))}
                                 </div>
                             </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Severity</label><select value={form.severity ?? ''} onChange={(e) => setForm((f) => ({ ...f, severity: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"><option value="">Select</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Severity</label><select value={form.severity ?? ''} onChange={(e) => setForm((f) => ({ ...f, severity: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"><option value="">Select</option><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option></select></div>
+                            <label className="flex items-start gap-2 text-sm text-gray-700">
+                                <input
+                                    type="checkbox"
+                                    checked={submitAnonymously}
+                                    onChange={(e) => setSubmitAnonymously(e.target.checked)}
+                                    className="mt-0.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                />
+                                <span>
+                                    Submit anonymously
+                                    <span className="block text-xs text-gray-500 mt-0.5">
+                                        {submitAnonymously
+                                            ? "Your name will not be shown on this incident report."
+                                            : `Otherwise, your name (${submitterName}) will be shared with staff reviewing this report.`}
+                                    </span>
+                                </span>
+                            </label>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Attachments</label>
                                 <input
@@ -615,7 +663,7 @@ export function SubmitPage() {
                                         {blitzOptionsLoading ? 'Loading teams…' : 'Select team'}
                                     </option>
                                     {blitzOptions?.trackTeams?.length ? (
-                                        <optgroup label="Track teams">
+                                        <optgroup label="Track teams (squads)">
                                             {blitzOptions.trackTeams.map((o) => (
                                                 <option key={`t-${o.value}`} value={o.value}>
                                                     {o.label}
@@ -676,8 +724,32 @@ export function SubmitPage() {
                     )}
                     {submissionType === 'anonymous_feedback' && (
                         <>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={form.category ?? ''} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"><option value="">Select</option><option value="program">Program</option><option value="logistics">Logistics</option><option value="partners">Partners (FFT, field trips, etc.)</option><option value="staff">Staff</option><option value="events">Events</option><option value="other">Other</option></select></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label><textarea value={form.feedback ?? ''} onChange={(e) => setForm((f) => ({ ...f, feedback: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500" rows={4} placeholder="Share your feedback" required /></div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                <select
+                                    value={form.category ?? ''}
+                                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                                >
+                                    <option value="">Select</option>
+                                    {FEEDBACK_CATEGORIES.map((c) => (
+                                        <option key={c.value} value={c.value}>
+                                            {c.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+                                <textarea
+                                    value={form.feedback ?? ''}
+                                    onChange={(e) => setForm((f) => ({ ...f, feedback: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                                    rows={4}
+                                    placeholder="Share your feedback"
+                                    required
+                                />
+                            </div>
                             <label className="flex items-start gap-2 text-sm text-gray-700">
                                 <input
                                     type="checkbox"
@@ -690,7 +762,7 @@ export function SubmitPage() {
                                     <span className="block text-xs text-gray-500 mt-0.5">
                                         {submitAnonymously
                                             ? 'Your name will not be shown with this feedback.'
-                                            : `Otherwise, submit as ${submitterName}.`}
+                                            : 'Otherwise, submit as Micky Wolf'}
                                     </span>
                                 </span>
                             </label>

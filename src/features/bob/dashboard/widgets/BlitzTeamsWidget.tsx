@@ -48,7 +48,7 @@ export function BlitzTeamsWidget({
               : "text-amber-800 hover:text-amber-950"
           }`}
         >
-          Global colors
+          Global teams
         </button>
         <button
           type="button"
@@ -65,16 +65,16 @@ export function BlitzTeamsWidget({
 
       {teams.length === 0 ? (
         <DashboardEmpty
-          title={tab === "global" ? "No global blitz teams" : "No track blitz teams"}
-          message="Assign Blitz Squad on Students & Alums to see teams here."
+          title={tab === "global" ? "No global teams" : "No track teams"}
+          message="Assign BoB '26 Blitz Squad on the student roster to populate track teams."
         />
       ) : (
         <BlitzLeaderboardTable teams={teams} />
       )}
       <p className="text-xs text-gray-500 mt-3">
         {tab === "global"
-          ? "Program-wide color teams. Track awards roll up here automatically."
-          : "Color + track combinations (Dentership, Bootcamp, AYD). Weekly totals use the current program week."}
+          ? "Program-wide color teams. Track awards roll up here; auto points are track-only."
+          : "Blitz squads from the roster (color + track). Falls back to color/track groups when squads are not synced."}
       </p>
     </DashboardCard>
   );

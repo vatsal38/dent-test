@@ -5,6 +5,7 @@ import {
   type BobSubmissionStatus,
 } from "@/platform/api/bob/submissions";
 import {
+  levelLabel,
   PRIORITY_OPTIONS,
   SUBMISSION_STATUS_LABELS,
 } from "@/features/bob/submissions/workflow/constants";
@@ -63,7 +64,7 @@ export function BulkActionBar({
         <option value="">Priority…</option>
         {PRIORITY_OPTIONS.map((p) => (
           <option key={p} value={p}>
-            {p}
+            {levelLabel(p)}
           </option>
         ))}
       </select>

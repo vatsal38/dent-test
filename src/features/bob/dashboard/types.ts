@@ -58,6 +58,8 @@ export interface WidgetPlacement {
   roles?: BobOpsRole[];
   /** Metric keys for kpi_row */
   metrics?: string[];
+  /** When true, attendance_summary shows all tracks (not personal student scope). */
+  programWide?: boolean;
   minScope?: DashboardScopeLevel;
 }
 

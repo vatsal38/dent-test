@@ -84,37 +84,33 @@ export const BOB_STAFF_FORMS: BobFormDefinition[] = [
     type: "reimbursement_request",
     title: "Reimbursement",
     description:
-      "Submit an expense for reimbursement. Attach receipts or receipt links.",
+      "Submit program-related expenses or mileage between two locations. Commuting to or from your normal work site is not reimbursable.",
     submitLabel: "Submit reimbursement",
     audience: "staff",
   },
   {
-    type: "photo_upload",
-    title: "Photo Album Links",
-    description:
-      "Share Google Photos or Drive album links from a session or event.",
-    submitLabel: "Submit album links",
-    audience: "staff",
-  },
-  {
     type: "coach_feedback",
-    title: "Coach Feedback",
+    title: "Weekly Coach Feedback",
     description:
       "Weekly survey: rate your week, share curriculum and logistics feedback, and ask leadership questions.",
-    submitLabel: "Submit coach feedback",
+    submitLabel: "Submit weekly coach feedback",
     audience: "staff",
   },
 ];
 
-export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
+/** Program forms that live on dedicated pages (not /submit?type=). */
+export const BOB_PROGRAM_FORM_LINKS: BobExternalFormLink[] = [
   {
-    id: "attendance_correction",
-    title: "Report absence / fix sign-in times",
+    id: "dent_testimony",
+    title: "Dent testimony",
     description:
-      "Request approval for a planned absence or correct sign-in or sign-out times.",
-    href: "/app/bob/attendance/correction",
-    cta: "Open correction form",
+      "Share a student or staff story in writing or via video link — available to staff and students.",
+    href: "/app/bob/testimony",
+    cta: "Open testimony form",
   },
+];
+
+export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
   {
     id: "project_team",
     title: "Submit your project team",
@@ -132,31 +128,12 @@ export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
     cta: "Open progress form",
   },
   {
-    id: "dent_testimony",
-    title: "Dent testimony",
-    description:
-      "Share a written story or video link with consent for public program use.",
-    href: "/app/bob/testimony",
-    cta: "Open testimony form",
-  },
-  {
     id: "anonymous_feedback",
     title: "Feedback",
     description:
       "Share program or logistics feedback. Choose whether to submit anonymously.",
     href: "/app/bob/submit?type=anonymous_feedback",
     cta: "Open feedback form",
-  },
-];
-
-export const BOB_EXTERNAL_FORM_LINKS: BobExternalFormLink[] = [
-  {
-    id: "attendance_correction",
-    title: "Attendance Correction",
-    description:
-      "Report an absence, fix sign-in/out times, or explain a special circumstance.",
-    href: "/app/bob/attendance/correction",
-    cta: "Open correction form",
   },
 ];
 

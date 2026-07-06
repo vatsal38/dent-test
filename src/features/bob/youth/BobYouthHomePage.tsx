@@ -5,6 +5,13 @@ import { PageHeader } from "@/design-system/patterns/PageHeader";
 
 const ACTIONS = [
   {
+    title: "Absence & sign-in/out correction",
+    description:
+      "Report upcoming absences or correct sign-in and sign-out times for days you attended.",
+    href: "/app/bob/attendance/correction",
+    cta: "Open correction form",
+  },
+  {
     title: "Weekly progress update",
     description:
       "Submit your team's deliverable progress, proof, and reflection for this week.",

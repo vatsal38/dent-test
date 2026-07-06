@@ -13,10 +13,16 @@ import {
 } from '@/platform/api/bob/attendanceCorrection';
 import { useBobStudentDetail } from '@/platform/query/hooks/useBobStudents';
 import { useBobMe } from '@/platform/query/hooks/useBobMe';
+import { useBobAccess } from '@/platform/rbac/useBobAccess';
 import { parseApiError } from '@/platform/api/errors';
 import { formatAttendanceTime } from './model/formatAttendanceTime';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { PageHeader } from '@/design-system/patterns/PageHeader';
+import {
+  listProgramDates,
+  PROGRAM_END_DATE,
+  PROGRAM_START_DATE,
+} from '@/lib/bobProgramCalendar';
 
 const REQUEST_TYPES: Array<{
   id: AttendanceCorrectionRequestType;
@@ -26,13 +32,14 @@ const REQUEST_TYPES: Array<{
 }> = [
   {
     id: 'absence',
-    label: 'Absence / Report Absence',
-    description: 'Request approval for a planned or past absence.',
+    label: 'Report absence',
+    description:
+      'Request approval for a planned upcoming absence or report a past absence.',
     pillClass: 'bg-sky-100 text-sky-900 border-sky-200',
   },
   {
     id: 'time_correction',
-    label: 'Time Correction',
+    label: 'Sign-in / sign-out correction',
     description: 'Fix sign-in or sign-out times you believe are wrong.',
     pillClass: 'bg-blue-100 text-blue-900 border-blue-200',
   },
@@ -61,17 +68,30 @@ function toTimeInputValue(iso?: string | null) {
   return `${h}:${m}`;
 }
 
+function formatProgramDateLabel(iso: string) {
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export function AttendanceCorrectionPage() {
   const searchParams = useSearchParams();
   const meQuery = useBobMe();
+  const { access } = useBobAccess();
   const demoScope = meQuery.data?.demoScope;
+  const linkedStudentId = meQuery.data?.linkedStudent?.id ?? null;
   const urlStudentId = searchParams?.get('studentId') || '';
   const lockedStudentId = demoScope?.studentId
     ? String(demoScope.studentId)
-    : urlStudentId;
+    : access.role === 'student' && linkedStudentId
+      ? linkedStudentId
+      : urlStudentId;
 
   const [requestType, setRequestType] =
-    useState<AttendanceCorrectionRequestType>('time_correction');
+    useState<AttendanceCorrectionRequestType>('absence');
   const [studentId, setStudentId] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [studentDropdownOpen, setStudentDropdownOpen] = useState(false);
@@ -80,6 +100,7 @@ export function AttendanceCorrectionPage() {
   const [dateOptions, setDateOptions] = useState<AttendanceCorrectionDateOption[]>([]);
   const [datesLoading, setDatesLoading] = useState(false);
   const [selectedDateId, setSelectedDateId] = useState('');
+  const [absenceDate, setAbsenceDate] = useState('');
 
   const [absenceReason, setAbsenceReason] = useState('');
   const [correctionDetail, setCorrectionDetail] = useState('');
@@ -98,7 +119,10 @@ export function AttendanceCorrectionPage() {
   const [studentsHint, setStudentsHint] = useState<string | null>(null);
   const debouncedStudentSearch = useDebouncedValue(studentSearch, 250);
 
-  const isStudentLocked = Boolean(demoScope?.studentId);
+  const isStudentLocked = Boolean(
+    demoScope?.studentId || (access.role === 'student' && linkedStudentId),
+  );
+  const isStudentView = access.role === 'student' || isStudentLocked;
   const prefilledStudentQuery = useBobStudentDetail(
     !isStudentLocked && studentId && /^[a-f\d]{24}$/i.test(studentId)
       ? studentId
@@ -129,6 +153,16 @@ export function AttendanceCorrectionPage() {
     () => dateOptions.find((d) => d.attendanceId === selectedDateId) ?? null,
     [dateOptions, selectedDateId],
   );
+
+  const programDateOptions = useMemo(
+    () => listProgramDates({ startDate: PROGRAM_START_DATE, endDate: PROGRAM_END_DATE }),
+    [],
+  );
+
+  const lockedStudentName =
+    meQuery.data?.linkedStudent?.name ||
+    demoScope?.studentName ||
+    (selectedStudent ? studentLabel(selectedStudent) : null);
 
   useEffect(() => {
     if (lockedStudentId) setStudentId(lockedStudentId);
@@ -175,11 +209,24 @@ export function AttendanceCorrectionPage() {
 
   useEffect(() => {
     const prefillDate = searchParams?.get('date');
-    if (prefillDate && dateOptions.length) {
-      const match = dateOptions.find((d) => d.date === prefillDate);
-      if (match) setSelectedDateId(match.attendanceId);
+    const prefillType = searchParams?.get('type');
+    if (
+      prefillType === 'absence' ||
+      prefillType === 'time_correction' ||
+      prefillType === 'special'
+    ) {
+      setRequestType(prefillType);
     }
-  }, [searchParams, dateOptions]);
+    if (!prefillDate) return;
+    if (prefillType === 'time_correction' || (!prefillType && requestType === 'time_correction')) {
+      if (dateOptions.length) {
+        const match = dateOptions.find((d) => d.date === prefillDate);
+        if (match) setSelectedDateId(match.attendanceId);
+      }
+      return;
+    }
+    setAbsenceDate(prefillDate);
+  }, [searchParams, dateOptions, requestType]);
 
   const loadDates = useCallback(async (id: string) => {
     if (!id || !/^[a-f\d]{24}$/i.test(id)) {
@@ -229,7 +276,7 @@ export function AttendanceCorrectionPage() {
     e.preventDefault();
     setError(null);
     if (!studentId) {
-      setError('Select your name to continue.');
+      setError(isStudentView ? 'Your student account is not linked yet. Ask staff for help.' : 'Select a student to continue.');
       return;
     }
     if (!requestType) {
@@ -237,20 +284,34 @@ export function AttendanceCorrectionPage() {
       return;
     }
 
+    const matchedAbsenceOption =
+      requestType === 'absence'
+        ? dateOptions.find((d) => d.date === absenceDate) ?? null
+        : null;
+
     setSubmitting(true);
     try {
       await submitAttendanceCorrection({
         studentId,
         requestType,
-        attendanceId: selectedDate?.attendanceId,
-        attendanceAirtableRecordId: selectedDate?.airtableRecordId,
-        attendanceDate: selectedDate?.date,
+        attendanceId:
+          requestType === 'time_correction'
+            ? selectedDate?.attendanceId
+            : matchedAbsenceOption?.attendanceId,
+        attendanceAirtableRecordId:
+          requestType === 'time_correction'
+            ? selectedDate?.airtableRecordId
+            : matchedAbsenceOption?.airtableRecordId,
+        attendanceDate:
+          requestType === 'absence' ? absenceDate : selectedDate?.date,
         absenceReason: absenceReason || undefined,
         correctionDetail: correctionDetail || undefined,
         specialCircumstance: specialCircumstance || undefined,
-        correctedSignInDate: selectedDate?.date,
+        correctedSignInDate:
+          requestType === 'time_correction' ? selectedDate?.date : undefined,
         correctedSignInTime: correctedSignInTime || undefined,
-        correctedSignOutDate: selectedDate?.date,
+        correctedSignOutDate:
+          requestType === 'time_correction' ? selectedDate?.date : undefined,
         correctedSignOutTime: correctedSignOutTime || undefined,
       });
       setSubmitted(true);
@@ -281,6 +342,7 @@ export function AttendanceCorrectionPage() {
                 setCorrectedSignInTime('');
                 setCorrectedSignOutTime('');
                 setSelectedDateId('');
+                setAbsenceDate('');
               }}
               className="px-4 py-2 rounded-lg bg-white border border-green-300 text-sm font-medium text-green-900 hover:bg-green-100"
             >
@@ -298,24 +360,43 @@ export function AttendanceCorrectionPage() {
     );
   }
 
-  const showDateFields =
-    requestType === 'absence' || requestType === 'time_correction';
+  const showTimeCorrectionDates = requestType === 'time_correction';
+  const showAbsenceDate = requestType === 'absence';
+  const canSubmit =
+    requestType === 'special' ||
+    (showAbsenceDate && Boolean(absenceDate)) ||
+    (showTimeCorrectionDates && Boolean(selectedDateId));
 
   return (
     <div className="max-w-2xl mx-auto">
       <PageHeader
         eyebrow="School-Year Programs"
-        title="Absence & Correction Request"
-        description="Submit absences for approval or report time you believe is incorrect. Submit one correction at a time with specific sign-in/out times."
+        title="Absence & Sign In/Out Correction"
+        description={
+          isStudentView
+            ? 'Report absences you know are coming, or correct sign-in and sign-out times for days you already attended.'
+            : 'Submit student absence requests or sign-in/out time corrections for staff review.'
+        }
       />
 
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-        <p className="font-medium">Deadline reminder</p>
-        <p className="mt-1 text-amber-900/90">
-          Time corrections are due the Monday before each pay day. Review your
-          daily attendance before submitting.
-        </p>
-      </div>
+      {!isStudentView ? (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-medium">Deadline reminder</p>
+          <p className="mt-1 text-amber-900/90">
+            Time corrections are due the Monday before each pay day. Review daily
+            attendance before submitting.
+          </p>
+        </div>
+      ) : (
+        <div className="mb-6 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+          <p className="font-medium">How this works</p>
+          <p className="mt-1 text-sky-900/90">
+            Use <strong>Report absence</strong> for upcoming or past absences.
+            Use <strong>Sign-in / sign-out correction</strong> when you attended
+            but your punch times look wrong.
+          </p>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -329,15 +410,16 @@ export function AttendanceCorrectionPage() {
 
         <div ref={studentDropdownRef}>
           <label className="block text-sm font-medium text-gray-900 mb-1">
-            Student name <span className="text-red-500">*</span>
+            Student {isStudentView ? '' : 'name '}
+            <span className="text-red-500">*</span>
           </label>
-          {isStudentLocked && demoScope?.studentName ? (
+          {isStudentLocked ? (
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-900">
-              {demoScope.studentName}
+              {lockedStudentName || 'Your account'}
               {!/^[a-f\d]{24}$/i.test(studentId) ? (
                 <p className="mt-1 text-xs font-normal text-amber-700">
-                  Demo student is not linked to roster data. Log in as staff to
-                  submit for a synced student.
+                  Your login is not linked to a roster student yet. Ask staff to
+                  provision your student account.
                 </p>
               ) : null}
             </div>
@@ -423,7 +505,13 @@ export function AttendanceCorrectionPage() {
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setRequestType(t.id)}
+                  onClick={() => {
+                    setRequestType(t.id);
+                    setError(null);
+                    if (t.id === 'absence' && selectedDate?.date) {
+                      setAbsenceDate(selectedDate.date);
+                    }
+                  }}
                   className={`w-full text-left rounded-xl border px-4 py-3 transition-all ${
                     active
                       ? `${t.pillClass} ring-2 ring-orange-400 ring-offset-1`
@@ -442,21 +530,44 @@ export function AttendanceCorrectionPage() {
           </div>
         </fieldset>
 
-        {showDateFields ? (
+        {showAbsenceDate ? (
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
-              Absence / correction date <span className="text-red-500">*</span>
+              Absence date <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-2">
-              Select one date at a time. Only dates with imported attendance
-              records appear here.
+              Pick any program day — including upcoming dates for planned absences.
+            </p>
+            <select
+              value={absenceDate}
+              onChange={(e) => setAbsenceDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">Select a program day…</option>
+              {programDateOptions.map((date) => (
+                <option key={date} value={date}>
+                  {formatProgramDateLabel(date)} ({date})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        {showTimeCorrectionDates ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Day to correct <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Only days with imported attendance records appear here.
             </p>
             {datesLoading ? (
               <p className="text-sm text-gray-500">Loading your dates…</p>
             ) : dateOptions.length === 0 ? (
               <p className="text-sm text-amber-700 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                No attendance dates found for this student. Import attendance from
-                Airtable first, or pick another student.
+                No attendance records found yet. If you need to report an upcoming
+                absence, switch to <strong>Report absence</strong>.
               </p>
             ) : (
               <select
@@ -537,7 +648,7 @@ export function AttendanceCorrectionPage() {
         {requestType === 'absence' ? (
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
-              Absence reason <span className="text-red-500">*</span>
+              Why will you be absent? <span className="text-red-500">*</span>
             </label>
             <textarea
               value={absenceReason}
@@ -545,7 +656,7 @@ export function AttendanceCorrectionPage() {
               required
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              placeholder="Why were you absent or reporting this absence?"
+              placeholder="Share the reason and any details staff should know."
             />
           </div>
         ) : null}
@@ -584,7 +695,7 @@ export function AttendanceCorrectionPage() {
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-gray-100">
           <button
             type="submit"
-            disabled={submitting || (showDateFields && !selectedDateId)}
+            disabled={submitting || !canSubmit}
             className="px-5 py-2.5 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
           >
             {submitting ? 'Submitting…' : 'Submit request'}

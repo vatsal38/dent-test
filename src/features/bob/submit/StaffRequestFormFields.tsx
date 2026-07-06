@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import type { BobStaffMember } from "@/platform/api/bob/staff";
 import { staffDisplayName } from "@/features/bob/pods/staffDisplay";
+import { countPtoProgramDays } from "@/features/bob/submit/ptoDays";
 
 export const STAFF_FORM_TYPES = [
   "pto_request",
@@ -96,6 +97,11 @@ export function StaffRequestFormFields({
   currentUserId,
   currentUserName,
 }: StaffRequestFormFieldsProps) {
+  const ptoDayCount =
+    type === "pto_request"
+      ? countPtoProgramDays(form.requestStartDate, form.requestEndDate)
+      : null;
+
   if (type === "pto_request") {
     const ptoFor = form.ptoFor || "self";
     const sortedStaff = [...staffList].sort((a, b) =>
@@ -106,7 +112,7 @@ export function StaffRequestFormFields({
       <>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            You or staff member out
+            Staff member out
           </label>
           <select
             value={ptoFor}
@@ -213,6 +219,13 @@ export function StaffRequestFormFields({
             />
           </div>
         </div>
+        {ptoDayCount != null ? (
+          <p className="text-sm text-sky-900 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2">
+            <span className="font-semibold">{ptoDayCount}</span> program day
+            {ptoDayCount === 1 ? "" : "s"} in this range (Mon–Fri, excluding
+            holidays).
+          </p>
+        ) : null}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Details
@@ -310,6 +323,10 @@ export function StaffRequestFormFields({
   if (type === "reimbursement_request") {
     return (
       <>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 leading-relaxed">
+          Reimbursements cover program-related expenses only. Driving to or from
+          your normal work location is not reimbursable.
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Expense type
@@ -320,15 +337,53 @@ export function StaffRequestFormFields({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
           >
             <option value="">Select (optional)</option>
+            <option value="mileage">Mileage</option>
             <option value="supplies">Supplies</option>
             <option value="food">Food</option>
-            <option value="travel">Travel</option>
+            <option value="travel">Travel (non-mileage)</option>
             <option value="other">Other</option>
           </select>
         </div>
+        {form.category === "mileage" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                From location
+              </label>
+              <input
+                type="text"
+                value={form.fromLocation ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, fromLocation: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                required
+                placeholder="e.g. Morgan State University"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                To location
+              </label>
+              <input
+                type="text"
+                value={form.toLocation ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, toLocation: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                required
+                placeholder="e.g. Field trip site"
+              />
+            </div>
+          </div>
+        ) : null}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Description
+            {form.category === "mileage" ? (
+              <span className="font-normal text-gray-500"> (optional)</span>
+            ) : null}
           </label>
           <textarea
             value={form.description ?? ""}
@@ -337,8 +392,12 @@ export function StaffRequestFormFields({
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
             rows={3}
-            required
-            placeholder="What was purchased and for which program need?"
+            required={form.category !== "mileage"}
+            placeholder={
+              form.category === "mileage"
+                ? "Optional notes about the trip purpose"
+                : "What was purchased and for which program need?"
+            }
           />
         </div>
         <div>
@@ -361,6 +420,7 @@ export function StaffRequestFormFields({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Receipt links
+            <span className="font-normal text-gray-500"> (optional)</span>
           </label>
           <textarea
             value={form.proofLinks ?? ""}
@@ -376,7 +436,8 @@ export function StaffRequestFormFields({
           pendingFiles={pendingFiles}
           setPendingFiles={setPendingFiles}
           fileInputRef={fileInputRef}
-          label="Receipt photos or PDFs"
+          label="Receipt photos or PDFs (optional)"
+          hint="Attach receipts when available (2MB each)."
         />
       </>
     );

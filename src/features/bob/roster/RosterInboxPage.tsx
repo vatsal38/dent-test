@@ -50,6 +50,7 @@ import {
   useDeleteBobStudent,
 } from "@/platform/query/hooks/useBobStudents";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { ScopedEmptyState } from "@/platform/rbac/ScopedEmptyState";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -148,8 +149,15 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
   }, [debouncedFilters, queueId, trackFilter]);
 
   const { access, isScoped, can } = useBobAccess();
+  const { data: me } = useBobMe();
+  const linkedStudentId = me?.linkedStudent?.id ?? null;
   const isStudentViewer = access.role === "student";
   const effectiveView = isStudentViewer ? "grid" : view;
+
+  const handleOpenStudent = (id: string) => {
+    if (isStudentViewer && linkedStudentId && id !== linkedStudentId) return;
+    openStudent(id);
+  };
 
   const listParamsMemo = useMemo(
     () =>
@@ -302,7 +310,15 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
               : "Active youth on program — attendance, deliverables, and track assignments."
           }
           actions={
-            isStudentViewer ? undefined : (
+            isStudentViewer && linkedStudentId ? (
+              <button
+                type="button"
+                onClick={() => handleOpenStudent(linkedStudentId)}
+                className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
+              >
+                My profile
+              </button>
+            ) : isStudentViewer ? undefined : (
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -485,8 +501,9 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
             headshot={headshot}
             columns={columns}
             labelsForField={labelsForField}
-            onOpenStudent={openStudent}
+            onOpenStudent={handleOpenStudent}
             simplifiedView={isStudentViewer}
+            ownStudentId={linkedStudentId}
           />
         )
       ) : (
