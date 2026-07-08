@@ -77,7 +77,14 @@ export function OverviewTab() {
   if (track && track !== "—") {
     rows.push({ label: "Track", value: track });
   }
-  for (const key of ["Project", "Team", "Blitz Team", "Program Team"]) {
+  const blitzTeam =
+    student.blitzSquad?.trim() ||
+    student.blitzColor?.trim() ||
+    "";
+  if (blitzTeam) {
+    rows.push({ label: "Blitz team", value: blitzTeam });
+  }
+  for (const key of ["Project", "Team", "Program Team"]) {
     const raw = fields[key];
     const val = raw != null ? String(raw).trim() : "";
     if (val) rows.push({ label: key, value: val });
@@ -153,9 +160,9 @@ export function OverviewTab() {
               showPersonalDetails
                 ? true
                 : row.label === "Track" ||
+                  row.label === "Blitz team" ||
                   row.label === "Team" ||
                   row.label === "Project" ||
-                  row.label === "Blitz Team" ||
                   row.label === "Program Team",
             )
             .map((row) => (

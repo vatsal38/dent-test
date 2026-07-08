@@ -142,6 +142,13 @@ export function buildFilterFieldCatalog(
       kind: "select",
       path: "coach",
     },
+    {
+      id: "sys:blitzTeam",
+      label: "Blitz team",
+      group: "Program",
+      kind: "select",
+      path: "blitzTeam",
+    },
   ];
 
   const airtable = includeAirtableFields
@@ -223,6 +230,8 @@ export function facetOptionsForField(
       return (facets.ywStatuses ?? []).map((x) => x.value);
     case "sys:coach":
       return facets.coaches.map((x) => x.value);
+    case "sys:blitzTeam":
+      return (facets.blitzTeams ?? []).map((x) => x.value);
     case "sys:school":
       return facets.schools.map((x) => x.value);
     default:

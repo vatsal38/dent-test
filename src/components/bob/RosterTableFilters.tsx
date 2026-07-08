@@ -287,6 +287,8 @@ export function RosterRecordsToolbar({
   schema,
   trackFilter = "",
   onTrackFilterChange,
+  blitzTeamFilter = "",
+  onBlitzTeamFilterChange,
   drawerOpen,
   onDrawerOpenChange,
   onSearchChange,
@@ -299,6 +301,8 @@ export function RosterRecordsToolbar({
   schema: BobRosterSchemaField[] | null;
   trackFilter?: string;
   onTrackFilterChange?: (track: string) => void;
+  blitzTeamFilter?: string;
+  onBlitzTeamFilterChange?: (team: string) => void;
   drawerOpen: boolean;
   onDrawerOpenChange: (open: boolean) => void;
   onSearchChange: (search: string) => void;
@@ -321,6 +325,15 @@ export function RosterRecordsToolbar({
   );
   const trackOptions = useMemo(
     () => rosterTrackFilterOptions(facets),
+    [facets],
+  );
+  const blitzTeamOptions = useMemo(
+    () =>
+      (facets?.blitzTeams ?? []).map((opt) => ({
+        value: opt.value,
+        label: opt.value,
+        count: opt.count,
+      })),
     [facets],
   );
 
@@ -392,6 +405,16 @@ export function RosterRecordsToolbar({
             onChange={onTrackFilterChange}
             options={trackOptions}
             loading={facetsLoading}
+          />
+        ) : null}
+        {onBlitzTeamFilterChange ? (
+          <RosterTrackScopeSelect
+            value={blitzTeamFilter}
+            onChange={onBlitzTeamFilterChange}
+            options={blitzTeamOptions}
+            loading={facetsLoading}
+            emptyLabel="All blitz teams"
+            className="h-[42px] shrink-0 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 min-w-[12rem] max-w-[18rem]"
           />
         ) : null}
         <button

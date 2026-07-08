@@ -75,6 +75,7 @@ function listParams(
   page: number,
   pageSize: number,
   trackFilter?: string | null,
+  blitzTeamFilter?: string | null,
   includeStats = true,
 ): BobStudentsListParams {
   const params: BobStudentsListParams = {
@@ -88,6 +89,8 @@ function listParams(
   if (q) params.search = q;
   const track = String(queueParams.track || trackFilter || "").trim();
   if (track) params.track = track;
+  const blitzTeam = String(blitzTeamFilter || "").trim();
+  if (blitzTeam) params.blitzTeam = blitzTeam;
   const filtersJson = serializeFiltersForApi(f);
   if (filtersJson) params.filters = filtersJson;
   return params;
@@ -126,6 +129,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
   const { openStudent } = useStudentDrawerUrl();
   const selectedId = searchParams.get("id") ?? searchParams.get("student");
   const trackFilter = searchParams.get("track") ?? "";
+  const blitzTeamFilter = searchParams.get("blitzTeam") ?? "";
   const view = (searchParams.get("view") || "grid") as "grid" | "table";
 
   const [filters, setFilters] = useState<RosterTableFilterState>(EMPTY_ROSTER_FILTERS);
@@ -146,7 +150,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedFilters, queueId, trackFilter]);
+  }, [debouncedFilters, queueId, trackFilter, blitzTeamFilter]);
 
   const { access, isScoped, can } = useBobAccess();
   const { data: me } = useBobMe();
@@ -167,9 +171,18 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         page,
         pageSize,
         trackFilter,
+        blitzTeamFilter,
         !isStudentViewer,
       ),
-    [debouncedFilters, queue.listParams, page, pageSize, trackFilter, isStudentViewer],
+    [
+      debouncedFilters,
+      queue.listParams,
+      page,
+      pageSize,
+      trackFilter,
+      blitzTeamFilter,
+      isStudentViewer,
+    ],
   );
 
   const {
@@ -288,7 +301,8 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
   const filtersActive =
     Boolean(debouncedFilters.search.trim()) ||
     (debouncedFilters.conditions?.length ?? 0) > 0 ||
-    Boolean(trackFilter);
+    Boolean(trackFilter) ||
+    Boolean(blitzTeamFilter);
   const scopedRosterEmpty =
     isScoped && rows.length === 0 && !loading && !filtersActive && !error;
 
@@ -351,20 +365,40 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
         />
       ) : null}
 
-      {trackFilter ? (
-        <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 flex items-center justify-between gap-2">
-          <span>Track: {trackFilter}</span>
-          <button
-            type="button"
-            onClick={() =>
-              updateUrl((sp) => {
-                sp.delete("track");
-              })
-            }
-            className="text-orange-700 font-medium hover:underline"
-          >
-            Clear track filter
-          </button>
+      {trackFilter || blitzTeamFilter ? (
+        <div className="mb-4 space-y-2">
+          {trackFilter ? (
+            <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 flex items-center justify-between gap-2">
+              <span>Track: {trackFilter}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  updateUrl((sp) => {
+                    sp.delete("track");
+                  })
+                }
+                className="text-orange-700 font-medium hover:underline"
+              >
+                Clear track filter
+              </button>
+            </div>
+          ) : null}
+          {blitzTeamFilter ? (
+            <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900 flex items-center justify-between gap-2">
+              <span>Blitz team: {blitzTeamFilter}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  updateUrl((sp) => {
+                    sp.delete("blitzTeam");
+                  })
+                }
+                className="text-violet-700 font-medium hover:underline"
+              >
+                Clear blitz filter
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -377,6 +411,7 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
             updateUrl((sp) => {
               sp.set("queue", q);
               sp.delete("track");
+              sp.delete("blitzTeam");
               sp.delete("id");
               sp.delete("tab");
               sp.delete("student");
@@ -408,6 +443,13 @@ export function RosterInboxPage({ embedded = false }: { embedded?: boolean }) {
           updateUrl((sp) => {
             if (track) sp.set("track", track);
             else sp.delete("track");
+          })
+        }
+        blitzTeamFilter={blitzTeamFilter}
+        onBlitzTeamFilterChange={(team) =>
+          updateUrl((sp) => {
+            if (team) sp.set("blitzTeam", team);
+            else sp.delete("blitzTeam");
           })
         }
         drawerOpen={filterDrawerOpen}

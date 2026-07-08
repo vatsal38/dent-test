@@ -109,6 +109,7 @@ export function RosterGridView({
       const name = studentDisplayName(s);
       const school = displayFromField(fields, s.school ?? "", [/^school$/i, /site/i, /organization/i]);
       const track = resolveStudentTrackLabel(s);
+      const blitzTeam = s.blitzSquad || s.blitzColor || "";
       const pod = displayFromField(fields, "", [/pod/i]);
       const coach = displayFromField(fields, s.coach ?? "", [/^coach$/i, /case\s*manager/i]);
       const atRisk = pickBooleanField(fields, /at\s*risk/i);
@@ -122,6 +123,7 @@ export function RosterGridView({
         id: s.id,
         name,
         track: track === "Unassigned" ? "" : track,
+        blitzTeam,
         pod,
         coach,
         school,
@@ -193,6 +195,12 @@ export function RosterGridView({
               {c.track ? (
                 <Chip label={c.track} className="bg-indigo-50 text-indigo-700 border border-indigo-200" />
               ) : null}
+              {c.blitzTeam ? (
+                <Chip
+                  label={c.blitzTeam}
+                  className="bg-violet-50 text-violet-800 border border-violet-200"
+                />
+              ) : null}
               {c.pod ? (
                 <Chip label={c.pod} className="bg-gray-50 text-gray-700 border border-gray-200" />
               ) : null}
@@ -210,9 +218,9 @@ export function RosterGridView({
                     <div className="truncate font-medium text-gray-800">{c.track || "—"}</div>
                   </div>
                   <div className="min-w-0 text-right">
-                    <div className="text-[11px] text-gray-400">Attendance</div>
-                    <div className="font-semibold text-gray-900">
-                      {c.attendancePct != null ? `${c.attendancePct}%` : "—"}
+                    <div className="text-[11px] text-gray-400">Blitz team</div>
+                    <div className="truncate font-medium text-gray-800">
+                      {c.blitzTeam || "—"}
                     </div>
                   </div>
                   <div className="min-w-0">
@@ -220,8 +228,10 @@ export function RosterGridView({
                     <div className="truncate font-medium text-gray-800">{c.milestone ?? "—"}</div>
                   </div>
                   <div className="min-w-0 text-right">
-                    <div className="text-[11px] text-gray-400">Status</div>
-                    <div className="truncate font-medium text-gray-800 capitalize">{c.atRisk ? "Needs check-in" : "On track"}</div>
+                    <div className="text-[11px] text-gray-400">Attendance</div>
+                    <div className="font-semibold text-gray-900">
+                      {c.attendancePct != null ? `${c.attendancePct}%` : "—"}
+                    </div>
                   </div>
                 </div>
               </>

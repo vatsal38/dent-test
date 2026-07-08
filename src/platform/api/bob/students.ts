@@ -100,6 +100,10 @@ export interface BobStudent {
   coach?: string | null;
   stage?: string | null;
   ywStatus?: string | null;
+  /** Resolved BoB '26 Blitz Squad label from Airtable. */
+  blitzSquad?: string | null;
+  /** Resolved blitz color (e.g. "Purple"). */
+  blitzColor?: string | null;
   attendanceStats?: BobStudentAttendanceStats | null;
   milestoneStats?: BobStudentMilestoneStats | null;
   /** Contract / YW registration / pre-survey from synced Airtable fields. */
@@ -126,6 +130,8 @@ export interface BobStudentsFacetsResponse {
   coaches: BobStudentsFacetOption[];
   ywStatuses?: BobStudentsFacetOption[];
   bob26TrackSites?: BobStudentsFacetOption[];
+  /** BoB '26 Blitz Squad / color labels with student counts. */
+  blitzTeams?: BobStudentsFacetOption[];
   pipeline: {
     total: number;
     synced: number;
@@ -150,6 +156,8 @@ export interface BobStudentsListParams {
   search?: string;
   /** Roster track / program label (from facets — partial match). */
   track?: string;
+  /** BoB '26 Blitz Squad or color label. */
+  blitzTeam?: string;
   /** JSON string: { match, conditions } — Airtable-style filter builder */
   filters?: string;
   sortBy?: "name" | "label";
@@ -180,6 +188,7 @@ export async function getBobStudents(
   if (params?.onboardingReady) sp.set("onboardingReady", params.onboardingReady);
   if (params?.search) sp.set("search", params.search);
   if (params?.track) sp.set("track", params.track);
+  if (params?.blitzTeam) sp.set("blitzTeam", params.blitzTeam);
   if (params?.filters) sp.set("filters", params.filters);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);
   if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);

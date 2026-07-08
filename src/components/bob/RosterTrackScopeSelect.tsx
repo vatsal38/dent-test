@@ -30,7 +30,11 @@ export const RosterTrackScopeSelect = forwardRef<
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={loading && options.length === 0}
-      aria-label="Filter by track"
+      aria-label={
+        emptyLabel.toLowerCase().includes("blitz")
+          ? "Filter by blitz team"
+          : "Filter by track"
+      }
       className={
         className ||
         "h-[42px] shrink-0 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 min-w-[10rem] max-w-[16rem]"
