@@ -104,12 +104,16 @@ export function MilestonesTab() {
           </li>
         ) : (
           milestones.map((m) => {
-            const review = reviewStatusBadge(m.reviewStatus);
             const due = isDeliverableDue(m);
             const overdue = isDeliverableOverdue(m);
             const uploads = (m.trackerRecords || []).flatMap(
               (t) => t.uploads || [],
             );
+            const review = isDeliverableCompleted(m)
+              ? reviewStatusBadge("approved")
+              : uploads.length > 0
+                ? { label: "Submitted", className: "bg-blue-100 text-blue-800" }
+                : reviewStatusBadge(m.reviewStatus);
             return (
               <li
                 key={m.id}
