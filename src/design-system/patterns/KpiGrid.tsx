@@ -44,12 +44,12 @@ export function KpiGrid({
 }) {
   const colClass =
     columns === 2
-      ? "grid-cols-2"
+      ? "grid-cols-1 sm:grid-cols-2"
       : columns === 3
-        ? "grid-cols-2 sm:grid-cols-3"
+        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
         : columns === 4
-          ? "grid-cols-2 sm:grid-cols-4"
-          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
+          ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+          : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
 
   if (loading) {
     return (
@@ -70,7 +70,7 @@ export function KpiGrid({
   }
 
   return (
-    <div className={`grid ${colClass} gap-4`}>
+    <div className={`grid ${colClass} gap-4 min-w-0`}>
       {items.map((item) => {
         const inner = (
           <>
@@ -86,7 +86,7 @@ export function KpiGrid({
             <div className="mt-3 h-0.5 w-12 rounded-full bg-gray-900/10" />
           </>
         );
-        const className = `p-4 rounded-xl border shadow-sm block transition-colors hover:shadow-md ${kpiToneClasses(item.id)}`;
+        const className = `p-4 rounded-xl border shadow-sm block transition-colors hover:shadow-md min-w-0 ${kpiToneClasses(item.id)}`;
 
         if (item.href) {
           return (

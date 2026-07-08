@@ -560,7 +560,8 @@ export function AttendanceCorrectionPage() {
               Day to correct <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-2">
-              Only days with imported attendance records appear here.
+              Choose any program day with attendance on file. Staff will review
+              your request even if the day is not yet in Airtable.
             </p>
             {datesLoading ? (
               <p className="text-sm text-gray-500">Loading your dates…</p>

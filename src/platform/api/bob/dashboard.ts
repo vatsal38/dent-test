@@ -198,6 +198,10 @@ export interface BobDashboardSnapshot {
     milestonesThisWeek: number;
     openDiscrepancies: number;
     openIncidents?: number;
+    studentAttendanceHours?: {
+      attended: number;
+      potential: number;
+    };
   };
 }
 

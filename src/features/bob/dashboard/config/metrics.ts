@@ -134,10 +134,18 @@ export function metricsToKpiItems(
   return keys.map((key) => {
     const def = METRIC_CATALOG[key];
     const raw = snapshot.kpis[key]?.value ?? snapshot.cards[key as keyof typeof snapshot.cards] ?? 0;
+    const hours =
+      key === "overallAttendancePct"
+        ? snapshot.cards.studentAttendanceHours
+        : null;
     return {
       id: key,
       label: options?.studentPersonal && studentLabels[key] ? studentLabels[key]! : def.label,
       value: def.format(typeof raw === "number" ? raw : Number(raw) || 0),
+      hint:
+        options?.studentPersonal && hours
+          ? `${hours.attended}h of ${hours.potential}h program-to-date`
+          : undefined,
       href: def.href?.({
         podId: snapshot.scope.podId ?? undefined,
         studentId: snapshot.scope.studentId ?? undefined,

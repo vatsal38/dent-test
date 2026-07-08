@@ -28,6 +28,8 @@ export interface EvaluationsDemographicsSyncResponse {
 export async function startEvaluationsDemographicsSync(params?: {
   sinceHours?: number;
   limit?: number;
+  /** Re-apply demographics even when a prior sync recorded the evaluation row. */
+  force?: boolean;
 }): Promise<{
   started: boolean;
   startedAt?: string;
@@ -36,8 +38,9 @@ export async function startEvaluationsDemographicsSync(params?: {
   return apiRequest("/api/bob/evaluations/demographics/sync", {
     method: "POST",
     body: JSON.stringify({
-      sinceHours: params?.sinceHours ?? 72,
-      limit: params?.limit ?? 15,
+      sinceHours: params?.sinceHours ?? 168,
+      limit: params?.limit ?? 100,
+      force: params?.force ?? true,
     }),
   });
 }

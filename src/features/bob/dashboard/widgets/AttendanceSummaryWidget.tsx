@@ -48,7 +48,7 @@ export function AttendanceSummaryWidget({
           </Link>
         }
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
               My attendance
@@ -56,6 +56,12 @@ export function AttendanceSummaryWidget({
             <p className="mt-1 text-3xl font-bold text-emerald-950 tabular-nums">
               {overall}%
             </p>
+            {snapshot.cards.studentAttendanceHours ? (
+              <p className="text-xs text-emerald-900/80 mt-0.5">
+                {snapshot.cards.studentAttendanceHours.attended}h of{" "}
+                {snapshot.cards.studentAttendanceHours.potential}h
+              </p>
+            ) : null}
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-600">
@@ -65,6 +71,22 @@ export function AttendanceSummaryWidget({
               {today ? "Yes" : "No"}
             </p>
           </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-orange-950">
+              Report absence or fix sign-in times
+            </p>
+            <p className="text-xs text-orange-900/90 mt-0.5">
+              Submit a correction request for staff to review.
+            </p>
+          </div>
+          <Link
+            href="/app/bob/attendance/correction"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+          >
+            Open correction form
+          </Link>
         </div>
       </DashboardCard>
     );

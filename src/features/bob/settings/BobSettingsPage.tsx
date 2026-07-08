@@ -116,6 +116,7 @@ export function BobSettingsPage() {
       await startEvaluationsDemographicsSync({
         sinceHours: 168,
         limit: 100,
+        force: true,
       });
       await pollDemographicsStatus();
     } catch (err) {
@@ -209,7 +210,8 @@ export function BobSettingsPage() {
           <p className="text-sm text-gray-600 mb-4">
             Copy submitted demographics from the Dent Evaluations form into
             Students &amp; Alums (matched by email). Students must already be on
-            the roster from intake transfer.
+            the roster from intake transfer. Each run re-applies recent
+            submissions (not only new ones).
           </p>
           <button
             type="button"

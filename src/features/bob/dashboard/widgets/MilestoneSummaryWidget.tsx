@@ -51,7 +51,7 @@ export function MilestoneSummaryWidget({
           </Link>
         }
       >
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-3">
             <p className="text-[11px] font-medium uppercase tracking-wide text-sky-800">
               Submitted

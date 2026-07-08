@@ -408,13 +408,13 @@ export const DASHBOARD_LAYOUTS: Record<
       {
         id: "student-personal",
         title: "My progress",
-        columns: 3,
+        columns: 1,
         widgets: [
           {
             id: "stu-team",
             kind: "my_project_team",
             title: "My project team",
-            colSpan: 4,
+            colSpan: 12,
             permissions: ["dashboard.view"],
             roles: ["student"],
           },
@@ -422,7 +422,7 @@ export const DASHBOARD_LAYOUTS: Record<
             id: "stu-attendance",
             kind: "attendance_summary",
             title: "My attendance",
-            colSpan: 4,
+            colSpan: 12,
             permissions: ["dashboard.view", "attendance.view"],
             roles: ["student"],
           },
@@ -430,7 +430,7 @@ export const DASHBOARD_LAYOUTS: Record<
             id: "stu-deliverables",
             kind: "milestone_summary",
             title: "My deliverables",
-            colSpan: 4,
+            colSpan: 12,
             permissions: ["dashboard.view", "milestones.view"],
             roles: ["student"],
           },
@@ -441,15 +441,6 @@ export const DASHBOARD_LAYOUTS: Record<
         title: "Program snapshot",
         columns: 1,
         widgets: [
-          {
-            id: "stu-all-tracks-attendance",
-            kind: "attendance_summary",
-            title: "Attendance by track",
-            colSpan: 12,
-            programWide: true,
-            permissions: ["dashboard.view", "attendance.view"],
-            roles: ["student"],
-          },
           {
             id: "stu-blitz",
             kind: "blitz_teams",

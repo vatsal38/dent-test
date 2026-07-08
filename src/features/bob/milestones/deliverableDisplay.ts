@@ -121,7 +121,8 @@ export const TRACK_FILTERS = [
 
 export const REVIEW_STATUS_OPTIONS = [
   { value: "", label: "—" },
-  { value: "not_started", label: "Submission" },
+  { value: "not_started", label: "Not started" },
+  { value: "in_progress", label: "In progress" },
   { value: "pending_review", label: "Pending Review" },
   { value: "changes_requested", label: "Needs Student Work" },
   { value: "approved", label: "Completed" },
@@ -162,8 +163,9 @@ export function reviewStatusBadge(status: string | null | undefined) {
         className: "bg-red-100 text-red-800",
       };
     case "not_started":
+      return { label: "Not started", className: "bg-gray-100 text-gray-800" };
     case "in_progress":
-      return { label: "Submission", className: "bg-blue-100 text-blue-800" };
+      return { label: "In progress", className: "bg-blue-100 text-blue-800" };
     case "pending_review":
     default:
       return {

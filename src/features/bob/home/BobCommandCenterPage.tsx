@@ -22,7 +22,7 @@ export function BobCommandCenterPage() {
   const isSiteSupporterHome = layoutId === "site_supporter_home";
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
       <PageHeader
         eyebrow="Bet on Baltimore"
         title={
