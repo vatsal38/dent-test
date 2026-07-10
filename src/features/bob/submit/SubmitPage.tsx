@@ -125,14 +125,21 @@ export function SubmitPage() {
         const sorted = [...students].sort(compareStudentsByName);
         if (!studentSearch.trim()) return sorted.slice(0, 50);
         const q = studentSearch.trim().toLowerCase();
-        return sorted.filter(
-            (s) =>
-                (s.firstName || '').toLowerCase().includes(q) ||
-                (s.lastName || '').toLowerCase().includes(q) ||
-                (s.email || '').toLowerCase().includes(q) ||
-                (s.school || '').toLowerCase().includes(q) ||
-                s.id.toLowerCase().includes(q)
-        ).slice(0, 50);
+        return sorted.filter((s) => {
+            const hay = [
+                s.firstName,
+                s.lastName,
+                s.preferredName,
+                s.email,
+                s.school,
+                studentLabel(s),
+                s.id,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+            return hay.includes(q);
+        }).slice(0, 50);
     }, [students, studentSearch]);
 
     const selectedStudent = useMemo(() => {

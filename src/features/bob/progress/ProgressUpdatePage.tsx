@@ -20,6 +20,7 @@ import {
   projectTeamsForStudent,
 } from "@/features/bob/milestones/deliverableStudentScope";
 import { studentLabel } from "@/features/bob/submit/StudentMultiSelect";
+import { studentDisplayName } from "@/features/bob/roster/recordDisplay";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
 import { PROGRESS_DELIVERABLE_STATUS_OPTIONS } from "@/features/bob/progress/progressConstants";
 
@@ -121,13 +122,20 @@ export function ProgressUpdatePage() {
     if (!studentSearch.trim()) return students.slice(0, 50);
     const q = studentSearch.trim().toLowerCase();
     return students
-      .filter(
-        (s) =>
-          (s.firstName || "").toLowerCase().includes(q) ||
-          (s.lastName || "").toLowerCase().includes(q) ||
-          (s.email || "").toLowerCase().includes(q) ||
-          s.id.toLowerCase().includes(q),
-      )
+      .filter((s) => {
+        const hay = [
+          s.firstName,
+          s.lastName,
+          s.preferredName,
+          s.email,
+          studentDisplayName(s),
+          s.id,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      })
       .slice(0, 50);
   }, [students, studentSearch]);
 

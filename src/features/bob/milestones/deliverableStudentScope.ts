@@ -10,12 +10,59 @@ export function projectTeamsForStudent(
   teams: BobProjectTeam[],
 ): BobProjectTeam[] {
   const studentAirtableId = String(student.airtableRecordId || "").trim();
+  const studentId = String(student.id || "").trim();
+  const nameKeys = new Set(
+    [
+      [student.firstName, student.lastName].filter(Boolean).join(" "),
+      [student.preferredName || student.firstName, student.lastName]
+        .filter(Boolean)
+        .join(" "),
+      student.preferredName && student.firstName && student.lastName
+        ? `${student.firstName} ${student.preferredName} ${student.lastName}`
+        : "",
+    ]
+      .map((n) =>
+        n
+          .toLowerCase()
+          .replace(/['’"‘]/g, "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter(Boolean),
+  );
+
   return teams.filter((team) =>
-    team.members.some(
-      (m) =>
-        m.studentId === student.id ||
-        (studentAirtableId && m.airtableRecordId === studentAirtableId),
-    ),
+    team.members.some((m) => {
+      if (studentId && m.studentId === studentId) return true;
+      if (
+        studentAirtableId &&
+        m.airtableRecordId &&
+        m.airtableRecordId === studentAirtableId
+      ) {
+        return true;
+      }
+      const memberKey = String(m.name || "")
+        .toLowerCase()
+        .replace(/['’"‘]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!memberKey || !nameKeys.size) return false;
+      if (nameKeys.has(memberKey)) return true;
+      const memberTokens = memberKey.split(" ").filter(Boolean);
+      for (const key of nameKeys) {
+        const keyTokens = key.split(" ").filter(Boolean);
+        if (
+          memberTokens.length >= 2 &&
+          keyTokens.length >= 2 &&
+          memberTokens[0] === keyTokens[0] &&
+          memberTokens[memberTokens.length - 1] ===
+            keyTokens[keyTokens.length - 1]
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }),
   );
 }
 

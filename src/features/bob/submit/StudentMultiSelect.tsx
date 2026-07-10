@@ -2,9 +2,25 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BobStudent } from "@/platform/api/bob/students";
+import { studentDisplayName } from "@/features/bob/roster/recordDisplay";
 
 function studentLabel(s: BobStudent) {
-  return [s.firstName, s.lastName].filter(Boolean).join(" ") || s.id;
+  return studentDisplayName(s) || s.id;
+}
+
+function studentSearchHaystack(s: BobStudent) {
+  return [
+    s.firstName,
+    s.lastName,
+    s.preferredName,
+    s.email,
+    s.school,
+    studentLabel(s),
+    s.id,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 function compareStudentsByName(a: BobStudent, b: BobStudent): number {
@@ -57,14 +73,7 @@ export function StudentMultiSelect({
     if (!search.trim()) return sortedStudents.slice(0, 50);
     const q = search.trim().toLowerCase();
     return sortedStudents
-      .filter(
-        (s) =>
-          (s.firstName || "").toLowerCase().includes(q) ||
-          (s.lastName || "").toLowerCase().includes(q) ||
-          (s.email || "").toLowerCase().includes(q) ||
-          (s.school || "").toLowerCase().includes(q) ||
-          s.id.toLowerCase().includes(q),
-      )
+      .filter((s) => studentSearchHaystack(s).includes(q))
       .slice(0, 50);
   }, [sortedStudents, search]);
 
