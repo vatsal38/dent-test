@@ -9,7 +9,6 @@ import {
 } from "../deliverableGrouping";
 import {
   formatDeliverableDates,
-  progressStatusBadge,
   reviewStatusBadge,
 } from "../deliverableDisplay";
 import {
@@ -40,9 +39,8 @@ function DeliverableSlotCard({
   const isTeam = variant === "team";
   const reviewStatus = isTeam
     ? teamReviewStatus(deliverable, teamName)
-    : deliverable.reviewStatus;
+    : teamReviewStatus(deliverable);
   const review = reviewStatusBadge(reviewStatus);
-  const progress = progressStatusBadge(deliverable.progressStatus);
   const uploads = isTeam
     ? teamPendingUploadCount(deliverable, teamName)
     : 0;
@@ -71,15 +69,9 @@ function DeliverableSlotCard({
         {formatDeliverableDates(deliverable)}
       </p>
       <div className="flex flex-wrap gap-1 mt-1.5">
-        {isTeam ? (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${review.className}`}>
-            {review.label}
-          </span>
-        ) : (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${progress.className}`}>
-            {progress.label}
-          </span>
-        )}
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${review.className}`}>
+          {review.label}
+        </span>
         {isTeam && tracker?.staffReviewNotes ? (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700">
             Staff notes

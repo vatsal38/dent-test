@@ -79,6 +79,11 @@ export function SubmissionCard({
           <p className="mt-2 text-sm font-medium line-clamp-1">
             {cardTitle(submission)}
           </p>
+          {submission.createdByLabel && !submission.isAnonymous ? (
+            <p className="text-xs text-gray-500 mt-0.5 truncate">
+              Submitted by {submission.createdByLabel}
+            </p>
+          ) : null}
           <p className="text-xs text-gray-600 line-clamp-2 mt-1">
             {cardSummary(submission) || "—"}
           </p>

@@ -149,7 +149,8 @@ export const APP_REVIEW_TO_TRACKER: Record<string, string> = {
   in_progress: "In Progress, On Track",
   changes_requested: "Behind",
   approved: "Completed",
-  pending_review: "In Progress, On Track",
+  // Do not force Airtable into "In Progress" for awaiting-review state
+  pending_review: "Not Started",
   not_completed: "Not Completed - Program Done",
 };
 

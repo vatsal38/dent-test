@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BobSubmissionStatus } from "@/platform/api/bob/submissions";
-import { auth } from "@/lib/firebase";
 import { Drawer } from "@/components/Drawer";
 import { Skeleton } from "@/components/Skeleton";
 import { PageHeader } from "@/design-system/patterns/PageHeader";
@@ -22,6 +21,7 @@ import {
 } from "@/features/bob/submissions/workflow/filters";
 import { useSubmissionKanban } from "@/features/bob/submissions/workflow/useSubmissionKanban";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 import {
   useBobSubmissionFacets,
@@ -67,7 +67,8 @@ export function SubmissionsInboxPage() {
     syncFiltersToUrl(next);
   };
 
-  const myId = auth.currentUser?.uid || null;
+  const { data: me } = useBobMe();
+  const myId = me?.user?.id || null;
   const { access } = useBobAccess();
   const canViewPto =
     access.role === "admin" ||

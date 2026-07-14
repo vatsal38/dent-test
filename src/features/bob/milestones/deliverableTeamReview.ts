@@ -57,14 +57,40 @@ export function teamReviewStatus(
   teamName?: string,
 ): string {
   const tracker = findTrackerForTeam(deliverable, teamName);
-  if (tracker?.reviewStatus) return tracker.reviewStatus;
+  const hasUploads = Boolean(tracker?.uploads?.length);
+  // Blank tracker / default pending_review with no files → not started
+  if (
+    tracker &&
+    !tracker.deliverableStatus &&
+    (!tracker.reviewStatus ||
+      tracker.reviewStatus === "pending_review" ||
+      tracker.reviewStatus === "not_started")
+  ) {
+    return hasUploads ? "pending_review" : "not_started";
+  }
   if (tracker?.deliverableStatus === "Completed") return "approved";
   if (tracker?.deliverableStatus === "Behind") return "changes_requested";
   if (tracker?.deliverableStatus === "In Progress, On Track") {
     return "in_progress";
   }
-  if (tracker?.deliverableStatus === "Not Started") return "not_started";
-  if (!teamName) return deliverable.reviewStatus || "pending_review";
+  if (tracker?.deliverableStatus === "Not Started") {
+    return hasUploads ? "pending_review" : "not_started";
+  }
+  if (tracker?.reviewStatus) return tracker.reviewStatus;
+  if (!teamName) {
+    const status = deliverable.reviewStatus;
+    if (
+      !status ||
+      status === "pending_review" ||
+      status === "not_started"
+    ) {
+      const anyUploads = (deliverable.trackerRecords || []).some(
+        (t) => t.uploads?.length,
+      );
+      return anyUploads ? "pending_review" : "not_started";
+    }
+    return status;
+  }
   return "not_started";
 }
 
@@ -155,9 +181,10 @@ export function teamDeliverableNeedsReview(
   deliverable: BobDeliverable,
   teamName: string,
 ): boolean {
+  if (teamPendingUploadCount(deliverable, teamName) > 0) return true;
   const status = teamReviewStatus(deliverable, teamName);
-  if (status === "pending_review" || status === "in_progress") return true;
-  return teamPendingUploadCount(deliverable, teamName) > 0;
+  // Only queue items awaiting review — blank/not-started should not flood "to review"
+  return status === "pending_review";
 }
 
 export function listTeamDeliverablesNeedingReview(

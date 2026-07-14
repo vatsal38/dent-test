@@ -70,11 +70,17 @@ export function formatLabel(value: string | null | undefined): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function submitterSuffix(s: BobSubmission) {
+  if (s.isAnonymous || !s.createdByLabel?.trim()) return "";
+  return ` · ${s.createdByLabel.trim()}`;
+}
+
 export function cardTitle(s: BobSubmission) {
   const student = s.student?.trim();
   const studentList =
     student ||
     (s.studentIds?.length ? `${s.studentIds.length} students` : "");
+  const by = submitterSuffix(s);
   if (s.type === "incident") {
     const raw = s.incidentType?.trim().toLowerCase();
     const kind =
@@ -87,32 +93,33 @@ export function cardTitle(s: BobSubmission) {
             : raw === "parent_contact"
               ? "Parent contact incident"
               : formatLabel(s.incidentType) || "Incident";
-    const by =
-      s.createdByLabel && !s.isAnonymous ? ` · ${s.createdByLabel}` : "";
     return studentList ? `${studentList} · ${kind}${by}` : `${kind}${by}`;
   }
   if (s.type === "wellness_check") {
     const score =
       s.wellnessScore != null ? `${s.wellnessScore}/10` : formatLabel(s.wellnessLevel);
-    return student
+    const core = student
       ? `${student} · Weekly check-in${score ? ` · ${score}` : ""}`
       : score
         ? `Weekly check-in · ${score}`
         : "Weekly check-in";
+    return `${core}${by}`;
   }
   if (s.type === "blitz_points") {
     const cat = s.blitzCategory ? formatLabel(s.blitzCategory) : null;
     const teamPart = s.team ? ` · ${s.team}` : "";
     const catPart = cat ? ` · ${cat}` : "";
-    return student
+    const core = student
       ? `${student} · Blitz points${catPart}${teamPart}`
       : `Blitz points${catPart}${teamPart}` || "Blitz points";
+    return `${core}${by}`;
   }
   if (s.type === "anonymous_feedback") {
     const prefix = s.isAnonymous ? "Anonymous feedback" : "Feedback";
-    return s.category
+    const core = s.category
       ? `${prefix} · ${feedbackCategoryLabel(s.category)}`
       : prefix;
+    return s.isAnonymous ? core : `${core}${by}`;
   }
   if (s.type === "progress_update") {
     const focus =
@@ -123,16 +130,19 @@ export function cardTitle(s: BobSubmission) {
       ? ` · ${progressStatusLabel(s.deliverableStatus)}`
       : "";
     const team = s.teamName ? ` (${s.teamName})` : "";
-    return student
+    const core = student
       ? `${student} · Progress update${focus}${status}${team}`
       : `Progress update${focus}${status}${team}`;
+    return `${core}${by}`;
   }
-  if (s.type === "parent_contact")
-    return student
+  if (s.type === "parent_contact") {
+    const core = student
       ? `${student} · Parent contact`
       : s.parentName
         ? `Parent contact · ${s.parentName}`
         : "Parent contact";
+    return `${core}${by}`;
+  }
   if (s.type === "pto_request") {
     const range =
       s.requestStartDate && s.requestEndDate
@@ -143,7 +153,10 @@ export function cardTitle(s: BobSubmission) {
         ? ` · ${s.requestDayCount} day${s.requestDayCount === 1 ? "" : "s"}`
         : "";
     const who = s.staffMemberName?.trim();
-    return who ? `${who} · PTO request${range}${days}` : `PTO request${range}${days}`;
+    const core = who
+      ? `${who} · PTO request${range}${days}`
+      : `PTO request${range}${days}`;
+    return `${core}${by}`;
   }
   if (s.type === "purchase_request" || s.type === "reimbursement_request") {
     const amount =
@@ -155,14 +168,14 @@ export function cardTitle(s: BobSubmission) {
         ? ` · ${s.fromLocation} → ${s.toLocation}`
         : "";
     const label = SUBMISSION_TYPE_LABELS[s.type] || s.type;
-    return `${label}${amount}${route}`;
+    return `${label}${amount}${route}${by}`;
   }
   if (s.type === "photo_upload") {
-    return "Photo album links";
+    return `Photo album links${by}`;
   }
   if (s.type === "coach_feedback") {
     const rating = s.coachRating != null ? ` · ${s.coachRating}/5` : "";
-    return `Weekly coach feedback${rating}`;
+    return `Weekly coach feedback${rating}${by}`;
   }
   if (s.type === "dent_testimony") {
     const format =
@@ -171,20 +184,23 @@ export function cardTitle(s: BobSubmission) {
       s.testimonySubject === "staff"
         ? s.staffMemberName?.trim()
         : student;
-    return who
+    const core = who
       ? `${who} · Dent testimony${format}`
       : `Dent testimony${format}`;
+    return `${core}${by}`;
   }
   if (s.type === "attendance_correction") {
     const kind = s.category || s.incidentType || "Request";
     const date =
       s.requestStartDate ? ` · ${s.requestStartDate}` : "";
-    return student
+    const core = student
       ? `${student} · ${kind}${date}`
       : `${kind}${date}`;
+    return `${core}${by}`;
   }
   const base = SUBMISSION_TYPE_LABELS[s.type] || s.type;
-  return student ? `${student} · ${base}` : base;
+  const core = student ? `${student} · ${base}` : base;
+  return `${core}${by}`;
 }
 
 export function cardSummary(s: BobSubmission) {
