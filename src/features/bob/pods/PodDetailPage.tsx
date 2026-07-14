@@ -139,10 +139,13 @@ export function PodDetailPage() {
           {error || `${BOB_POD_SINGULAR} not found`}
         </div>
         <Link
-          href="/app/bob/pods"
+          href={can("pods.view") ? "/app/bob/pods" : "/app/bob/my-pod"}
           className="mt-4 inline-block text-sm text-orange-600 hover:underline"
         >
-          ← Back to {BOB_POD_PLURAL.toLowerCase()}
+          ← Back to{" "}
+          {can("pods.view")
+            ? BOB_POD_PLURAL.toLowerCase()
+            : BOB_MY_POD}
         </Link>
       </div>
     );
@@ -174,10 +177,12 @@ export function PodDetailPage() {
         description={`Assign coach, ${BOB_SITE_SUPPORTER.toLowerCase()}, and students. Changes sync to Airtable Programs.`}
         actions={
           <Link
-            href="/app/bob/pods"
+            href={can("pods.view") ? "/app/bob/pods" : "/app/bob/my-pod"}
             className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
           >
-            ← All {BOB_POD_PLURAL.toLowerCase()}
+            {can("pods.view")
+              ? `← All ${BOB_POD_PLURAL.toLowerCase()}`
+              : `← ${BOB_MY_POD}`}
           </Link>
         }
       />

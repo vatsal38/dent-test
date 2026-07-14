@@ -15,7 +15,6 @@ import { useBobPodDetail } from "@/platform/query/hooks/useBobPods";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
 import {
   BOB_MY_POD,
-  BOB_POD_PLURAL,
   BOB_POD_SINGULAR,
 } from "@/lib/bobDisplayTerminology";
 import { CoachPodPageSkeleton } from "@/features/bob/attendance/components/AttendancePageSkeletons";
@@ -101,11 +100,9 @@ export function CoachPodPage() {
         />
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
           <p className="text-sm text-gray-700">
-            Ask an admin to set your email or user id on a pod&apos;s coach field in{" "}
-            <Link href="/app/bob/pods" className="text-orange-600 font-medium">
-              {BOB_POD_PLURAL}
-            </Link>
-            .
+            Ask an admin to assign your email on a track&apos;s coach field or
+            BoB &apos;26 Track link in the Airtable staff roster, then re-sync
+            staff.
           </p>
         </div>
       </div>
@@ -130,7 +127,7 @@ export function CoachPodPage() {
               href={`/app/bob/pods/${pod.id}`}
               className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium"
             >
-              {BOB_POD_SINGULAR} settings
+              View {BOB_POD_SINGULAR.toLowerCase()}
             </Link>
           </>
         }

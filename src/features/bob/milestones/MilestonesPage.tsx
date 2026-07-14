@@ -117,13 +117,31 @@ export function MilestonesPage() {
   const updateMilestone = useUpdateBobMilestone();
   const rawData = milestonesQuery.data?.data ?? [];
   const data = useMemo(() => {
-    if (!linkedStudent) return rawData;
-    return filterDeliverablesForStudent(
-      rawData,
-      linkedStudent,
-      projectTeams,
-    );
-  }, [rawData, linkedStudent, projectTeams]);
+    let rows = rawData;
+    if (linkedStudent) {
+      rows = filterDeliverablesForStudent(rows, linkedStudent, projectTeams);
+    } else if (
+      (access.role === "coach" || access.role === "site_supporter") &&
+      (me?.assignedPods?.length || 0) > 0
+    ) {
+      const allowed = new Set(
+        (me?.assignedPods || [])
+          .flatMap((p) => [p.name])
+          .map((n) => formatBobTrackDisplayLabel(n || "").toLowerCase())
+          .filter(Boolean),
+      );
+      if (allowed.size) {
+        rows = rows.filter((d) => {
+          const track = formatBobTrackDisplayLabel(d.trackName || "").toLowerCase();
+          if (!track) return false;
+          return [...allowed].some(
+            (a) => track.includes(a) || a.includes(track),
+          );
+        });
+      }
+    }
+    return rows;
+  }, [rawData, linkedStudent, projectTeams, access.role, me?.assignedPods]);
   const loading = milestonesQuery.isLoading;
   const error = milestonesQuery.error
     ? parseApiError(milestonesQuery.error)

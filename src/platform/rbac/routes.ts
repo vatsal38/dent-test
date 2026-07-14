@@ -36,6 +36,13 @@ export const BOB_ROUTES: BobRouteDef[] = [
   },
   { path: "/app/bob/roster", permission: "roster.view" },
   { path: "/app/bob/pods/new", permission: "pods.create", fallback: "/app/bob/pods" },
+  // Allow coaches (drawer.podDetail) to open an assigned track detail page.
+  // List view still requires pods.view (Support Squad / leadership).
+  {
+    path: "/app/bob/pods/",
+    permission: "drawer.podDetail",
+    fallback: "/app/bob/my-pod",
+  },
   { path: "/app/bob/pods", permission: "pods.view", fallback: "/app/bob/my-pod" },
   { path: "/app/bob/my-pod", permission: "myPod.view", fallback: "/app/bob" },
   {
@@ -89,7 +96,13 @@ export const BOB_ROUTES: BobRouteDef[] = [
 export function matchBobRoute(pathname: string): BobRouteDef | null {
   const normalized = pathname.split("?")[0].replace(/\/$/, "") || "/";
   for (const route of BOB_ROUTES) {
+    const detailOnly = route.path.endsWith("/") && route.path.length > 1;
     const base = route.path.replace(/\/$/, "") || route.path;
+    if (detailOnly) {
+      // e.g. "/app/bob/pods/" matches only "/app/bob/pods/:id", not the list.
+      if (normalized.startsWith(`${base}/`)) return route;
+      continue;
+    }
     if (
       normalized === base ||
       (base !== "/app/bob" && normalized.startsWith(`${base}/`))

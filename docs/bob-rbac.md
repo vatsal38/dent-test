@@ -8,9 +8,9 @@ Enterprise role-based access control for **Bet on Baltimore** (Dent Ops), aligne
 |------|------------|--------|----------------|
 | **Admin** | Leadership | Organization | Full program data, settings, sync, reports |
 | **Program Manager** | Leadership | Organization | Roster, intake, tracks, attendance, deliverables |
-| **Site Supporter** | Support Squad | Assigned tracks (up to 2) | All except intake; deliverables, blitz, roster, incidents |
-| **Fellow** | Support Squad | Assigned tracks | Same permissions as site supporter (`bobRole: fellow` → `site_supporter`) |
-| **Coach** | Coaches | 1 track | Deliverables & attendance for their track; no intake or track assignment |
+| **Site Supporter** | Support Squad | Assigned tracks (up to 2) | All except intake; deliverables, blitz, roster, incidents. Weekly check-in: everyone. |
+| **Fellow** | Support Squad | Assigned tracks (up to 2) | Same permissions as site supporter (`bobRole: fellow` → `site_supporter`). Weekly check-in: everyone (same as site supporter). |
+| **Coach** | Coaches | Assigned track(s) | Dashboard + **My Track** workspace; deliverables & attendance for their track; weekly check-in: Blitz team youth (fallback: track). No intake or track admin list. |
 | **Student** | Students | Self | Own profile, submit forms, limited dashboard; no staff notes or org inbox |
 
 Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **client-side** via `useBobAccess()` / route guards.
