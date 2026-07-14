@@ -158,6 +158,8 @@ export interface BobStudentsListParams {
   track?: string;
   /** BoB '26 Blitz Squad or color label. */
   blitzTeam?: string;
+  /** `wellness` = coaches see Blitz team youth; site supporters see everyone. */
+  scope?: "wellness";
   /** JSON string: { match, conditions } — Airtable-style filter builder */
   filters?: string;
   sortBy?: "name" | "label";
@@ -189,6 +191,7 @@ export async function getBobStudents(
   if (params?.search) sp.set("search", params.search);
   if (params?.track) sp.set("track", params.track);
   if (params?.blitzTeam) sp.set("blitzTeam", params.blitzTeam);
+  if (params?.scope) sp.set("scope", params.scope);
   if (params?.filters) sp.set("filters", params.filters);
   if (params?.sortBy) sp.set("sortBy", params.sortBy);
   if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);

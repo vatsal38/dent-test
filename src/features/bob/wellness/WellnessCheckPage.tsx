@@ -22,30 +22,29 @@ export function WellnessCheckPage() {
   const [trackFilter, setTrackFilter] = useState("");
   const [search, setSearch] = useState("");
 
-  const podId = useMemo(() => {
-    if (!me?.coachScope) return undefined;
-    const assigned = me.assignedPods ?? [];
-    if (assigned.length > 1 || access.podIds.length > 1) return undefined;
-    return me.primaryPod?.id ?? assigned[0]?.id ?? access.podIds[0];
-  }, [me?.coachScope, me?.assignedPods, me?.primaryPod?.id, access.podIds]);
+  const isSiteSupporter =
+    access.role === "site_supporter" ||
+    String(me?.bobRole || "").toLowerCase() === "site_supporter";
+  const isCoach =
+    access.role === "coach" || String(me?.bobRole || "").toLowerCase() === "coach";
 
+  // Backend already scopes: coaches → Blitz team, site supporters → everyone.
+  // Do not further narrow by a single assigned track pod.
   const weekParams = useMemo(
     () => ({
       weekIndex,
       track: trackFilter || undefined,
-      podId,
       search: search.trim() || undefined,
     }),
-    [weekIndex, trackFilter, podId, search],
+    [weekIndex, trackFilter, search],
   );
 
   const statsParams = useMemo(
     () => ({
       weekIndex,
       track: trackFilter || undefined,
-      podId,
     }),
-    [weekIndex, trackFilter, podId],
+    [weekIndex, trackFilter],
   );
 
   const weekQuery = useBobWellnessWeek(weekParams);
@@ -90,7 +89,13 @@ export function WellnessCheckPage() {
       <PageHeader
         eyebrow="Coach tools"
         title="Weekly Check-in"
-        description="See which students still need a wellness check-in this week and track average scores by track."
+        description={
+          isSiteSupporter
+            ? "See check-ins for everyone on the roster this week and track average scores by track."
+            : isCoach
+              ? "See which youth on your Blitz team still need a wellness check-in this week."
+              : "See which students still need a wellness check-in this week and track average scores by track."
+        }
         actions={
           <Link
             href="/app/bob/submit?type=wellness_check"

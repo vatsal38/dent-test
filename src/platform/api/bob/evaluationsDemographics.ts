@@ -26,6 +26,7 @@ export interface EvaluationsDemographicsSyncResponse {
 }
 
 export async function startEvaluationsDemographicsSync(params?: {
+  /** Hours back to scan; use 0 for the full demographics view. Default 90 days. */
   sinceHours?: number;
   limit?: number;
   /** Re-apply demographics even when a prior sync recorded the evaluation row. */
@@ -38,7 +39,7 @@ export async function startEvaluationsDemographicsSync(params?: {
   return apiRequest("/api/bob/evaluations/demographics/sync", {
     method: "POST",
     body: JSON.stringify({
-      sinceHours: params?.sinceHours ?? 168,
+      sinceHours: params?.sinceHours ?? 2160,
       limit: params?.limit ?? 100,
       force: params?.force ?? true,
     }),

@@ -12,7 +12,6 @@ import {
 } from "@/platform/api/bob/submit";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
-import { useBobPodDetail } from "@/platform/query/hooks/useBobPods";
 import { decodeBobReturnTo } from "@/lib/bobReturnUrl";
 import { useAuth } from "@/context/AuthContext";
 import { FormsHub } from "@/features/bob/submit/FormsHub";
@@ -59,24 +58,16 @@ export function SubmitPage() {
         : prefilledStudentId && !isStudent
           ? 'incident'
           : null;
-    const assignedCount = me?.assignedPods?.length ?? 0;
-    const wellnessPodId =
-        submissionType === "wellness_check" && me?.coachScope && assignedCount <= 1
-            ? me?.primaryPod?.id ?? me?.assignedPods?.[0]?.id ?? null
-            : null;
-    const { data: wellnessPod } = useBobPodDetail(wellnessPodId);
-    const wellnessPodStudentIds = wellnessPod?.students ?? [];
-
     const studentsListParams = useMemo(() => {
-        if (submissionType === "wellness_check" && wellnessPodStudentIds.length > 0) {
+        if (submissionType === "wellness_check") {
             return {
-                ids: wellnessPodStudentIds.join(","),
-                limit: wellnessPodStudentIds.length,
+                limit: 500,
                 includeStats: false,
+                scope: "wellness" as const,
             };
         }
         return { limit: 500, includeStats: false };
-    }, [submissionType, wellnessPodStudentIds]);
+    }, [submissionType]);
 
     const formDef = submissionType ? getBobFormDefinition(submissionType) : null;
     const submitterName = user?.name?.trim() || user?.email?.trim() || 'You';
@@ -611,9 +602,11 @@ export function SubmitPage() {
                                     placeholder="What did the student share or what did you observe?"
                                 />
                             </div>
-                            {wellnessPodId && wellnessPodStudentIds.length === 0 && !studentsLoading ? (
+                            {submissionType === "wellness_check" &&
+                            !studentsLoading &&
+                            students.length === 0 ? (
                                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                    No students are assigned to your pod yet.
+                                    No students match your Weekly Check-in scope yet.
                                 </p>
                             ) : null}
                         </>

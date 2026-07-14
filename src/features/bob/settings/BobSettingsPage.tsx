@@ -113,12 +113,28 @@ export function BobSettingsPage() {
     setDemographicsStarting(true);
     setMessage(null);
     try {
-      await startEvaluationsDemographicsSync({
-        sinceHours: 168,
-        limit: 100,
-        force: true,
-      });
-      await pollDemographicsStatus();
+      try {
+        await startEvaluationsDemographicsSync({
+          sinceHours: 2160,
+          limit: 100,
+          force: true,
+        });
+      } catch (err) {
+        // Another click / leftover run — keep polling instead of looking "broken".
+        const status =
+          err && typeof err === "object" && "status" in err
+            ? (err as { status?: number }).status
+            : undefined;
+        if (status !== 409) throw err;
+      }
+      const status = await pollDemographicsStatus();
+      if (!status?.running && status?.progress?.phase === "done") {
+        setMessage(
+          status.result?.message ||
+            status.progress?.message ||
+            "Demographics sync complete.",
+        );
+      }
     } catch (err) {
       setMessage(parseApiError(err));
     } finally {
@@ -210,8 +226,8 @@ export function BobSettingsPage() {
           <p className="text-sm text-gray-600 mb-4">
             Copy submitted demographics from the Dent Evaluations form into
             Students &amp; Alums (matched by email). Students must already be on
-            the roster from intake transfer. Each run re-applies recent
-            submissions (not only new ones).
+            the roster from intake transfer. Each run re-applies the last 90
+            days of submissions (not only new ones).
           </p>
           <button
             type="button"
@@ -238,7 +254,12 @@ export function BobSettingsPage() {
                 <span>
                   Skipped: {demographicsStatus?.progress?.skipped ?? 0}
                 </span>
-                <span>Failed: {demographicsStatus?.progress?.imported ?? 0}</span>
+                <span>
+                  Failed:{" "}
+                  {demographicsStatus?.progress?.imported ??
+                    demographicsStatus?.result?.imported ??
+                    0}
+                </span>
                 {demographicsStatus?.elapsed ? (
                   <span>Elapsed: {demographicsStatus.elapsed}</span>
                 ) : null}
