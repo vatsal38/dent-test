@@ -75,13 +75,22 @@ export const BOB_NAV_CONFIG: BobNavConfigItem[] = [
     section: "primary",
   },
   {
+    href: "/app/bob/attendance/mark",
+    label: "Issue triage",
+    iconKey: "attendance",
+    permission: "attendance.mark",
+    denyRoles: ["student"],
+    section: "primary",
+    after: "/app/bob/attendance",
+  },
+  {
     href: "/app/bob/wellness",
     label: "Weekly check-in",
     iconKey: "wellness",
     permission: "submit.view",
     denyRoles: ["student"],
     section: "primary",
-    after: "/app/bob/attendance",
+    after: "/app/bob/attendance/mark",
   },
   {
     href: "/app/bob/deliverables",

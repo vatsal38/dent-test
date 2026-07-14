@@ -6,13 +6,15 @@ import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
 import {
   ALLERGY_KEYS,
+  computeAgeFromDob,
   DOB_KEYS,
   EMERGENCY_KEYS,
+  formatPersonalDate,
   GUARDIAN_EMAIL_KEYS,
   GUARDIAN_NAME_KEYS,
   GUARDIAN_PHONE_KEYS,
-  formatPersonalDate,
   pickField,
+  pickPrimaryDob,
   SCHOOL_ONLY_KEYS,
   SKIP_IN_PERSONAL,
 } from "../../lib/personalFieldDisplay";
@@ -56,7 +58,11 @@ export function DemographicsTab() {
 
   function displayField(key: string, raw: unknown): string {
     if (DOB_KEYS.includes(key as (typeof DOB_KEYS)[number])) {
-      return formatPersonalDate(raw) || resolveLinked(key, raw) || cellDisplayValue(raw, labelsForField(key));
+      return (
+        formatPersonalDate(raw) ||
+        resolveLinked(key, raw) ||
+        cellDisplayValue(raw, labelsForField(key))
+      );
     }
     if (key === "School") return school;
     return resolveLinked(key, raw) || cellDisplayValue(raw, labelsForField(key));
@@ -74,12 +80,21 @@ export function DemographicsTab() {
     return items;
   }
 
+  // 80B — one DOB field only (prefer Date of Birth; drop Birthday duplicates)
+  const primaryDob = pickPrimaryDob(fields);
+  if (primaryDob) {
+    used.add(primaryDob.key);
+    for (const key of DOB_KEYS) used.add(key);
+  }
+  // 81B — Age as its own block (not appended to DOB)
+  const age =
+    primaryDob != null ? computeAgeFromDob(primaryDob.value) : null;
+
   const identityKeys = [
     "First Name",
     "Last Name",
     "Preferred Name",
     "Pronouns",
-    ...DOB_KEYS,
     ...ALLERGY_KEYS,
     "Gender",
     "Race/Ethnicity",
@@ -92,7 +107,6 @@ export function DemographicsTab() {
     ...collect(identityKeys),
     ...matchExtraFields(fields, used, [
       /pronoun/i,
-      /birth/i,
       /allerg/i,
       /gender/i,
       /ethnic/i,
@@ -103,6 +117,11 @@ export function DemographicsTab() {
       value: displayField(key, value),
     })),
   ].filter((e) => e.value && e.value !== "—");
+
+  // Skip Birthday / Birth Date / DOB extras that aren't the primary DOB
+  const birthExtras = matchExtraFields(fields, used, [/birth/i]).filter(
+    ({ key }) => !/^birthday$/i.test(key) && !/^birth\s*date$/i.test(key),
+  );
 
   const guardianName = pickField(fields, GUARDIAN_NAME_KEYS);
   const guardianPhone = pickField(fields, GUARDIAN_PHONE_KEYS);
@@ -122,13 +141,22 @@ export function DemographicsTab() {
 
   const schoolItems = [
     ...collect(SCHOOL_ONLY_KEYS),
-    ...matchExtraFields(fields, used, [/school/i, /grade/i, /graduation/i, /counselor/i, /teacher/i]),
+    ...matchExtraFields(fields, used, [
+      /school/i,
+      /grade/i,
+      /graduation/i,
+      /counselor/i,
+      /teacher/i,
+    ]),
   ]
     .map(({ key, value }) => ({
       key,
       value: typeof value === "string" ? value : displayField(key, value),
     }))
     .filter((e) => e.value && e.value !== "—");
+
+  const hasPersonalBlock =
+    identity.length > 0 || primaryDob != null || age != null;
 
   return (
     <div className="p-5 space-y-6">
@@ -137,7 +165,7 @@ export function DemographicsTab() {
         Overview.
       </p>
 
-      {identity.length > 0 ? (
+      {hasPersonalBlock ? (
         <section>
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Personal
@@ -145,6 +173,36 @@ export function DemographicsTab() {
           <dl className="grid gap-2 sm:grid-cols-2">
             {identity.map((e) => (
               <FieldCard key={e.key} label={e.key} value={e.value} />
+            ))}
+            {primaryDob ? (
+              <FieldCard
+                key={primaryDob.key}
+                label={
+                  /^date of birth$/i.test(primaryDob.key) ||
+                  /^dob$/i.test(primaryDob.key)
+                    ? "Date of Birth"
+                    : primaryDob.key
+                }
+                value={formatPersonalDate(primaryDob.value)}
+              />
+            ) : null}
+            {/* 81B — separate Age block */}
+            {age != null ? (
+              <div className="rounded-lg border border-orange-100 bg-orange-50/50 px-3 py-2 sm:col-span-1">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-orange-800/80">
+                  Age
+                </dt>
+                <dd className="text-xl font-bold text-orange-950 tabular-nums mt-0.5">
+                  {age}
+                </dd>
+              </div>
+            ) : null}
+            {birthExtras.map((e) => (
+              <FieldCard
+                key={e.key}
+                label={e.key}
+                value={displayField(e.key, e.value)}
+              />
             ))}
           </dl>
         </section>
@@ -209,9 +267,7 @@ export function DemographicsTab() {
         </section>
       ) : null}
 
-      {identity.length === 0 &&
-      !guardianName &&
-      schoolItems.length === 0 ? (
+      {!hasPersonalBlock && !guardianName && schoolItems.length === 0 ? (
         <p className="text-sm text-gray-500">
           Sync Airtable fields to see personal details.
         </p>

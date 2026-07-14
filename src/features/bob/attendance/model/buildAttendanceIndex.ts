@@ -20,6 +20,7 @@ import {
   computeSessionHoursFromPunches,
   hasExplicitStaffCorrection,
   isScheduledPlaceholderTime,
+  isDefaultAfternoonOutTime,
   staffAfternoonInInput,
   staffAfternoonOutInput,
   staffMorningInInput,
@@ -214,7 +215,9 @@ function populateDailyRecordPunches(
       signOutIso &&
       signInIso &&
       Math.abs(new Date(signOutIso).getTime() - new Date(signInIso).getTime()) < 45 * 60 * 1000;
-    if (!rollupLooksBogus) {
+    const isDefaultPmOut =
+      isAfternoonSignOutTime(signOutIso) && isDefaultAfternoonOutTime(signOutIso);
+    if (!rollupLooksBogus && !isDefaultPmOut) {
       const outType = isAfternoonSignOutTime(signOutIso) ? "pm_out" : "am_out";
       setPunchTime(punches, outType, {
         display: pmOutDisplay || pmOutOriginal,
@@ -530,18 +533,28 @@ export function buildStudentDayAttendance(
         punchHours,
       );
 
+      const excusedOrAbsent =
+        attendanceState === "excused" ||
+        attendanceState === "absent" ||
+        daily?.status === "excused" ||
+        daily?.status === "absent";
+
       const morning = buildSession(
         punches,
         "am_in",
         "am_out",
-        morningHours > 0 ? formatHoursLabel(morningHours) : formatHoursLabel(daily?.amHours),
+        morningHours > 0 && !excusedOrAbsent
+          ? formatHoursLabel(morningHours)
+          : formatHoursLabel(excusedOrAbsent ? 0 : daily?.amHours),
         attendanceState,
       );
       const afternoon = buildSession(
         punches,
         "pm_in",
         "pm_out",
-        afternoonHours > 0 ? formatHoursLabel(afternoonHours) : formatHoursLabel(daily?.pmHours),
+        afternoonHours > 0 && !excusedOrAbsent
+          ? formatHoursLabel(afternoonHours)
+          : formatHoursLabel(excusedOrAbsent ? 0 : daily?.pmHours),
         attendanceState,
       );
 
@@ -552,7 +565,9 @@ export function buildStudentDayAttendance(
           ? formatHoursLabel(punchHours)
           : formatHoursLabel(daily?.hoursPresent) || formatHoursLabel(daily?.totalHours);
 
-      if (
+      if (excusedOrAbsent) {
+        totalHoursLabel = formatHoursLabel(0);
+      } else if (
         (!totalHoursLabel || isLowTrustRollupHours(daily?.hoursPresent)) &&
         daily
       ) {

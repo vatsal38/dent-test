@@ -82,9 +82,37 @@ export function isScheduledPlaceholderTime(value?: string | null): boolean {
   return d.getUTCHours() === 20 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
 }
 
+/**
+ * Airtable often autofills afternoon out at 6:30 PM. Program afternoon ends at 4:00 PM —
+ * treat 6:30 as blank so it is not used as the Final record default.
+ */
+export function isDefaultAfternoonOutTime(value?: string | null): boolean {
+  if (!value) return false;
+  const raw = String(value).trim();
+  if (!raw) return false;
+  if (/^\d{1,2}:\d{2}$/.test(raw)) {
+    const [h, m] = raw.split(":").map(Number);
+    return h === 18 && m === 30;
+  }
+  // Display labels like "6:30 PM"
+  const twelveHour = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (twelveHour) {
+    let h = Number(twelveHour[1]);
+    const m = Number(twelveHour[2]);
+    const ampm = twelveHour[3].toUpperCase();
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return h === 18 && m === 30;
+  }
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getHours() === 18 && d.getMinutes() === 30;
+}
+
 function hoursBetweenIso(date: string, inIso?: string | null, outIso?: string | null): number {
   if (!inIso || !outIso) return 0;
   if (isScheduledPlaceholderTime(inIso)) return 0;
+  if (isDefaultAfternoonOutTime(outIso)) return 0;
   return hoursBetween(date, toTimeInputValue(inIso), toTimeInputValue(outIso));
 }
 
@@ -137,7 +165,9 @@ export function syncedTimeInput(
   day: StudentDayAttendance,
   punch: PunchType,
 ): string {
-  return toTimeInputValue(day.punches[punch].youthTimeIso);
+  const iso = day.punches[punch].youthTimeIso;
+  if (punch === "pm_out" && isDefaultAfternoonOutTime(iso)) return "";
+  return toTimeInputValue(iso);
 }
 
 export function effectiveStaffTime(
@@ -145,7 +175,11 @@ export function effectiveStaffTime(
   day: StudentDayAttendance,
   punch: PunchType,
 ): string {
-  if (String(staffInput || "").trim()) return staffInput;
+  const entered = String(staffInput || "").trim();
+  if (entered) {
+    if (punch === "pm_out" && isDefaultAfternoonOutTime(entered)) return "";
+    return entered;
+  }
   return syncedTimeInput(day, punch);
 }
 
@@ -198,7 +232,7 @@ export function hasStaffAfternoonOutCorrection(
 ): boolean {
   if (!daily?.staffCorrectedByUserId) return false;
   const out = daily.signOutTime || daily.adjustedSignOut;
-  if (!out) return false;
+  if (!out || isDefaultAfternoonOutTime(out)) return false;
   const youthPmOut = day?.punches?.pm_out?.youthTimeIso;
   if (youthPmOut && sameIsoMoment(out, youthPmOut)) return false;
   return true;
@@ -209,7 +243,9 @@ export function staffAfternoonOutInput(
   day?: Pick<StudentDayAttendance, "punches">,
 ): string {
   if (!hasStaffAfternoonOutCorrection(daily, day)) return "";
-  return toTimeInputValue(daily?.signOutTime || daily?.adjustedSignOut);
+  const out = daily?.signOutTime || daily?.adjustedSignOut;
+  if (isDefaultAfternoonOutTime(out)) return "";
+  return toTimeInputValue(out);
 }
 export function computeEffectiveHoursPresent(
   day: StudentDayAttendance,
@@ -365,6 +401,9 @@ export function syncedPunchLabel(
   day: StudentDayAttendance,
   punch: PunchType,
 ): string {
+  if (punch === "pm_out" && isDefaultAfternoonOutTime(day.punches.pm_out.youthTimeIso)) {
+    return "—";
+  }
   const slot = day.punches[punch];
   const candidates = [
     slot.timeLabel,
@@ -372,7 +411,10 @@ export function syncedPunchLabel(
     slot.originalTimeLabel,
   ];
   for (const label of candidates) {
-    if (label && label !== "[object Object]") return label;
+    if (label && label !== "[object Object]") {
+      if (punch === "pm_out" && isDefaultAfternoonOutTime(label)) continue;
+      return label;
+    }
   }
   return "—";
 }

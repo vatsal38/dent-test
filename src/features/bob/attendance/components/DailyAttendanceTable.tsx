@@ -107,21 +107,32 @@ export function DailyAttendanceTable({
 
   const pagination =
     onPageChange && rowsByStudent.length > pageSize ? (
-      <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 bg-gray-50 rounded-b-lg">
+      <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 bg-gray-50 rounded-b-lg">
         <p className="text-xs text-gray-500 tabular-nums">
           Page {page} of {totalPages}
         </p>
-        {page < totalPages ? (
-          <button
-            type="button"
-            onClick={() => onPageChange(page + 1)}
-            className="text-sm font-medium text-orange-700 hover:text-orange-800 hover:underline"
-          >
-            Scroll to next page →
-          </button>
-        ) : (
-          <span className="text-xs text-gray-400">End of roster</span>
-        )}
+        <div className="flex items-center gap-3">
+          {page > 1 ? (
+            <button
+              type="button"
+              onClick={() => onPageChange(page - 1)}
+              className="text-sm font-medium text-orange-700 hover:text-orange-800 hover:underline"
+            >
+              ← Back
+            </button>
+          ) : null}
+          {page < totalPages ? (
+            <button
+              type="button"
+              onClick={() => onPageChange(page + 1)}
+              className="text-sm font-medium text-orange-700 hover:text-orange-800 hover:underline"
+            >
+              Scroll to next page →
+            </button>
+          ) : (
+            <span className="text-xs text-gray-400">End of roster</span>
+          )}
+        </div>
       </div>
     ) : null;
 
@@ -364,20 +375,29 @@ export function DailyAttendanceTable({
       {pagination}
       </div>
       {pagination ? (
-        <div className="md:hidden mt-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="md:hidden mt-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 space-y-2">
           <p className="text-xs text-gray-500 tabular-nums">
             Page {page} of {totalPages}
           </p>
+          {page > 1 ? (
+            <button
+              type="button"
+              onClick={() => onPageChange!(page - 1)}
+              className="w-full rounded-lg border border-orange-200 bg-white py-2 text-sm font-medium text-orange-700"
+            >
+              ← Back
+            </button>
+          ) : null}
           {page < totalPages ? (
             <button
               type="button"
               onClick={() => onPageChange!(page + 1)}
-              className="mt-2 w-full rounded-lg border border-orange-200 bg-white py-2 text-sm font-medium text-orange-700"
+              className="w-full rounded-lg border border-orange-200 bg-white py-2 text-sm font-medium text-orange-700"
             >
               Load more students
             </button>
           ) : (
-            <p className="mt-1 text-xs text-gray-400">End of roster</p>
+            <p className="text-xs text-gray-400">End of roster</p>
           )}
         </div>
       ) : null}

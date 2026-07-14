@@ -17,6 +17,7 @@ import {
 import {
   staffCorrectionIso,
   toTimeInputValue,
+  combineDateAndTime,
 } from "../model/attendanceRecordTime";
 import {
   computeEffectiveHoursPresent,
@@ -35,9 +36,15 @@ import {
   syncedPunchLabel,
 } from "../model/staffRecordDerived";
 import { resolveDayHoursNumeric } from "../model/dayHours";
+import { formatAttendanceTime } from "../model/formatAttendanceTime";
 import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
 import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 import { parseApiError } from "@/platform/api/errors";
+
+function formatFinalTimeLabel(date: string, hhmm: string): string {
+  if (!hhmm?.trim()) return "—";
+  return formatAttendanceTime(combineDateAndTime(date, hhmm)) || hhmm;
+}
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -169,16 +176,24 @@ export function StaffAttendanceRecordEditor({
   const effectiveAfternoonIn = effectiveStaffTime(afternoonIn, day, "pm_in");
   const effectiveAfternoonOut = effectiveStaffTime(afternoonOut, day, "pm_out");
 
-  const morningHours = useMemo(
-    () => computeSessionHours(day.date, effectiveMorningIn, effectiveMorningOut),
-    [day.date, effectiveMorningIn, effectiveMorningOut],
-  );
-  const afternoonHours = useMemo(
-    () =>
-      computeSessionHours(day.date, effectiveAfternoonIn, effectiveAfternoonOut),
-    [day.date, effectiveAfternoonIn, effectiveAfternoonOut],
-  );
+  const morningHours = useMemo(() => {
+    if (status === "excused" || status === "absent") return 0;
+    return computeSessionHours(
+      day.date,
+      effectiveMorningIn,
+      effectiveMorningOut,
+    );
+  }, [day.date, status, effectiveMorningIn, effectiveMorningOut]);
+  const afternoonHours = useMemo(() => {
+    if (status === "excused" || status === "absent") return 0;
+    return computeSessionHours(
+      day.date,
+      effectiveAfternoonIn,
+      effectiveAfternoonOut,
+    );
+  }, [day.date, status, effectiveAfternoonIn, effectiveAfternoonOut]);
   const hoursPresent = useMemo(() => {
+    if (status === "excused" || status === "absent") return 0;
     const punchHours = computeHoursPresentFromPunchSlots(day.date, day.punches);
     const morningInForCalc =
       source?.signInTime && isScheduledPlaceholderTime(source.signInTime)
@@ -193,7 +208,15 @@ export function StaffAttendanceRecordEditor({
     if (fromEffective > 0) return fromEffective;
     if (punchHours > 0) return punchHours;
     return resolveDayHoursNumeric(day);
-  }, [day, morningIn, morningOut, afternoonIn, afternoonOut, source?.signInTime]);
+  }, [
+    day,
+    status,
+    morningIn,
+    morningOut,
+    afternoonIn,
+    afternoonOut,
+    source?.signInTime,
+  ]);
   const expectedHours = expectedHoursForDate(day.date);
 
   async function handleSave(e: React.FormEvent) {
@@ -211,7 +234,10 @@ export function StaffAttendanceRecordEditor({
     if (status) payload.status = status;
     payload.excusedAbsence = status === "excused";
     payload.attendanceStatus = attendanceStatusLabel;
-    payload.hoursPresent = formatHoursValue(hoursPresent);
+    payload.hoursPresent =
+      status === "excused" || status === "absent"
+        ? "0"
+        : formatHoursValue(hoursPresent);
 
     if (notes.trim()) payload.notes = notes.trim();
     else if (source?.notes) payload.notes = null;
@@ -338,9 +364,11 @@ export function StaffAttendanceRecordEditor({
           label="Hours present"
           value={`${hoursPresent}h`}
           hint={
-            expectedHours > 0
-              ? `Auto-calculated · ${expectedHours}h expected today`
-              : "Auto-calculated"
+            status === "excused" || status === "absent"
+              ? "Excused/absent days do not count toward hours"
+              : expectedHours > 0
+                ? `Auto-calculated · ${expectedHours}h expected today`
+                : "Auto-calculated"
           }
         />
       </div>
@@ -407,22 +435,22 @@ export function StaffAttendanceRecordEditor({
         <div className="grid grid-cols-2 gap-3">
           <ReadOnlyField
             label="Morning sign in"
-            value={effectiveMorningIn || "—"}
+            value={formatFinalTimeLabel(day.date, effectiveMorningIn)}
             hint="Student + staff correction"
           />
           <ReadOnlyField
             label="Morning sign out"
-            value={effectiveMorningOut || "—"}
+            value={formatFinalTimeLabel(day.date, effectiveMorningOut)}
             hint="Student + staff correction"
           />
           <ReadOnlyField
             label="Afternoon sign in"
-            value={effectiveAfternoonIn || "—"}
+            value={formatFinalTimeLabel(day.date, effectiveAfternoonIn)}
             hint="Student + staff correction"
           />
           <ReadOnlyField
             label="Afternoon sign out"
-            value={effectiveAfternoonOut || "—"}
+            value={formatFinalTimeLabel(day.date, effectiveAfternoonOut)}
             hint="Student + staff correction"
           />
         </div>

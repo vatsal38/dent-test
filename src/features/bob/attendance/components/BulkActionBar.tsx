@@ -26,7 +26,7 @@ export function BulkActionBar({
   return (
     <div className="sticky bottom-4 z-30 mx-auto max-w-3xl rounded-xl border border-orange-200 bg-white shadow-lg px-4 py-3 flex flex-wrap items-center gap-2">
       <span className="text-sm font-medium text-gray-900 mr-1">
-        {selectedCount} selected
+        Bulk triage · {selectedCount} selected
       </span>
       {BULK_STATUSES.map((st) => (
         <button

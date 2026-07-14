@@ -160,8 +160,9 @@ export function AttendanceScanPage() {
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 mt-4 mb-1">Issue triage</h1>
       <p className="text-gray-600 text-sm mb-6">
-        Review operational issues for this track and date. Edit attendance in the
-        drawer — changes sync to Airtable.
+        Review missing punches and other issues for this track and date. Select
+        multiple students for bulk triage (mark present, absent, excused, or
+        late). Edit a single record in the drawer — changes sync to Airtable.
       </p>
 
       {scopeReady && todayRows.length > 0 ? (

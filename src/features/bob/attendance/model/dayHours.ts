@@ -7,6 +7,16 @@ export function parseHoursLabel(label?: string | null): number {
 }
 
 export function resolveDayHoursNumeric(day: StudentDayAttendance): number {
+  if (
+    day.health === "excused" ||
+    day.health === "absent" ||
+    day.attendanceState === "excused" ||
+    day.attendanceState === "absent" ||
+    day.dailyStatus === "excused" ||
+    day.dailyStatus === "absent"
+  ) {
+    return 0;
+  }
   const finalLabel = day.finalRecord?.totalHours;
   if (finalLabel) {
     const fromFinal = parseHoursLabel(finalLabel);

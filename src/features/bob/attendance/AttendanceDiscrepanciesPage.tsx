@@ -91,10 +91,17 @@ export function AttendanceDiscrepanciesPage() {
             Attendance corrections
           </h1>
           <p className="text-gray-600 text-sm mt-1">
-            Youth submit absence and time corrections through One Stop. Review
-            open items here, then edit the attendance record in the drawer —
-            same fields as Airtable. Missing check-ins are tracked on program
-            weekdays only ({PROGRAM_START_DATE} – {PROGRAM_END_DATE}).
+            Youth One Stop correction requests and open issues for the selected
+            week. For day-of missing punches and bulk triage, use{" "}
+            <Link
+              href="/app/bob/attendance/mark"
+              className="text-orange-600 hover:underline font-medium"
+            >
+              Issue triage
+            </Link>
+            . Edit the attendance record in the drawer — same fields as Airtable.
+            Missing check-ins are tracked on program weekdays only (
+            {PROGRAM_START_DATE} – {PROGRAM_END_DATE}).
           </p>
           {isBeforeProgramStart(new Date().toISOString().slice(0, 10)) ? (
             <p className="text-sm text-amber-800 mt-2">

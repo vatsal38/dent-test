@@ -419,7 +419,7 @@ export function AttendanceHubPage() {
               <BobPermissionGuard permission="attendance.mark" silent>
                 <BobActionButton
                   href={`/app/bob/attendance/mark?date=${focusDate}${trackFilter ? `&track=${encodeURIComponent(trackFilter)}` : ""}`}
-                  label="Scan mode"
+                  label="Issue triage"
                   icon={<FiZap />}
                   variant="primary"
                 />

@@ -113,23 +113,43 @@ export function computeAgeFromDob(value: unknown): number | null {
   return age >= 0 && age < 120 ? age : null;
 }
 
-export function formatPersonalDate(value: unknown): string {
+export function formatPersonalDate(value: unknown, opts?: { includeAge?: boolean }): string {
   const raw = String(value || "").trim();
   if (!raw) return "";
+  const includeAge = opts?.includeAge === true;
   const iso = raw.slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
     const d = new Date(`${iso}T12:00:00`);
     if (!Number.isNaN(d.getTime())) {
-      const age = computeAgeFromDob(iso);
       const formatted = d.toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
-      return age != null ? `${formatted} (age ${age})` : formatted;
+      if (includeAge) {
+        const age = computeAgeFromDob(iso);
+        return age != null ? `${formatted} (age ${age})` : formatted;
+      }
+      return formatted;
     }
   }
   return raw;
+}
+
+/** Prefer Date of Birth; skip Birthday / Birth Date when DOB is present (80B). */
+export function pickPrimaryDob(
+  fields: Record<string, unknown>,
+): { key: string; value: unknown } | null {
+  const preferred = ["Date of Birth", "DOB"] as const;
+  for (const key of preferred) {
+    const raw = fields[key];
+    if (raw != null && String(raw).trim()) return { key, value: raw };
+  }
+  for (const key of DOB_KEYS) {
+    const raw = fields[key];
+    if (raw != null && String(raw).trim()) return { key, value: raw };
+  }
+  return null;
 }
 
 export {
