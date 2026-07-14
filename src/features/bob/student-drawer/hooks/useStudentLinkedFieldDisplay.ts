@@ -8,6 +8,9 @@ import {
   cellDisplayValue,
   extractAirtableRecordIds,
 } from "@/lib/bobAirtableDisplay";
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
+import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
+import { BOB26_TRACK_NAME_LOOKUP_FIELDS } from "@/lib/bobRosterFieldConstants";
 
 /** Merge Mongo top-level fields into airtableFields for linked-record resolution. */
 export function buildStudentLabelFields(
@@ -50,7 +53,13 @@ export function useStudentLinkedFieldDisplay(
   );
 
   const trackField = fieldName(
-    [/final track/i, /^track$/i, /program\s*track/i, /\btrack\b/i],
+    [
+      /track\s*name\s*\(from\s*bob/i,
+      /final track/i,
+      /^track$/i,
+      /program\s*track/i,
+      /\btrack\b/i,
+    ],
     "Track",
   );
   const schoolField = fieldName(
@@ -110,6 +119,40 @@ export function useStudentLinkedFieldDisplay(
 
   const fields = student ? buildStudentLabelFields(student) : {};
 
+  // 44B — prefer Airtable "Track Name (from BoB '26 Track)", not the full
+  // linked Programs record (“Bet on Baltimore - 2026 - Summer …”).
+  let trackLabel = "—";
+  if (student) {
+    const fromTrackName = resolveStudentTrackLabel(student);
+    if (fromTrackName && fromTrackName !== "Unassigned") {
+      trackLabel = fromTrackName;
+    } else {
+      const af = (student.airtableFields || {}) as Record<string, unknown>;
+      let rawFromLookup = "";
+      for (const key of BOB26_TRACK_NAME_LOOKUP_FIELDS) {
+        const raw = af[key];
+        const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+        for (const v of arr) {
+          const s = String(v ?? "").trim();
+          if (s && !/^rec[a-zA-Z0-9]+$/i.test(s)) {
+            rawFromLookup = s;
+            break;
+          }
+        }
+        if (rawFromLookup) break;
+      }
+      const linked = resolveLinked(
+        trackField,
+        fields[trackField],
+        fields.Track,
+        student.track,
+      );
+      trackLabel =
+        formatBobTrackDisplayLabel(rawFromLookup || (linked !== "—" ? linked : "")) ||
+        "—";
+    }
+  }
+
   return {
     schema,
     fieldName,
@@ -129,9 +172,7 @@ export function useStudentLinkedFieldDisplay(
           student.school,
         )
       : "—",
-    track: student
-      ? resolveLinked(trackField, fields[trackField], fields.Track, student.track)
-      : "—",
+    track: trackLabel,
     coach: student
       ? resolveLinked(coachField, fields[coachField], fields.Coach, student.coach)
       : "—",

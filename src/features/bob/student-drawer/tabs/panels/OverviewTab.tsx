@@ -11,6 +11,7 @@ import { ActivityTimeline } from "../../widgets/ActivityTimeline";
 import { extractCoachNotes } from "../../lib/profileSignals";
 import { useStudentActivityFeed } from "../../hooks/useStudentTabQueries";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
+import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { canEditStudentRecord } from "@/platform/rbac/studentProfile";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
@@ -63,6 +64,14 @@ export function OverviewTab() {
 
   if (!student) return null;
 
+  // 44B — always use Track Name (canonical), never the full linked record label.
+  const trackDisplay = (() => {
+    const fromName = resolveStudentTrackLabel(student);
+    if (fromName && fromName !== "Unassigned") return fromName;
+    if (track && track !== "—" && track !== "Loading…") return track;
+    return "";
+  })();
+
   const notes = extractCoachNotes(student).slice(0, 2);
   const pronouns = String(fields.Pronouns ?? fields.pronouns ?? "").trim();
   const rows = studentSummaryRows(student)
@@ -74,8 +83,8 @@ export function OverviewTab() {
   if (pronouns) {
     rows.unshift({ label: "Pronouns", value: pronouns });
   }
-  if (track && track !== "—") {
-    rows.push({ label: "Track", value: track });
+  if (trackDisplay) {
+    rows.push({ label: "Track", value: trackDisplay });
   }
   const blitzTeam =
     student.blitzSquad?.trim() ||

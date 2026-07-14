@@ -12,15 +12,40 @@ import {
   type BobStudent,
 } from "@/platform/api/bob/students";
 import { bobKeys } from "@/platform/query/queryKeys";
-import { pickField, DOB_KEYS, computeAgeFromDob, GUARDIAN_NAME_KEYS, GUARDIAN_PHONE_KEYS, GUARDIAN_EMAIL_KEYS, EMERGENCY_KEYS } from "@/features/bob/student-drawer/lib/personalFieldDisplay";
+import { pickField, DOB_KEYS, HEALTH_FIELD_KEYS, computeAgeFromDob, GUARDIAN_NAME_KEYS, GUARDIAN_PHONE_KEYS, GUARDIAN_EMAIL_KEYS, EMERGENCY_KEYS } from "@/features/bob/student-drawer/lib/personalFieldDisplay";
 import { StudentHeadshot } from "@/features/bob/student-drawer/header/StudentHeadshot";
 import { cellDisplayValue, isAirtableRecordId } from "@/lib/bobAirtableDisplay";
+import { formatBobFieldDisplayName } from "@/lib/bobDisplayTerminology";
 import { useBobLinkedFieldLabels } from "@/hooks/useBobLinkedFieldLabels";
 import { Skeleton } from "@/components/Skeleton";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { canEditStudentRecord } from "@/platform/rbac/studentProfile";
 import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
+import { studentDisplayName } from "@/features/bob/roster/recordDisplay";
+
+/** Hide from full record editor (53A / 52A). */
+function isHiddenFullRecordField(name: string): boolean {
+  const n = String(name || "").trim();
+  if (!n) return true;
+  // 53A — Birthday / Birth Date duplicates; keep Date of Birth
+  if (/^birthday$/i.test(n) || /^birth\s*date$/i.test(n)) return true;
+  if (/^BSFC/i.test(n) || /BSFC\s*['']?\s*24/i.test(n)) return true;
+  // 52A — legacy BoB '24 / '25 columns under Program (and elsewhere)
+  if (/bob\s*[''\u2019]?\s*(?:24|25)\b/i.test(n)) return true;
+  if (/from\s*bob\s*[''\u2019]?\s*(?:24|25)\b/i.test(n)) return true;
+  return false;
+}
+
+function isHealthFieldName(name: string): boolean {
+  const n = String(name || "").toLowerCase();
+  return (
+    HEALTH_FIELD_KEYS.some((k) => k.toLowerCase() === n) ||
+    /(allerg|otc\b|over the counter|medicine authorized|health history|dietary\s*restrict)/i.test(
+      name,
+    )
+  );
+}
 
 function getAirtableErrorText(v: unknown): string | null {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
@@ -223,7 +248,7 @@ function FieldRow({
   return (
     <div className="py-3 grid grid-cols-1 sm:grid-cols-12 gap-2 border-b border-gray-100">
       <div className="sm:col-span-4 text-xs font-medium text-gray-500 uppercase tracking-wide sm:pt-1">
-        {label}
+        {formatBobFieldDisplayName(label)}
       </div>
       <div className="sm:col-span-7 text-sm whitespace-pre-wrap wrap-break-word">
         {valueNode ? (
@@ -257,14 +282,44 @@ function FieldRow({
   );
 }
 
-type FieldGroupKey = "Contact" | "Family" | "School" | "Program" | "Attendance" | "Notes" | "Other";
+type FieldGroupKey =
+  | "Contact"
+  | "Family"
+  | "School"
+  | "Health"
+  | "Program"
+  | "Attendance"
+  | "Notes"
+  | "Other";
 
 function groupForFieldName(name: string): FieldGroupKey {
   const n = name.toLowerCase();
-  if (/(email|phone|cell|mobile|address|instagram|linkedin)/.test(n)) return "Contact";
+  // 51A — Preferred Name (and core identity) stay on Contact, not Other
+  if (
+    /^preferred\s*name$/i.test(name) ||
+    /^name$/i.test(name) ||
+    /^first\s*name$/i.test(name) ||
+    /^last\s*name$/i.test(name) ||
+    /pronoun/i.test(n) ||
+    /^date of birth$/i.test(name) ||
+    /^dob$/i.test(name)
+  ) {
+    return "Contact";
+  }
+  if (isHealthFieldName(name)) return "Health";
+  if (/(email|phone|cell|mobile|address|instagram|linkedin)/.test(n))
+    return "Contact";
   if (/(parent|guardian|emergency|family|home phone)/.test(n)) return "Family";
-  if (/(school|grade|gpa|teacher|counselor)/.test(n)) return "School";
-  if (/(dent|track|pod|coach|start date|enroll|placement|interview|status|stage)/.test(n)) return "Program";
+  // 61 — Grad year + 2026-27 Grade land in School
+  if (/(school|grade|gpa|teacher|counselor|graduation\s*year)/.test(n))
+    return "School";
+  if (
+    /(dent|track|pod|coach|start date|first year|enroll|placement|interview|status|stage|returner)/.test(
+      n,
+    )
+  ) {
+    return "Program";
+  }
   if (/(attendance|present|absent|tardy)/.test(n)) return "Attendance";
   if (/(note|notes|comment|reflection)/.test(n)) return "Notes";
   return "Other";
@@ -291,8 +346,9 @@ function Section({
           <div className="text-sm font-semibold text-gray-900">{title}</div>
           {subtitle && <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>}
         </div>
+        {/* 55 — larger chevrons */}
         <div
-          className="text-xs text-gray-500 pt-0.5 transition-transform group-open:rotate-180"
+          className="text-xl leading-none text-gray-600 pt-0.5 px-1 transition-transform group-open:rotate-180"
           aria-hidden
         >
           ▾
@@ -424,7 +480,17 @@ export function RosterStudentDetailPage() {
     openedEditFromQueryRef.current = true;
   }, [student, searchParams, can, me?.linkedStudent?.id]);
 
-  const airtableFields = (student?.airtableFields || {}) as Record<string, unknown>;
+  const airtableFields = useMemo(() => {
+    const base = { ...(student?.airtableFields || {}) } as Record<string, unknown>;
+    // 51A — keep Preferred Name on full record (Mongo + Airtable)
+    const preferred =
+      String(student?.preferredName || base["Preferred Name"] || "").trim();
+    if (preferred && (base["Preferred Name"] == null || base["Preferred Name"] === "")) {
+      base["Preferred Name"] = preferred;
+    }
+    return base;
+  }, [student]);
+
   const fieldTypeByName = useMemo(() => {
     const m = new Map<string, string>();
     for (const f of schema || []) {
@@ -467,21 +533,40 @@ export function RosterStudentDetailPage() {
       "First Name",
       "Last Name",
       "Preferred Name",
+      "Date of Birth",
       "Student Email",
       "Student Cell Phone Number",
       "School",
+      "Graduation Year",
+      "2026-27 Grade",
+      "Grade",
       "Parent/Guardian Email",
       "Start Date @ Dent",
+      "First Year at Dent",
+      "First year at Dent",
+      ...HEALTH_FIELD_KEYS,
     ];
+    // Always surface these on the editor even when empty (51A / 54 / 61 / 54A).
+    const forceInclude = new Set([
+      "Preferred Name",
+      "Date of Birth",
+      "Graduation Year",
+      "2026-27 Grade",
+      "Start Date @ Dent",
+      ...HEALTH_FIELD_KEYS,
+    ]);
+
     for (const n of pin) {
-      if (Object.prototype.hasOwnProperty.call(airtableFields, n)) {
-        out.push({ name: n, value: airtableFields[n] });
-        seen.add(n);
-      }
+      if (isHiddenFullRecordField(n)) continue;
+      const exists = Object.prototype.hasOwnProperty.call(airtableFields, n);
+      if (!exists && !forceInclude.has(n)) continue;
+      out.push({ name: n, value: exists ? airtableFields[n] : "" });
+      seen.add(n);
     }
 
     for (const f of list) {
       if (!f?.name || seen.has(f.name)) continue;
+      if (isHiddenFullRecordField(f.name)) continue;
       if (!Object.prototype.hasOwnProperty.call(airtableFields, f.name)) continue;
       out.push({ name: f.name, value: airtableFields[f.name] });
       seen.add(f.name);
@@ -490,6 +575,7 @@ export function RosterStudentDetailPage() {
     // Anything in the row but not in schema (rare) goes last.
     for (const k of Object.keys(airtableFields)) {
       if (seen.has(k)) continue;
+      if (isHiddenFullRecordField(k)) continue;
       out.push({ name: k, value: airtableFields[k] });
       seen.add(k);
     }
@@ -499,16 +585,26 @@ export function RosterStudentDetailPage() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
+    const forceShowEmpty = new Set([
+      "Preferred Name",
+      "Date of Birth",
+      "Graduation Year",
+      "2026-27 Grade",
+      "Start Date @ Dent",
+      ...HEALTH_FIELD_KEYS,
+    ]);
     const base = orderedFields.filter((f) => {
-      if (showEmpty) return true;
+      if (isHiddenFullRecordField(f.name)) return false;
+      if (showEmpty || forceShowEmpty.has(f.name)) return true;
       const t = formatValue(f.value);
       return t !== "—";
     });
     if (!term) return base;
     return base.filter((f) => {
-      const label = f.name.toLowerCase();
+      const label = formatBobFieldDisplayName(f.name).toLowerCase();
+      const rawName = f.name.toLowerCase();
       const val = formatValue(f.value).toLowerCase();
-      return label.includes(term) || val.includes(term);
+      return label.includes(term) || rawName.includes(term) || val.includes(term);
     });
   }, [orderedFields, q, showEmpty]);
 
@@ -517,12 +613,16 @@ export function RosterStudentDetailPage() {
       Contact: [],
       Family: [],
       School: [],
+      Health: [],
       Program: [],
       Attendance: [],
       Notes: [],
       Other: [],
     };
-    for (const f of filtered) groups[groupForFieldName(f.name)].push({ name: f.name, value: f.value });
+    for (const f of filtered) {
+      if (isHiddenFullRecordField(f.name)) continue;
+      groups[groupForFieldName(f.name)].push({ name: f.name, value: f.value });
+    }
     return groups;
   }, [filtered]);
 
@@ -576,7 +676,7 @@ export function RosterStudentDetailPage() {
 
   if (!student) return null;
 
-  const title = `${student.firstName} ${student.lastName}`.trim() || "Student";
+  const title = studentDisplayName(student);
   const allowEdit = canEditStudentRecord(can, me?.linkedStudent?.id, student.id);
   const subtitle =
     (airtableFields["Student Email"] as string | undefined) ||
@@ -596,9 +696,14 @@ export function RosterStudentDetailPage() {
       : (airtableFields["School"] as string | undefined) ||
         student.school ||
         null;
+  // 54 — First year (Airtable still stores Start Date @ Dent / First Year at Dent)
   const startDate =
-    (airtableFields["Start Date @ Dent"] as string | undefined) || null;
-  const dobField = pickField(airtableFields, DOB_KEYS);
+    (airtableFields["First Year at Dent"] as string | undefined) ||
+    (airtableFields["First year at Dent"] as string | undefined) ||
+    (airtableFields["Start Date @ Dent"] as string | undefined) ||
+    null;
+  const dobField = pickField(airtableFields, ["Date of Birth", "DOB"] as const)
+    || pickField(airtableFields, DOB_KEYS);
   const age = dobField ? computeAgeFromDob(dobField.value) : null;
   const returnerField = pickField(airtableFields, ["Returner"]);
   const returnerLabel = returnerField
@@ -929,7 +1034,7 @@ export function RosterStudentDetailPage() {
 
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="bg-white border border-gray-200 rounded-lg p-3">
-            <div className="text-xs text-gray-500">Start date @ Dent</div>
+            <div className="text-xs text-gray-500">First year</div>
             <div className="text-sm font-semibold text-gray-900 mt-1">{startDate || "—"}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3">
@@ -1054,11 +1159,41 @@ export function RosterStudentDetailPage() {
           )}
         </Section>
 
-        <Section title={`School (${grouped.School.length})`} subtitle="School related info" defaultOpen={false}>
+        <Section title={`School (${grouped.School.length})`} subtitle="School, grad year, and 2026–27 grade" defaultOpen>
           {grouped.School.length === 0 ? (
             <div className="py-6 text-sm text-gray-500">No school info found.</div>
           ) : (
             grouped.School.map((f) =>
+              editing ? (
+                <FieldRow
+                  key={f.name}
+                  label={f.name}
+                  value={draft[f.name]}
+                  valueNode={<div className="w-full">{renderEditor(f.name, draft[f.name])}</div>}
+                />
+              ) : (
+                <FieldRow
+                  key={f.name}
+                  label={f.name}
+                  value={f.value}
+                  labelsByRecordId={labelsForField(f.name)}
+                />
+              ),
+            )
+          )}
+        </Section>
+
+        <Section
+          title={`Health & medicine (${grouped.Health.length})`}
+          subtitle="Allergies, OTC medicine, and health history"
+          defaultOpen={false}
+        >
+          {grouped.Health.length === 0 ? (
+            <div className="py-6 text-sm text-gray-500">
+              No medicine or allergy fields on this record yet.
+            </div>
+          ) : (
+            grouped.Health.map((f) =>
               editing ? (
                 <FieldRow
                   key={f.name}

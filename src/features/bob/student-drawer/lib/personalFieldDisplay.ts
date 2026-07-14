@@ -12,6 +12,15 @@ const ALLERGY_KEYS = [
   "Medical Allergies",
 ] as const;
 
+/** Full record + Contracts & Health — medicine / allergies. */
+const HEALTH_FIELD_KEYS = [
+  "Health History",
+  "Allergies",
+  "Allergies / Medical Notes",
+  "Over The Counter (OTC) Medicine Authorized",
+  "Dietary Restrictions",
+] as const;
+
 const GUARDIAN_NAME_KEYS = [
   "Parent/Guardian Name",
   "Parent Name",
@@ -126,6 +135,7 @@ export function formatPersonalDate(value: unknown): string {
 export {
   DOB_KEYS,
   ALLERGY_KEYS,
+  HEALTH_FIELD_KEYS,
   GUARDIAN_NAME_KEYS,
   GUARDIAN_PHONE_KEYS,
   GUARDIAN_EMAIL_KEYS,

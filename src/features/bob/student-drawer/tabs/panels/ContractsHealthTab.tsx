@@ -7,6 +7,7 @@ import {
   onboardingPhaseTone,
   preSurveyLabel,
 } from "@/features/bob/onboarding/statusLabels";
+import { HEALTH_FIELD_KEYS } from "@/features/bob/student-drawer/lib/personalFieldDisplay";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { useStudentLinkedFieldDisplay } from "../../hooks/useStudentLinkedFieldDisplay";
 
@@ -15,14 +16,6 @@ const CONTRACT_FIELD_KEYS = [
   "BoB '26 Student Contract Status",
   "BoB '26 Pre-Survey Status",
   "BoB '26 All Forms Completed",
-] as const;
-
-const HEALTH_FIELD_KEYS = [
-  "Health History",
-  "Allergies",
-  "Allergies / Medical Notes",
-  "Over The Counter (OTC) Medicine Authorized",
-  "Dietary Restrictions",
 ] as const;
 
 function FieldCard({
