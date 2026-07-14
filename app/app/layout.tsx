@@ -2,12 +2,13 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getAirtableStatus, syncAirtable, AirtableStatus } from "@/lib/api";
 import { BobSyncStatusBadge } from "@/features/bob/sync/BobSyncStatusBadge";
 import { useBobNavItems } from "@/platform/rbac/useBobNavItems";
+import { isNavHrefActive } from "@/platform/rbac/navActive";
 import { DentOpsRouteGuard } from "@/platform/rbac/DentOpsRouteGuard";
 import { useDentOpsAccess } from "@/platform/rbac/useDentOpsAccess";
 import { getBobHomeHref } from "@/platform/rbac/routes";
@@ -190,6 +191,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { enabled: isAuthenticated && !isLoading },
   );
 
+  const bobNavHrefs = useMemo(
+    () => [...bobNavItems, ...bobNavMoreItems].map((item) => item.href),
+    [bobNavItems, bobNavMoreItems],
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
@@ -267,6 +273,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ]
     : [];
 
+  const dentOpsNavHrefs = dentOpsNavItems.map((item) => item.href);
+
   const isBobMoreActive =
     pathname?.startsWith("/app/bob/my-pod") ||
     pathname?.startsWith("/app/bob/inbox") ||
@@ -320,9 +328,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </p>
               <nav className="p-3 pt-0 space-y-0.5">
                 {dentOpsNavItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/app" && pathname?.startsWith(item.href));
+                  const isActive = isNavHrefActive(
+                    pathname,
+                    item.href,
+                    dentOpsNavHrefs,
+                    ["/app"],
+                  );
                   return (
                     <Link
                       key={item.href}
@@ -364,9 +375,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
             {!bobNavLoading &&
               bobNavItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/app/bob" && pathname?.startsWith(item.href));
+              const isActive = isNavHrefActive(
+                pathname,
+                item.href,
+                bobNavHrefs,
+                ["/app/bob"],
+              );
               return (
                 <Link
                   key={item.href}
@@ -409,10 +423,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {bobMoreExpanded && (
                 <div className="mt-0.5 ml-3 pl-3 border-l border-orange-200 space-y-0.5">
                   {bobNavMoreItems.map((item) => {
-                    const isActive =
-                      pathname === item.href ||
-                      (item.href !== "/app/bob" &&
-                        pathname?.startsWith(item.href));
+                    const isActive = isNavHrefActive(
+                      pathname,
+                      item.href,
+                      bobNavHrefs,
+                      ["/app/bob"],
+                    );
                     return (
                       <Link
                         key={item.href}
