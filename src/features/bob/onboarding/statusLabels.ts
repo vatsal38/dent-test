@@ -1,9 +1,13 @@
 import type { BobOnboardingStatus } from "@/platform/api/bob/students";
 
-export function contractStatusLabel(phase: BobOnboardingStatus["contract"]["phase"]): string {
+export function contractStatusLabel(
+  phase: BobOnboardingStatus["contract"]["phase"] | "not_needed",
+): string {
   switch (phase) {
     case "signed":
       return "Signed";
+    case "not_needed":
+      return "Not needed";
     case "in_progress":
       return "In progress";
     case "not_started":
@@ -29,25 +33,29 @@ export function ywRegistrationLabel(
 }
 
 export function preSurveyLabel(status: BobOnboardingStatus["preSurvey"]): string {
-  if (!status.synced) return "No email match on BoB roster";
-  if (status.label) {
-    if (status.label.toLowerCase() === "done") return "Done";
-    return status.label;
-  }
+  if (!status.synced) return "Not synced from Airtable";
+  if (status.label) return status.label;
   switch (status.phase) {
     case "complete":
-      return "Complete";
+      return "Completed";
     case "incomplete":
-      return "Incomplete";
+      return "Still need to complete";
     default:
       return "—";
   }
 }
 
 export function onboardingPhaseTone(
-  phase: "signed" | "complete" | "in_progress" | "incomplete" | "not_started" | "unknown",
+  phase:
+    | "signed"
+    | "complete"
+    | "in_progress"
+    | "incomplete"
+    | "not_started"
+    | "not_needed"
+    | "unknown",
 ): string {
-  if (phase === "signed" || phase === "complete") {
+  if (phase === "signed" || phase === "complete" || phase === "not_needed") {
     return "bg-emerald-50 text-emerald-800 border-emerald-200";
   }
   if (phase === "in_progress" || phase === "incomplete") {

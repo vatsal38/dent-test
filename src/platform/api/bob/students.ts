@@ -47,11 +47,23 @@ export type BobOnboardingPhase =
   | "signed"
   | "in_progress"
   | "not_started"
+  | "not_needed"
   | "unknown"
   | "complete"
   | "incomplete";
 
+export interface BobOnboardingFieldStatus {
+  field: string | null;
+  label: string | null;
+  phase: "signed" | "in_progress" | "not_started" | "not_needed" | "unknown";
+}
+
 export interface BobOnboardingStatus {
+  /** BoB '26 Parent Contract Status */
+  parentContract?: BobOnboardingFieldStatus & { satisfied?: boolean };
+  /** BoB '26 Student Contract Status (youth) */
+  youthContract?: BobOnboardingFieldStatus & { signed?: boolean };
+  /** Combined legacy contract rollup (parent + youth). */
   contract: {
     field: string | null;
     label: string | null;
@@ -69,9 +81,12 @@ export interface BobOnboardingStatus {
     phase: "complete" | "incomplete" | "unknown";
     synced: boolean;
   };
+  allFormsCompleted?: boolean;
   readyForProgram: boolean;
   contractAndPreSurveyComplete?: boolean;
   contractSigned: boolean;
+  parentContractSatisfied?: boolean;
+  youthContractSigned?: boolean;
   ywReady: boolean;
   preSurveyComplete: boolean;
 }

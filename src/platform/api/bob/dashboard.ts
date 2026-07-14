@@ -60,6 +60,12 @@ export interface BobDashboardQueueItem {
 export interface BobDashboardOnboardingSummary {
   total: number;
   contractSigned: number;
+  parentContractSatisfied?: number;
+  parentContractInProgress?: number;
+  parentContractNotStarted?: number;
+  youthContractSigned?: number;
+  youthContractInProgress?: number;
+  youthContractNotStarted?: number;
   contractInProgress: number;
   contractNotStarted: number;
   ywReady: number;

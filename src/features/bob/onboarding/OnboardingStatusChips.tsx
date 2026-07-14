@@ -19,6 +19,15 @@ function chip(
   );
 }
 
+function parentTone(
+  phase: NonNullable<BobOnboardingStatus["parentContract"]>["phase"],
+): Parameters<typeof onboardingPhaseTone>[0] {
+  if (phase === "signed" || phase === "not_needed") return phase;
+  if (phase === "in_progress") return "in_progress";
+  if (phase === "not_started") return "not_started";
+  return "unknown";
+}
+
 export function OnboardingStatusChips({
   status,
   compact = false,
@@ -27,51 +36,100 @@ export function OnboardingStatusChips({
   compact?: boolean;
 }) {
   if (!status) {
-    return (
-      <span className="text-xs text-gray-400">—</span>
-    );
+    return <span className="text-xs text-gray-400">—</span>;
   }
 
-  const contractPhase =
-    status.contract.phase === "signed"
-      ? "signed"
-      : status.contract.phase === "in_progress"
-        ? "in_progress"
-        : status.contract.phase === "not_started"
-          ? "not_started"
-          : "unknown";
-
-  const surveyPhase = status.preSurveyComplete
-    ? "complete"
-    : status.preSurvey.phase === "incomplete"
-      ? "incomplete"
-      : status.preSurvey.synced
-        ? "incomplete"
-        : "unknown";
-
+  const parent = status.parentContract;
+  const youth = status.youthContract;
   const ready =
     status.contractAndPreSurveyComplete ?? status.readyForProgram;
 
+  const parentLabel = compact
+    ? parent?.satisfied
+      ? "Parent ✓"
+      : "Parent"
+    : `Parent: ${
+        parent?.label ||
+        (parent?.phase === "signed"
+          ? "Signed"
+          : parent?.phase === "not_needed"
+            ? "18+ N/A"
+            : parent?.phase === "in_progress"
+              ? "Pending"
+              : "—")
+      }`;
+
+  const youthLabel = compact
+    ? youth?.signed || youth?.phase === "signed"
+      ? "Youth ✓"
+      : "Youth"
+    : `Youth: ${
+        youth?.label ||
+        (youth?.phase === "signed"
+          ? "Signed"
+          : youth?.phase === "in_progress"
+            ? "Pending"
+            : "—")
+      }`;
+
+  const surveyLabel = compact
+    ? status.preSurveyComplete
+      ? "Survey ✓"
+      : "Survey"
+    : `Survey: ${
+        status.preSurvey.label ||
+        (status.preSurveyComplete
+          ? "Completed"
+          : status.preSurvey.synced
+            ? "Pending"
+            : "—")
+      }`;
+
   const items = [
-    chip(
-      "contract",
-      compact
-        ? contractPhase === "signed"
-          ? "Contract ✓"
-          : "Contract"
-        : `Contract: ${contractPhase === "signed" ? "Signed" : contractPhase === "in_progress" ? "Pending" : "—"}`,
-      contractPhase === "signed" ? "signed" : contractPhase === "in_progress" ? "in_progress" : "not_started",
-    ),
+    parent
+      ? chip("parent", parentLabel, parentTone(parent.phase))
+      : chip(
+          "contract",
+          compact
+            ? status.contractSigned
+              ? "Contract ✓"
+              : "Contract"
+            : `Contract: ${
+                status.contract.phase === "signed"
+                  ? "Signed"
+                  : status.contract.phase === "in_progress"
+                    ? "Pending"
+                    : "—"
+              }`,
+          status.contract.phase === "signed"
+            ? "signed"
+            : status.contract.phase === "in_progress"
+              ? "in_progress"
+              : "not_started",
+        ),
+    youth
+      ? chip(
+          "youth",
+          youthLabel,
+          youth.phase === "signed"
+            ? "signed"
+            : youth.phase === "in_progress"
+              ? "in_progress"
+              : "not_started",
+        )
+      : null,
     chip(
       "survey",
-      compact
-        ? status.preSurveyComplete
-          ? "Survey ✓"
-          : "Survey"
-        : `Survey: ${status.preSurveyComplete ? "Done" : status.preSurvey.synced ? "Pending" : "—"}`,
-      surveyPhase,
+      surveyLabel,
+      status.preSurveyComplete
+        ? "complete"
+        : status.preSurvey.phase === "incomplete"
+          ? "incomplete"
+          : status.preSurvey.synced
+            ? "incomplete"
+            : "unknown",
     ),
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="flex flex-wrap items-center gap-1">

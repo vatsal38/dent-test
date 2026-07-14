@@ -224,10 +224,28 @@ export function BobSettingsPage() {
             Evaluations demographics
           </h2>
           <p className="text-sm text-gray-600 mb-4">
-            Copy submitted demographics from the Dent Evaluations form into
-            Students &amp; Alums (matched by email). Students must already be on
-            the roster from intake transfer. Each run re-applies the last 90
-            days of submissions (not only new ones).
+            Copy submitted demographics from{" "}
+            <a
+              href="https://airtable.com/appUBN5NyXcVYXXNg/tblJwtZnVZoGpUjY3/viwDJlqMlViKB2Dmm?blocks=hide"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-gray-800"
+            >
+              Dent Evaluations
+            </a>{" "}
+            into{" "}
+            <a
+              href="https://airtable.com/appjDzuL6WUmrcZ5d/tblWX69llgeaLCKlT/viweLHMuhtXqs2bx7?blocks=hide"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-gray-800"
+            >
+              Students &amp; Alums
+            </a>{" "}
+            (matched by email). Linked school/org records stay in Evaluations —
+            labels are copied as text because the tables are in different bases.
+            Students must already be on the roster. Each run re-applies the last
+            90 days of submissions.
           </p>
           <button
             type="button"
@@ -255,10 +273,7 @@ export function BobSettingsPage() {
                   Skipped: {demographicsStatus?.progress?.skipped ?? 0}
                 </span>
                 <span>
-                  Failed:{" "}
-                  {demographicsStatus?.progress?.imported ??
-                    demographicsStatus?.result?.imported ??
-                    0}
+                  Failed: {demographicsStatus?.progress?.imported ?? 0}
                 </span>
                 {demographicsStatus?.elapsed ? (
                   <span>Elapsed: {demographicsStatus.elapsed}</span>
@@ -268,6 +283,11 @@ export function BobSettingsPage() {
                 <div className="h-full w-[40%] bg-orange-500 animate-pulse rounded-full" />
               </div>
             </div>
+          ) : null}
+          {!demographicsRunning && demographicsStatus?.result?.message ? (
+            <p className="mt-3 text-xs text-gray-500">
+              Last run: {demographicsStatus.result.message}
+            </p>
           ) : null}
         </section>
 

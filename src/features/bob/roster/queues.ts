@@ -45,7 +45,7 @@ export const ROSTER_QUEUES: RosterQueueDef[] = [
   {
     id: "onboarding_pending",
     label: "Onboarding",
-    description: "Contract or pre-survey still incomplete",
+    description: "Parent/youth contract or pre-survey still incomplete",
     listParams: { bobCohort: "active", onboardingReady: "no" },
   },
   {

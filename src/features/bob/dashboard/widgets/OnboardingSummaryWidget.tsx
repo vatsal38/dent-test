@@ -6,6 +6,9 @@ import { DashboardEmpty } from "../primitives/DashboardEmpty";
 import { DashboardWidgetSkeleton } from "../primitives/DashboardWidgetSkeleton";
 import type { WidgetRenderProps } from "../types";
 
+const AIRTABLE_ONBOARDING_VIEW =
+  "https://airtable.com/appjDzuL6WUmrcZ5d/tblWX69llgeaLCKlT/viwo67vEM2OeW9Hva?blocks=hide";
+
 function StatRow({
   label,
   value,
@@ -60,7 +63,10 @@ export function OnboardingSummaryWidget({
   }
 
   const ready = onboarding.contractAndPreSurveyComplete ?? 0;
-  const pending = onboarding.contractAndPreSurveyPending ?? Math.max(0, total - ready);
+  const pending =
+    onboarding.contractAndPreSurveyPending ?? Math.max(0, total - ready);
+  const parentOk = onboarding.parentContractSatisfied ?? onboarding.contractSigned;
+  const youthOk = onboarding.youthContractSigned ?? onboarding.contractSigned;
 
   return (
     <DashboardCard title={title} refreshing={isRefreshing}>
@@ -68,28 +74,26 @@ export function OnboardingSummaryWidget({
         <p className="text-sm text-gray-600">
           <span className="font-semibold text-gray-900">{ready}</span> of{" "}
           <span className="font-semibold text-gray-900">{total}</span> with
-          contract and pre-survey complete
+          parent contract, youth contract, and pre-survey complete
           {pending > 0 ? (
             <span className="text-amber-700"> · {pending} pending</span>
           ) : null}
         </p>
         <StatRow
-          label="Contract signed"
-          value={onboarding.contractSigned}
+          label="Parent contract satisfied"
+          value={parentOk}
           total={total}
         />
         <StatRow
-          label="Pre-survey complete"
+          label="Youth contract signed"
+          value={youthOk}
+          total={total}
+        />
+        <StatRow
+          label="Youth pre-survey complete"
           value={onboarding.preSurveyComplete}
           total={total}
         />
-        {onboarding.preSurveyNotSynced > 0 ? (
-          <p className="text-xs text-gray-500">
-            {onboarding.preSurveyNotSynced} without email match on BoB All
-            Students — status from Airtable &quot;BoB &apos;25 Pre-Survey
-            Done&quot;.
-          </p>
-        ) : null}
         <Link
           href={
             pending > 0
@@ -101,9 +105,29 @@ export function OnboardingSummaryWidget({
           {pending > 0 ? "Review onboarding queue →" : "Review cohort roster →"}
         </Link>
         <p className="text-[11px] text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
-          Counts use active BoB &apos;26 roster students in scope. Contract from
-          enrollment/contract fields; pre-survey from BoB &apos;25 Pre-Survey Done
-          when email matches BoB All Students. Refresh via Settings → Airtable sync.
+          Counts use active BoB &apos;26 roster students in scope. Status from
+          Airtable fields{" "}
+          <span className="font-medium text-gray-600">
+            BoB &apos;26 Parent Contract Status
+          </span>
+          ,{" "}
+          <span className="font-medium text-gray-600">
+            BoB &apos;26 Student Contract Status
+          </span>
+          , and{" "}
+          <span className="font-medium text-gray-600">
+            BoB &apos;26 Pre-Survey Status
+          </span>
+          . Update those in{" "}
+          <a
+            href={AIRTABLE_ONBOARDING_VIEW}
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-gray-700"
+          >
+            Airtable
+          </a>
+          ; they appear in Dent Ops after roster sync (Settings → Airtable sync).
         </p>
       </div>
     </DashboardCard>

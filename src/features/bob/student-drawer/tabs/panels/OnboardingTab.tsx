@@ -13,19 +13,22 @@ function StatusCard({
   title,
   detail,
   phase,
+  fieldHint,
 }: {
   title: string;
   detail: string;
   phase: Parameters<typeof onboardingPhaseTone>[0];
+  fieldHint?: string | null;
 }) {
   return (
-    <div
-      className={`rounded-xl border p-3 ${onboardingPhaseTone(phase)}`}
-    >
+    <div className={`rounded-xl border p-3 ${onboardingPhaseTone(phase)}`}>
       <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
         {title}
       </p>
       <p className="text-sm font-medium mt-1">{detail}</p>
+      {fieldHint ? (
+        <p className="text-[10px] mt-1.5 opacity-70">Airtable: {fieldHint}</p>
+      ) : null}
     </div>
   );
 }
@@ -51,18 +54,56 @@ export function OnboardingTab() {
           <h3 className="text-sm font-semibold text-gray-900">
             Airtable onboarding status
           </h3>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <p className="text-xs text-gray-500">
+            Pulled from Students &amp; Alums — Parent Contract, Student Contract,
+            and Pre-Survey. Updates in Airtable show here after roster sync.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
             <StatusCard
-              title="Contract"
+              title="Parent contract"
               detail={
-                ob.contract.label
-                  ? `${contractStatusLabel(ob.contract.phase)} — ${ob.contract.label}`
-                  : contractStatusLabel(ob.contract.phase)
+                ob.parentContract?.label
+                  ? `${contractStatusLabel(ob.parentContract.phase)} — ${ob.parentContract.label}`
+                  : contractStatusLabel(ob.parentContract?.phase ?? ob.contract.phase)
               }
-              phase={ob.contract.phase === "signed" ? "signed" : ob.contract.phase === "in_progress" ? "in_progress" : ob.contract.phase === "not_started" ? "not_started" : "unknown"}
+              phase={
+                ob.parentContract?.phase === "signed" ||
+                ob.parentContract?.phase === "not_needed"
+                  ? ob.parentContract.phase
+                  : ob.parentContract?.phase === "in_progress"
+                    ? "in_progress"
+                    : ob.parentContract?.phase === "not_started"
+                      ? "not_started"
+                      : ob.contract.phase === "signed"
+                        ? "signed"
+                        : ob.contract.phase === "in_progress"
+                          ? "in_progress"
+                          : "unknown"
+              }
+              fieldHint={ob.parentContract?.field ?? "BoB '26 Parent Contract Status"}
             />
             <StatusCard
-              title="Pre-survey"
+              title="Youth contract"
+              detail={
+                ob.youthContract?.label
+                  ? `${contractStatusLabel(ob.youthContract.phase)} — ${ob.youthContract.label}`
+                  : contractStatusLabel(ob.youthContract?.phase ?? "unknown")
+              }
+              phase={
+                ob.youthContract?.phase === "signed"
+                  ? "signed"
+                  : ob.youthContract?.phase === "in_progress"
+                    ? "in_progress"
+                    : ob.youthContract?.phase === "not_started"
+                      ? "not_started"
+                      : "unknown"
+              }
+              fieldHint={
+                ob.youthContract?.field ?? "BoB '26 Student Contract Status"
+              }
+            />
+            <StatusCard
+              title="Youth pre-survey"
               detail={preSurveyLabel(ob.preSurvey)}
               phase={
                 ob.preSurveyComplete
@@ -71,16 +112,18 @@ export function OnboardingTab() {
                     ? "incomplete"
                     : "unknown"
               }
+              fieldHint={ob.preSurvey.field ?? "BoB '26 Pre-Survey Status"}
             />
           </div>
           {ob.contractAndPreSurveyComplete ?? ob.readyForProgram ? (
             <p className="text-sm text-emerald-700 font-medium">
-              Ready for program — contract and pre-survey complete.
+              Ready for program — parent contract, youth contract, and pre-survey
+              complete.
             </p>
           ) : (
             <p className="text-sm text-amber-800">
-              Onboarding incomplete — contract or pre-survey still pending in
-              Airtable.
+              Onboarding incomplete — parent contract, youth contract, or
+              pre-survey still pending in Airtable.
             </p>
           )}
         </div>
@@ -89,7 +132,9 @@ export function OnboardingTab() {
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="font-medium text-gray-900">Dent checklist</span>
-          <span className="text-gray-600">{done}/{tasks.length || 0}</span>
+          <span className="text-gray-600">
+            {done}/{tasks.length || 0}
+          </span>
         </div>
         <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
           <div
