@@ -150,6 +150,9 @@ export interface BobSubmissionsListParams {
   status?: BobSubmissionStatus;
   assignedTo?: string;
   studentId?: string;
+  deliverableId?: string;
+  teamName?: string;
+  projectTeamId?: string;
   search?: string;
   priority?: string;
   severity?: string;
@@ -211,6 +214,9 @@ function buildSubmissionsQuery(params?: BobSubmissionsListParams) {
   if (params?.status) sp.set("status", params.status);
   if (params?.assignedTo) sp.set("assignedTo", params.assignedTo);
   if (params?.studentId) sp.set("studentId", params.studentId);
+  if (params?.deliverableId) sp.set("deliverableId", params.deliverableId);
+  if (params?.teamName) sp.set("teamName", params.teamName);
+  if (params?.projectTeamId) sp.set("projectTeamId", params.projectTeamId);
   if (params?.search) sp.set("search", params.search);
   if (params?.priority) sp.set("priority", params.priority);
   if (params?.severity) sp.set("severity", params.severity);

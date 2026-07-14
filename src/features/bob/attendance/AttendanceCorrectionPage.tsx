@@ -23,7 +23,9 @@ import {
   PROGRAM_END_DATE,
   PROGRAM_START_DATE,
 } from '@/lib/bobProgramCalendar';
-
+import { decodeBobReturnTo } from '@/lib/bobReturnUrl';
+import { BOB_ATTENDANCE_CORRECTION_AIRTABLE_FORM } from '@/features/bob/submit/formsConfig';
+import { Skeleton } from '@/components/Skeleton';
 const REQUEST_TYPES: Array<{
   id: AttendanceCorrectionRequestType;
   label: string;
@@ -84,6 +86,8 @@ export function AttendanceCorrectionPage() {
   const demoScope = meQuery.data?.demoScope;
   const linkedStudentId = meQuery.data?.linkedStudent?.id ?? null;
   const urlStudentId = searchParams?.get('studentId') || '';
+  const returnHref =
+    decodeBobReturnTo(searchParams?.get('returnTo')) || '/app/bob/submit';
   const lockedStudentId = demoScope?.studentId
     ? String(demoScope.studentId)
     : access.role === 'student' && linkedStudentId
@@ -322,9 +326,19 @@ export function AttendanceCorrectionPage() {
     }
   }
 
+  if (meQuery.isLoading && !meQuery.data) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4" aria-busy="true">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
         <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
           <p className="text-lg font-semibold text-green-900">Request submitted</p>
           <p className="text-sm text-green-800 mt-2">
@@ -349,10 +363,10 @@ export function AttendanceCorrectionPage() {
               Submit another
             </button>
             <Link
-              href="/app/bob/attendance"
+              href={returnHref}
               className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600"
             >
-              Back to attendance
+              Back to forms
             </Link>
           </div>
         </div>
@@ -368,7 +382,15 @@ export function AttendanceCorrectionPage() {
     (showTimeCorrectionDates && Boolean(selectedDateId));
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6">
+      <Link
+        href={returnHref}
+        className="text-sm text-orange-600 hover:underline"
+      >
+        ← Back to forms
+      </Link>
+
+      <div className="mt-4">
       <PageHeader
         eyebrow="School-Year Programs"
         title="Absence & Sign In/Out Correction"
@@ -378,6 +400,7 @@ export function AttendanceCorrectionPage() {
             : 'Submit student absence requests or sign-in/out time corrections for staff review.'
         }
       />
+      </div>
 
       {!isStudentView ? (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -393,8 +416,17 @@ export function AttendanceCorrectionPage() {
           <p className="mt-1 text-sky-900/90">
             Use <strong>Report absence</strong> for upcoming or past absences.
             Use <strong>Sign-in / sign-out correction</strong> when you attended
-            but your punch times look wrong.
+            but your punch times look wrong. Prefer this Dent form; the official
+            Airtable form is still available if needed.
           </p>
+          <a
+            href={BOB_ATTENDANCE_CORRECTION_AIRTABLE_FORM}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex text-sm font-medium text-sky-800 underline hover:text-sky-950"
+          >
+            Open Airtable Absence &amp; Sign In/Out Correction form ↗
+          </a>
         </div>
       )}
 
@@ -702,7 +734,7 @@ export function AttendanceCorrectionPage() {
             {submitting ? 'Submitting…' : 'Submit request'}
           </button>
           <Link
-            href="/app/bob/attendance"
+            href={returnHref}
             className="text-sm font-medium text-gray-600 hover:text-gray-900"
           >
             Cancel

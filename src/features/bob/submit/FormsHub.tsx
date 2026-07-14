@@ -19,16 +19,36 @@ function FormCard({
   href: string;
   cta?: string;
 }) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-orange-300 hover:shadow-md transition-shadow"
-    >
+  const isExternal = /^https?:\/\//i.test(href);
+  const className =
+    "block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-orange-300 hover:shadow-md transition-shadow";
+
+  const body = (
+    <>
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
       <p className="mt-2 text-sm text-gray-600 leading-relaxed">{description}</p>
       <span className="mt-4 inline-flex text-sm font-medium text-orange-600">
         {cta}
       </span>
+    </>
+  );
+
+  if (isExternal) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {body}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {body}
     </Link>
   );
 }
@@ -47,14 +67,15 @@ export function FormsHub({
   }
 
   function externalHref(path: string) {
+    if (/^https?:\/\//i.test(path)) return path;
     if (!returnHref) return path;
-    const params = new URLSearchParams();
     if (path.includes("?")) {
       const [base, qs] = path.split("?");
       const existing = new URLSearchParams(qs);
       existing.set("returnTo", returnHref);
       return `${base}?${existing.toString()}`;
     }
+    const params = new URLSearchParams();
     params.set("returnTo", returnHref);
     return `${path}?${params.toString()}`;
   }
@@ -70,7 +91,7 @@ export function FormsHub({
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 {studentMode
-                  ? "Progress updates, testimony, and program feedback. View past submissions on My submissions."
+                  ? "Absence corrections, progress updates, testimony, and program feedback. View past submissions on My submissions."
                   : "Program submissions, student forms, and staff requests."}
               </p>
             </div>

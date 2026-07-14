@@ -61,9 +61,14 @@ export const BOB_ROUTES: BobRouteDef[] = [
     fallback: "/app/bob/attendance",
   },
   {
+    path: "/app/bob/absence-correction",
+    permission: "submit.view",
+    fallback: "/app/bob/submit",
+  },
+  {
     path: "/app/bob/attendance/correction",
     permission: "submit.view",
-    fallback: "/app/bob/attendance",
+    fallback: "/app/bob/submit",
   },
   {
     path: "/app/bob/attendance",

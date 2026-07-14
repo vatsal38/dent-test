@@ -53,6 +53,28 @@ export function SubmitPage() {
     const returnHref = decodeBobReturnTo(searchParams?.get("returnTo"));
     const prefilledStudentId = searchParams?.get("studentId") || '';
     const typeParam = searchParams?.get("type");
+
+    // 120B — older links used ?type=attendance_correction on Submit (404/blank).
+    useEffect(() => {
+      const t = String(typeParam || "").trim().toLowerCase();
+      if (
+        t === "attendance_correction" ||
+        t === "absence_correction" ||
+        t === "absence" ||
+        t === "time_correction"
+      ) {
+        const params = new URLSearchParams();
+        if (t === "absence" || t === "time_correction") params.set("type", t);
+        if (returnHref) params.set("returnTo", returnHref);
+        const date = searchParams?.get("date");
+        if (date) params.set("date", date);
+        const qs = params.toString();
+        router.replace(
+          `/app/bob/attendance/correction${qs ? `?${qs}` : ""}`,
+        );
+      }
+    }, [typeParam, returnHref, router, searchParams]);
+
     const submissionType = isValidFormType(typeParam)
         ? typeParam
         : prefilledStudentId && !isStudent

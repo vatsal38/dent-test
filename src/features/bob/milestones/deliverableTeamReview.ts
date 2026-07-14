@@ -160,24 +160,22 @@ export function teamDeliverableNeedsReview(
   return teamPendingUploadCount(deliverable, teamName) > 0;
 }
 
-export function countTeamDeliverablesNeedingReview(
-  deliverables: BobDeliverable[],
-): number {
-  let count = 0;
-  for (const d of deliverables) {
-    for (const team of teamNamesFromDeliverables([d])) {
-      if (teamDeliverableNeedsReview(d, team)) count += 1;
-    }
-  }
-  return count;
-}
-
 export function listTeamDeliverablesNeedingReview(
   deliverables: BobDeliverable[],
+  allowedTeamNames?: string[],
 ): Array<{ deliverable: BobDeliverable; teamName: string }> {
   const out: Array<{ deliverable: BobDeliverable; teamName: string }> = [];
+  if (allowedTeamNames !== undefined && allowedTeamNames.length === 0) {
+    return out;
+  }
   for (const d of deliverables) {
     for (const team of teamNamesFromDeliverables([d])) {
+      if (
+        allowedTeamNames?.length &&
+        !allowedTeamNames.some((allowed) => teamNamesMatch(team, allowed))
+      ) {
+        continue;
+      }
       if (teamDeliverableNeedsReview(d, team)) {
         out.push({ deliverable: d, teamName: team });
       }
@@ -189,6 +187,14 @@ export function listTeamDeliverablesNeedingReview(
     return na.localeCompare(nb, undefined, { numeric: true });
   });
   return out;
+}
+
+export function countTeamDeliverablesNeedingReview(
+  deliverables: BobDeliverable[],
+  allowedTeamNames?: string[],
+): number {
+  return listTeamDeliverablesNeedingReview(deliverables, allowedTeamNames)
+    .length;
 }
 
 export function teamNameMatchesFilter(

@@ -112,6 +112,14 @@ export const BOB_PROGRAM_FORM_LINKS: BobExternalFormLink[] = [
 
 export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
   {
+    id: "attendance_correction",
+    title: "Absence & Sign In/Out Correction",
+    description:
+      "Report absences you know are coming, or correct sign-in and sign-out times for days you attended.",
+    href: "/app/bob/attendance/correction",
+    cta: "Open correction form",
+  },
+  {
     id: "project_team",
     title: "Submit your project team",
     description:
@@ -136,6 +144,10 @@ export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
     cta: "Open feedback form",
   },
 ];
+
+/** Official Airtable one-stop form (fallback when in-app link is unavailable). */
+export const BOB_ATTENDANCE_CORRECTION_AIRTABLE_FORM =
+  "https://airtable.com/appKnMenSN4RSG1ZV/pagkOVTlSpunIWWUZ/form";
 
 /** @deprecated use BOB_PROGRAM_FORMS */
 export const BOB_FORMS = [...BOB_PROGRAM_FORMS, ...BOB_STAFF_FORMS];

@@ -174,7 +174,7 @@ export function PodDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={displayName}
-        description={`Assign coach, ${BOB_SITE_SUPPORTER.toLowerCase()}, and students. Changes sync to Airtable Programs.`}
+        description={`Coach, ${BOB_SITE_SUPPORTER.toLowerCase()}, and student assignments sync from Airtable Programs on import. Edits here also write back when linked.`}
         actions={
           <Link
             href={can("pods.view") ? "/app/bob/pods" : "/app/bob/my-pod"}
@@ -215,6 +215,9 @@ export function PodDetailPage() {
             </dt>
             <dd className="font-medium text-gray-900 mt-0.5 tabular-nums">
               {pod.students?.length ?? 0}
+              {pod.airtableStudentCount != null
+                ? ` · Airtable ${pod.airtableStudentCount}`
+                : ""}
             </dd>
           </div>
           {pod.syncedAt ? (
@@ -319,8 +322,9 @@ export function PodDetailPage() {
             Student roster
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Select students assigned to this track. Saves sync to Airtable when
-            roster students are linked.
+            Assignments come from Airtable Programs (Students &amp; Alums links)
+            and roster BoB &apos;26 Track. Re-import Tracks to refresh. Saving
+            here updates Dent and writes linked students back to Airtable.
           </p>
         </div>
 

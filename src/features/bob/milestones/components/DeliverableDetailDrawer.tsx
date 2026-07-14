@@ -11,12 +11,15 @@ import {
 } from "../deliverableDisplay";
 import {
   findTrackerForTeam,
+  teamNameMatchesFilter,
   teamTrackerSummaries,
 } from "../deliverableTeamReview";
+import { DeliverableWeeklySubmissions } from "./DeliverableWeeklySubmissions";
 
 export function DeliverableDetailDrawer({
   deliverable,
   teamName,
+  allowedTeamNames,
   updatingId,
   detailSaveError,
   onClose,
@@ -27,6 +30,8 @@ export function DeliverableDetailDrawer({
 }: {
   deliverable: BobDeliverable;
   teamName?: string;
+  /** 100B — only show BoB '26 Project Teams in catalog team list */
+  allowedTeamNames?: string[];
   updatingId: string | null;
   detailSaveError: string | null;
   onClose: () => void;
@@ -49,7 +54,13 @@ export function DeliverableDetailDrawer({
 }) {
   const isTeamReview = Boolean(teamName);
   const tracker = findTrackerForTeam(deliverable, teamName);
-  const teamSummaries = teamTrackerSummaries(deliverable);
+  const teamSummaries = teamTrackerSummaries(deliverable).filter((row) => {
+    if (!allowedTeamNames?.length) return true;
+    if (row.teamName === "Unassigned") return false;
+    return allowedTeamNames.some((allowed) =>
+      teamNameMatchesFilter(row.teamName, allowed),
+    );
+  });
   const [reviewNotes, setReviewNotes] = useState(tracker?.staffReviewNotes || "");
   const [reviewedBy, setReviewedBy] = useState(
     tracker?.reviewedBy || defaultReviewerName || "",
@@ -328,6 +339,11 @@ export function DeliverableDetailDrawer({
               </ul>
             </div>
           )}
+
+          <DeliverableWeeklySubmissions
+            deliverableId={deliverable.id}
+            teamName={teamName}
+          />
 
           {(deliverable.trackerRecords || []).length > 0 && isTeamReview ? (
             <div>

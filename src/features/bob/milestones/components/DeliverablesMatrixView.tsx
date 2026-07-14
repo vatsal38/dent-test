@@ -227,8 +227,9 @@ export function DeliverablesTeamMatrix({
         </table>
       </div>
       <p className="text-xs text-gray-500">
-        Weekly progress is submitted outside Dent; update deliverable review status
-        here after coach review.
+        Each youth submits a weekly progress update for their team deliverable.
+        Open a cell to see all submissions for that team (typically one per
+        member). Staff review status below is updated after coach review.
       </p>
     </div>
   );

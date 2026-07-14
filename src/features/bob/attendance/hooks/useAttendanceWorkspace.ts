@@ -8,7 +8,7 @@ import { parseApiError } from "@/platform/api/errors";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { filterPodsByAccess } from "@/platform/rbac/scopedFilters";
-import { PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
+import { PROGRAM_END_DATE, PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
 import { getWeekMonday, getWeekSunday } from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
 import { filterStudentsByCoachAttendanceScope } from "../model/coachAttendanceScope";
@@ -33,13 +33,15 @@ function filterRecordsForStudent<T extends { studentId?: string | null }>(
   return rows.filter((r) => String(r.studentId || "") === studentId);
 }
 
-const STUDENT_ATTENDANCE_HISTORY_DAYS = 42;
-
-function studentHistoryStart(focusDate: string): string {
-  const d = new Date(`${focusDate}T12:00:00`);
-  d.setDate(d.getDate() - STUDENT_ATTENDANCE_HISTORY_DAYS);
-  const iso = d.toISOString().slice(0, 10);
-  return iso < PROGRAM_START_DATE ? PROGRAM_START_DATE : iso;
+/** Today bounded to the program window — used so My Attendance matches roster stats. */
+function studentAttendanceEndDate(focusDate: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  let end = today > PROGRAM_END_DATE ? PROGRAM_END_DATE : today;
+  // Keep selected day visible even if staff adjusted focus into the future.
+  if (focusDate && focusDate > end && focusDate <= PROGRAM_END_DATE) {
+    end = focusDate;
+  }
+  return end;
 }
 
 export function useAttendanceWorkspace({
@@ -56,13 +58,14 @@ export function useAttendanceWorkspace({
   const effectiveTrack = isStudentViewer ? "" : trackFilter;
 
   const weekMonday = getWeekMonday(new Date(focusDate + "T12:00:00"));
+  // 119B — load full program history so hours/% match roster attendanceStats
   const startDate = isStudentViewer
-    ? studentHistoryStart(focusDate)
+    ? PROGRAM_START_DATE
     : weekMode
       ? weekMonday
       : focusDate;
   const endDate = isStudentViewer
-    ? focusDate
+    ? studentAttendanceEndDate(focusDate)
     : weekMode
       ? getWeekSunday(weekMonday)
       : focusDate;

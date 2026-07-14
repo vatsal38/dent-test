@@ -63,7 +63,7 @@ export function PodsListPage() {
     <div className="space-y-6">
       <PageHeader
         title={BOB_POD_PLURAL}
-        description={`${BOB_POD_PLURAL} sync with Airtable Programs. Create new tracks here or re-import to refresh from Airtable.`}
+        description={`${BOB_POD_PLURAL} sync with Airtable Programs — including coach, ${BOB_SITE_SUPPORTER.toLowerCase()}, and student assignments. Create tracks here or re-import to refresh membership from Airtable.`}
         actions={
           <>
             <BobActionButton
@@ -96,8 +96,9 @@ export function PodsListPage() {
             >
               Programs
             </a>{" "}
-            table. Re-import updates metadata; tracks created in Dent stay linked
-            via Airtable.
+            table. Re-import refreshes track metadata and assignments (Staff +
+            Students &amp; Alums links). Tracks created in Dent stay linked via
+            Airtable.
           </p>
           <BobImportProgress
             label="tracks"

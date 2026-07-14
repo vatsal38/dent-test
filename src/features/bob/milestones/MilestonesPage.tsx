@@ -25,7 +25,6 @@ import {
   reviewStatusBadge,
 } from "./deliverableDisplay";
 import {
-  groupDeliverablesByTeam,
   groupDeliverablesByTrack,
   deliverablesToTeamSlotMap,
 } from "./deliverableGrouping";
@@ -37,12 +36,12 @@ import {
 import { DeliverableDetailDrawer } from "./components/DeliverableDetailDrawer";
 import {
   findTrackerForTeam,
-  teamNamesFromDeliverables,
   teamPendingUploadCount,
   teamReviewStatus,
   teamNameMatchesFilter,
   countTeamDeliverablesNeedingReview,
   listTeamDeliverablesNeedingReview,
+  deliverableAppliesToTeam,
 } from "./deliverableTeamReview";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
@@ -147,51 +146,50 @@ export function MilestonesPage() {
     ? parseApiError(milestonesQuery.error)
     : null;
 
-  const pendingCount = useMemo(
-    () => countTeamDeliverablesNeedingReview(data),
-    [data],
+  const teamsReady = isStudent
+    ? !myProjectTeamsQuery.isLoading
+    : !projectTeamsQuery.isLoading;
+
+  const allowedTeamNames = useMemo(
+    () => projectTeams.map((t) => t.name).filter(Boolean),
+    [projectTeams],
   );
+
+  const pendingCount = useMemo(() => {
+    if (!teamsReady) return 0;
+    return countTeamDeliverablesNeedingReview(data, allowedTeamNames);
+  }, [data, allowedTeamNames, teamsReady]);
 
   const groupedByTrack = useMemo(() => groupDeliverablesByTrack(data), [data]);
 
   const groupedByTeam = useMemo(() => {
-    let grouped = groupDeliverablesByTeam(data);
-    if (!grouped.length && projectTeams.length) {
-      const teams = linkedStudent
+    // 100B — only BoB '26 Project Teams (synced allowlist), not stale tracker teams
+    if (!teamsReady) return [];
+    if (projectTeams.length) {
+      let teams = linkedStudent
         ? projectTeams.filter(
             (team) => studentProjectTeamNames(linkedStudent, [team]).length > 0,
           )
         : projectTeams;
-      grouped = teams.map((team) => ({
+      let grouped = teams.map((team) => ({
         teamName: team.name,
-        items: data.filter((d) =>
-          (d.trackerRecords || []).some((t) =>
-            (t.teamNames || []).some((n) =>
-              teamNameMatchesFilter(n, team.name),
-            ),
-          ),
-        ),
+        items: data.filter((d) => deliverableAppliesToTeam(d, team.name)),
         slots: deliverablesToTeamSlotMap(team.name, data),
       }));
-    }
-    if (linkedStudent) {
-      const mine = studentProjectTeamNames(linkedStudent, projectTeams);
-      if (mine.length) {
+      if (selectedTeam) {
         grouped = grouped.filter((row) =>
-          mine.some((name) => teamNameMatchesFilter(row.teamName, name)),
+          teamNameMatchesFilter(row.teamName, selectedTeam),
         );
       }
+      return grouped;
     }
-    if (!selectedTeam) return grouped;
-    return grouped.filter((row) =>
-      teamNameMatchesFilter(row.teamName, selectedTeam),
-    );
-  }, [data, selectedTeam, projectTeams, linkedStudent]);
+    return [];
+  }, [data, selectedTeam, projectTeams, linkedStudent, teamsReady]);
 
-  const pendingReviewItems = useMemo(
-    () => listTeamDeliverablesNeedingReview(data),
-    [data],
-  );
+  const pendingReviewItems = useMemo(() => {
+    if (!teamsReady) return [];
+    return listTeamDeliverablesNeedingReview(data, allowedTeamNames);
+  }, [data, allowedTeamNames, teamsReady]);
 
   function openDetail(d: BobDeliverable, teamName?: string) {
     setDetailSaveError(null);
@@ -365,7 +363,7 @@ export function MilestonesPage() {
       <PageHeader
         eyebrow="Program operations"
         title="Deliverables"
-        description="FY26 deliverable catalog by track — synced from Airtable. Coaches review team submissions in the tracker."
+        description="FY26 deliverable catalog by track — synced from Airtable. By Team and Deliverables to review only show BoB '26 Project Teams. Weekly progress submissions appear on each team deliverable."
         actions={
           <Link
             href="/app/bob/progress-update"
@@ -568,6 +566,7 @@ export function MilestonesPage() {
         <DeliverableDetailDrawer
           deliverable={detail.deliverable}
           teamName={detail.teamName}
+          allowedTeamNames={allowedTeamNames}
           updatingId={updatingId}
           detailSaveError={detailSaveError}
           defaultReviewerName={me?.user?.name || me?.user?.email || ""}

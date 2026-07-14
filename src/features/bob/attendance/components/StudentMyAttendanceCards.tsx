@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import type { BobStudent } from "@/platform/api/bob/students";
 import { isProgramDay } from "@/lib/bobProgramCalendar";
-import { formatDayHoursPresent } from "../model/dayHours";
+import { formatDayHoursPresent, resolveDayHoursNumeric } from "../model/dayHours";
 import type { StudentDayAttendance } from "../types";
 import { AttendanceStatusBadge } from "./AttendanceStatusBadge";
 import { AttendancePunchBlock, AttendancePunchRow } from "./AttendancePunchRows";
@@ -22,10 +22,12 @@ export function StudentMyAttendanceCards({
   days,
   student,
   focusDate,
+  linkedStudentMissing = false,
 }: {
   days: StudentDayAttendance[];
   student?: BobStudent | null;
   focusDate: string;
+  linkedStudentMissing?: boolean;
 }) {
   const programDays = useMemo(() => {
     const byDate = new Map<string, StudentDayAttendance>();
@@ -40,10 +42,80 @@ export function StudentMyAttendanceCards({
 
   const stats = student?.attendanceStats;
 
+  /** Local rollup of visible program days — should track roster hoursPct closely. */
+  const visibleHours = useMemo(() => {
+    let attended = 0;
+    for (const day of programDays) {
+      attended += resolveDayHoursNumeric(day);
+    }
+    return Math.round(attended * 100) / 100;
+  }, [programDays]);
+
+  if (linkedStudentMissing) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950">
+        <p className="font-semibold">Student account not linked</p>
+        <p className="mt-1 text-amber-900/90">
+          Your login is not linked to a roster profile yet, so attendance cannot
+          load. Ask your coach or site supporter to connect your account.
+        </p>
+        <Link
+          href="/app/bob/submit"
+          className="mt-3 inline-flex text-sm font-medium text-orange-700 hover:underline"
+        >
+          Back to Submit →
+        </Link>
+      </div>
+    );
+  }
+
   if (!programDays.length) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-        No attendance recorded yet for this period.
+      <div className="space-y-4">
+        {stats ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+                My attendance
+              </p>
+              <p className="mt-1 text-2xl font-bold text-emerald-950 tabular-nums">
+                {stats.hoursPct ?? 0}%
+              </p>
+              {stats.hoursAttended != null && stats.hoursPotential != null ? (
+                <p className="text-xs text-emerald-900/80 mt-0.5">
+                  {stats.hoursAttended}h of {stats.hoursPotential}h
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Same as roster
+              </p>
+              <p className="mt-1 text-sm text-gray-700">
+                Hours % matches your Command Center / roster attendance stats.
+              </p>
+            </div>
+          </div>
+        ) : null}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+          No attendance recorded yet for this period.
+        </div>
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-orange-950">
+              Absence &amp; sign-in/out correction
+            </p>
+            <p className="text-xs text-orange-900/90 mt-0.5">
+              Report a planned absence or fix punch times for a day you attended.
+            </p>
+          </div>
+          <Link
+            href="/app/bob/attendance/correction"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+          >
+            Open form
+          </Link>
+        </div>
       </div>
     );
   }
@@ -51,8 +123,8 @@ export function StudentMyAttendanceCards({
   return (
     <div className="space-y-4">
       {stats ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:col-span-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
               My attendance
             </p>
@@ -62,8 +134,15 @@ export function StudentMyAttendanceCards({
             {stats.hoursAttended != null && stats.hoursPotential != null ? (
               <p className="text-xs text-emerald-900/80 mt-0.5">
                 {stats.hoursAttended}h of {stats.hoursPotential}h
+                {visibleHours > 0 &&
+                Math.abs(visibleHours - (stats.hoursAttended || 0)) > 0.05
+                  ? ` · days below show ${visibleHours}h`
+                  : ""}
               </p>
             ) : null}
+            <p className="text-[11px] text-emerald-900/70 mt-1">
+              Same hours % as your roster profile.
+            </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -72,7 +151,16 @@ export function StudentMyAttendanceCards({
             <p className="mt-1 text-2xl font-bold text-gray-900 tabular-nums">
               {stats.hoursPctThisWeek ?? 0}%
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">Hours vs expected days</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Present / Absent
+            </p>
+            <p className="mt-1 text-2xl font-bold text-gray-900 tabular-nums">
+              {stats.present ?? 0}
+              <span className="text-gray-400 font-medium text-lg"> / </span>
+              {stats.absent ?? 0}
+            </p>
           </div>
         </div>
       ) : null}
@@ -80,7 +168,7 @@ export function StudentMyAttendanceCards({
       <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-orange-950">
-            Absence & sign-in/out correction
+            Absence &amp; sign-in/out correction
           </p>
           <p className="text-xs text-orange-900/90 mt-0.5">
             Report a planned absence or fix punch times for a day you attended.
@@ -138,19 +226,19 @@ export function StudentMyAttendanceCards({
               <AttendancePunchBlock title="Sign-in & sign-out">
                 <AttendancePunchRow
                   label="AM"
-                  inTime={final.morning.in}
-                  outTime={final.morning.out}
-                  hours={final.morning.hours}
+                  inTime={final?.morning?.in}
+                  outTime={final?.morning?.out}
+                  hours={final?.morning?.hours}
                   size="large"
                 />
                 <AttendancePunchRow
                   label="PM"
-                  inTime={final.afternoon.in}
-                  outTime={final.afternoon.out}
-                  hours={final.afternoon.hours}
+                  inTime={final?.afternoon?.in}
+                  outTime={final?.afternoon?.out}
+                  hours={final?.afternoon?.hours}
                   size="large"
                 />
-                {final.totalHours ? (
+                {final?.totalHours ? (
                   <p className="text-xs font-semibold text-emerald-900 text-right tabular-nums pt-1 border-t border-emerald-100">
                     {final.totalHours} total
                   </p>

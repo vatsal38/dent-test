@@ -112,6 +112,7 @@ export function AttendanceHubPage() {
     refetch,
     lastSyncedAt,
     isStudentViewer,
+    linkedStudentId,
   } = useAttendanceWorkspace({
     focusDate,
     weekMode: viewMode === "week",
@@ -300,8 +301,8 @@ export function AttendanceHubPage() {
           </h1>
           {isStudentViewer ? (
             <p className="text-xs text-gray-500 mt-0.5 max-w-xl">
-              Sign-in and sign-out times for each program day. Use the date to
-              scroll through recent weeks.
+              Program-day hours and attendance % match your roster profile.
+              Open a correction form for absences or punch fixes.
             </p>
           ) : null}
         </div>
@@ -504,6 +505,7 @@ export function AttendanceHubPage() {
           days={workspace.days}
           student={workspace.students[0]}
           focusDate={focusDate}
+          linkedStudentMissing={!linkedStudentId}
         />
       ) : (
         <>
