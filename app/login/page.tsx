@@ -15,6 +15,7 @@ import { resolveBobAccess } from '@/platform/rbac/resolveBobAccess';
 
 const DEMO_ROLES: { role: DemoLoginRole; label: string }[] = [
   { role: 'admin', label: 'Admin' },
+  { role: 'program_manager', label: 'Program Manager' },
   { role: 'site_supporter', label: 'Site Supporter' },
   { role: 'coach', label: 'Coach' },
   { role: 'student', label: 'Student' },
@@ -275,9 +276,9 @@ function LoginForm() {
                 ))}
               </div>
               <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                Demo accounts are for review only. The Student demo links to the
-                active roster youth with the most attendance, submissions, and team
-                data.
+                Demo accounts use real BoB roles against live data: Coach and Site
+                Supporter bind to the richest active tracks; Student links to the
+                richest active roster youth; Admin / Program Manager are org-wide.
               </p>
             </div>
           ) : null}

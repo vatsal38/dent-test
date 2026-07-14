@@ -2,6 +2,7 @@ import { API_BASE } from "@/platform/api/client";
 
 export type DemoLoginRole =
   | "admin"
+  | "program_manager"
   | "site_supporter"
   | "coach"
   | "student";
