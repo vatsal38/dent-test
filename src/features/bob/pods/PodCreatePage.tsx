@@ -178,6 +178,7 @@ export function PodCreatePage() {
         />
         <StaffMemberSelect
           label={`${BOB_SITE_SUPPORTER} (optional)`}
+          hint="Site supporters, fellows, and coaches can be assigned."
           value={siteSupporterId}
           onChange={setSiteSupporterId}
           staff={supporterOptions.length ? supporterOptions : staff}

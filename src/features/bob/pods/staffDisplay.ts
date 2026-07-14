@@ -46,13 +46,23 @@ export function resolveStaffLabels(
 
 export function staffForRole(
   staff: BobStaffMember[],
-  role: "coach" | "site_supporter",
+  role: "coach" | "site_supporter" | "support_squad",
 ): BobStaffMember[] {
   return staff.filter((s) => {
     const r = (s.bobRole || "").toLowerCase();
     if (role === "coach") {
-      return r === "coach" || r === "site_coach";
+      return r === "coach" || r === "site_coach" || r === "fellow";
     }
-    return r === "site_supporter" || r === "site supporter";
+    // Support Squad assignee slot: site supporters, fellows, and coaches.
+    if (role === "site_supporter" || role === "support_squad") {
+      return (
+        r === "site_supporter" ||
+        r === "site supporter" ||
+        r === "fellow" ||
+        r === "coach" ||
+        r === "site_coach"
+      );
+    }
+    return false;
   });
 }

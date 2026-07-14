@@ -264,7 +264,7 @@ export function PodDetailPage() {
           />
           <StaffMemberSelect
             label={BOB_SITE_SUPPORTER}
-            hint={`Can mark attendance for this ${BOB_POD_SINGULAR.toLowerCase()}.`}
+            hint="Site supporters, fellows, and coaches can be assigned here."
             value={editSiteSupporterId}
             onChange={setEditSiteSupporterId}
             staff={supporterOptions.length ? supporterOptions : staff}
@@ -274,8 +274,8 @@ export function PodDetailPage() {
 
         {!canEditPod && (podCoachIds(pod).length || pod.siteSupporterId) ? (
           <p className="text-sm text-gray-600">
-            Coaches: {resolveStaffLabels(staff, podCoachIds(pod))} · Track
-            supporter: {resolve(pod.siteSupporterId)}
+            Coaches: {resolveStaffLabels(staff, podCoachIds(pod))} ·{" "}
+            {BOB_SITE_SUPPORTER}: {resolve(pod.siteSupporterId)}
           </p>
         ) : null}
 

@@ -5,8 +5,10 @@ export const BOB_POD_SINGULAR = "Track";
 export const BOB_POD_PLURAL = "Tracks";
 export const BOB_MY_POD = "My Track";
 
-/** Staff role title — not "Track Supporter". */
-export const BOB_SITE_SUPPORTER = "Site Supporter";
+/** Staff role title — Support Squad covers site supporters, fellows, and coaches when assigned on a track. */
+export const BOB_SITE_SUPPORTER = "Support Squad";
+/** @deprecated Alias — same as BOB_SITE_SUPPORTER */
+export const BOB_SUPPORT_SQUAD = BOB_SITE_SUPPORTER;
 
 const FIELD_DISPLAY_LABELS: Record<string, string> = {
   Pod: BOB_POD_SINGULAR,
