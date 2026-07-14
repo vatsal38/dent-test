@@ -43,6 +43,19 @@ export async function postDemoLogin(
   return response.json();
 }
 
+export async function getDemoMode(): Promise<{ enabled: boolean } | null> {
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/demo-mode`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
 export interface StudentLoginResponse {
   token: string;
   expiresAt: string;

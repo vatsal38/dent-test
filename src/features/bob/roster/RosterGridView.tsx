@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { BobRosterSchemaField, BobStudent } from "@/platform/api/bob/students";
 import { TruncatedWithTooltip } from "@/components/TruncatedWithTooltip";
 import { extractAirtableAttachments } from "@/lib/bobAirtableDisplay";
@@ -8,6 +8,7 @@ import { initialsOf, studentDisplayName } from "@/features/bob/roster/recordDisp
 import { extractAirtableRecordIds } from "@/lib/bobAirtableDisplay";
 import { OnboardingStatusChips } from "@/features/bob/onboarding/OnboardingStatusChips";
 import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
+import { HeadshotLightbox } from "@/features/bob/roster/HeadshotLightbox";
 
 function isAirtableRecordId(v: string) {
   return /^rec[a-zA-Z0-9]{8,}$/.test(v);
@@ -74,6 +75,7 @@ export function RosterGridView({
   /** In simplified view, only this student opens the detail drawer (own profile). */
   ownStudentId?: string | null;
 }) {
+  const [zoom, setZoom] = useState<{ url: string; alt: string } | null>(null);
   const fieldNames = useMemo(() => columns.map((c) => c.name), [columns]);
 
   function displayFromField(
@@ -138,6 +140,7 @@ export function RosterGridView({
   }, [students, headshot, fieldNames, labelsForField]);
 
   return (
+    <>
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {cards.map((c) => {
         const isOwnProfile =
@@ -153,13 +156,25 @@ export function RosterGridView({
           <div className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="relative h-12 w-12 shrink-0 rounded-full bg-gray-100 overflow-hidden ring-2 ring-gray-100">
+                <button
+                  type="button"
+                  disabled={!c.photoUrl}
+                  className={`relative h-12 w-12 shrink-0 rounded-full bg-gray-100 overflow-hidden ring-2 ring-gray-100 ${
+                    c.photoUrl ? "cursor-zoom-in hover:ring-orange-300" : ""
+                  }`}
+                  aria-label={c.photoUrl ? `View ${c.name} photo` : undefined}
+                  onClick={(e) => {
+                    if (!c.photoUrl) return;
+                    e.stopPropagation();
+                    setZoom({ url: c.photoUrl, alt: c.name });
+                  }}
+                >
                   {c.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={c.photoUrl}
                       alt=""
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover object-top"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
@@ -167,7 +182,7 @@ export function RosterGridView({
                       {c.initials}
                     </div>
                   )}
-                </div>
+                </button>
                 <div className="min-w-0">
                   <TruncatedWithTooltip
                     text={c.name}
@@ -254,17 +269,31 @@ export function RosterGridView({
         }
 
         return (
-          <button
+          <div
             key={c.id}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => onOpenStudent(c.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpenStudent(c.id);
+              }
+            }}
             className={cardClass}
           >
             {inner}
-          </button>
+          </div>
         );
       })}
     </div>
+    <HeadshotLightbox
+      open={Boolean(zoom)}
+      src={zoom?.url || ""}
+      alt={zoom?.alt || ""}
+      onClose={() => setZoom(null)}
+    />
+    </>
   );
 }
 

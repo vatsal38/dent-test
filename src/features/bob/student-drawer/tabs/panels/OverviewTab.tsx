@@ -81,9 +81,8 @@ export function OverviewTab() {
     student.blitzSquad?.trim() ||
     student.blitzColor?.trim() ||
     "";
-  if (blitzTeam) {
-    rows.push({ label: "Blitz team", value: blitzTeam });
-  }
+  // Always surface Blitz team on profile (39B), even when unassigned.
+  rows.push({ label: "Blitz team", value: blitzTeam || "—" });
   for (const key of ["Project", "Team", "Program Team"]) {
     const raw = fields[key];
     const val = raw != null ? String(raw).trim() : "";

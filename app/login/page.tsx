@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { isDemoModeEnabledClient } from '@/lib/demoAuth';
 import { isDentOpsPath } from '@/platform/rbac/dentOpsRoutes';
 import type { DemoLoginRole } from '@/platform/api/auth';
-import { StudentLoginError } from '@/platform/api/auth';
+import { StudentLoginError, getDemoMode } from '@/platform/api/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/Skeleton';
@@ -62,10 +62,24 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const demoModeEnabled = isDemoModeEnabledClient();
+  const [demoModeEnabled, setDemoModeEnabled] = useState(
+    isDemoModeEnabledClient(),
+  );
 
   const meQuery = useBobMe({ enabled: isAuthenticated && !isLoading });
   const fromParam = searchParams.get('from');
+
+  useEffect(() => {
+    let cancelled = false;
+    getDemoMode().then((res) => {
+      if (cancelled || res == null) return;
+      // Backend is source of truth once /api/auth/demo-mode is available.
+      setDemoModeEnabled(Boolean(res.enabled) && isDemoModeEnabledClient());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function resolvePostLoginPath() {
     const access = resolveBobAccess(meQuery.data);

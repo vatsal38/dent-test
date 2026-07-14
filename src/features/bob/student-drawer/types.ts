@@ -8,6 +8,7 @@ export const STUDENT_DRAWER_TABS = [
   "notes",
   "incidents",
   "onboarding",
+  "contracts_health",
   "demographics",
   "activity",
 ] as const;

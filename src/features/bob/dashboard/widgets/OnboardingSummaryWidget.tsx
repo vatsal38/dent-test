@@ -80,7 +80,7 @@ export function OnboardingSummaryWidget({
           ) : null}
         </p>
         <StatRow
-          label="Parent contract satisfied"
+          label="Parent/Guardian contract satisfied"
           value={parentOk}
           total={total}
         />
@@ -90,7 +90,7 @@ export function OnboardingSummaryWidget({
           total={total}
         />
         <StatRow
-          label="Youth pre-survey complete"
+          label="Pre-survey complete"
           value={onboarding.preSurveyComplete}
           total={total}
         />
@@ -108,17 +108,17 @@ export function OnboardingSummaryWidget({
           Counts use active BoB &apos;26 roster students in scope. Status from
           Airtable fields{" "}
           <span className="font-medium text-gray-600">
-            BoB &apos;26 Parent Contract Status
+            Youth contract (BoB &apos;26 Student Contract Status)
           </span>
           ,{" "}
           <span className="font-medium text-gray-600">
-            BoB &apos;26 Student Contract Status
+            Parent/Guardian contract (BoB &apos;26 Parent Contract Status)
           </span>
           , and{" "}
           <span className="font-medium text-gray-600">
-            BoB &apos;26 Pre-Survey Status
+            Pre-Survey (BoB &apos;26 Pre-Survey Status)
           </span>
-          . Update those in{" "}
+          . Onboarding is complete when all three are done. Update those in{" "}
           <a
             href={AIRTABLE_ONBOARDING_VIEW}
             target="_blank"

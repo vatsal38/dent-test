@@ -38,6 +38,11 @@ export const LazyOnboardingTab = dynamic(
   () => import("./panels/OnboardingTab").then((m) => m.OnboardingTab),
   { loading: () => <OnboardingTabSkeleton />, ssr: false },
 );
+export const LazyContractsHealthTab = dynamic(
+  () =>
+    import("./panels/ContractsHealthTab").then((m) => m.ContractsHealthTab),
+  { loading: () => <OnboardingTabSkeleton />, ssr: false },
+);
 export const LazyDemographicsTab = dynamic(
   () => import("./panels/DemographicsTab").then((m) => m.DemographicsTab),
   { loading: () => <DemographicsTabSkeleton />, ssr: false },
@@ -54,6 +59,7 @@ const PANELS: Record<StudentDrawerTabId, ComponentType> = {
   notes: LazyNotesTab,
   incidents: LazyIncidentsTab,
   onboarding: LazyOnboardingTab,
+  contracts_health: LazyContractsHealthTab,
   demographics: LazyDemographicsTab,
   activity: LazyActivityTab,
 };

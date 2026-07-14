@@ -6,6 +6,7 @@ export type BobOpsRole =
   | "program_manager"
   | "site_supporter"
   | "coach"
+  | "summer_staff"
   | "student"
   | "read_only";
 

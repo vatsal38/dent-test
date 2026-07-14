@@ -10,7 +10,7 @@ import {
   isDeliverableDue,
   isDeliverableOverdue,
   isDeliverableSubmitted,
-  reviewStatusBadge,
+  portfolioStatusBadge,
 } from "@/features/bob/milestones/deliverableDisplay";
 import { hasIndustryCredential } from "../../lib/profileSignals";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
@@ -78,9 +78,14 @@ export function MilestonesTab() {
       ) : null}
 
       <div className="flex justify-between items-center gap-3">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Portfolio ({milestones.length})
-        </h3>
+        <div className="min-w-0">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Portfolio ({milestones.length})
+          </h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            Badge = coach review status (not deliverable type).
+          </p>
+        </div>
         <div className="flex items-center gap-3 shrink-0">
           <Link
             href={`/app/bob/progress-update?studentId=${encodeURIComponent(student.id)}`}
@@ -109,11 +114,7 @@ export function MilestonesTab() {
             const uploads = (m.trackerRecords || []).flatMap(
               (t) => t.uploads || [],
             );
-            const review = isDeliverableCompleted(m)
-              ? reviewStatusBadge("approved")
-              : uploads.length > 0
-                ? { label: "Submitted", className: "bg-blue-100 text-blue-800" }
-                : reviewStatusBadge(m.reviewStatus);
+            const review = portfolioStatusBadge(m);
             return (
               <li
                 key={m.id}
@@ -125,6 +126,7 @@ export function MilestonesTab() {
                     {m.deliverableName}
                   </p>
                   <span
+                    title={review.title}
                     className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${review.className}`}
                   >
                     {review.label}

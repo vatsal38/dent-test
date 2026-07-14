@@ -43,6 +43,12 @@ export const STUDENT_DRAWER_TABS_CONFIG: (StudentDrawerTabDef & {
     shortLabel: "Onboard.",
     denyRoles: ["student"],
   },
+  {
+    id: "contracts_health",
+    label: "Contracts & Health",
+    shortLabel: "Health",
+    denyRoles: ["student"],
+  },
   { id: "demographics", label: "Personal", shortLabel: "Personal" },
   {
     id: "activity",

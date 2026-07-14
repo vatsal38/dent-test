@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { BobRecruitmentRecord } from "@/lib/api";
 import {
   cellDisplayValue as formatCellDisplay,
@@ -8,6 +9,7 @@ import {
   type AirtableAttachmentItem,
 } from "@/lib/bobAirtableDisplay";
 import { TruncatedWithTooltip } from "@/components/TruncatedWithTooltip";
+import { HeadshotLightbox } from "@/features/bob/roster/HeadshotLightbox";
 
 export { extractAirtableRecordIds, cellDisplayValue } from "@/lib/bobAirtableDisplay";
 
@@ -20,6 +22,9 @@ export function HeadshotCell({
   attachments: AirtableAttachmentItem[];
   maxVisible?: number;
 }) {
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+  const [zoomAlt, setZoomAlt] = useState("");
+
   if (attachments.length === 0) {
     return <span className="text-xs text-gray-300">—</span>;
   }
@@ -28,37 +33,47 @@ export function HeadshotCell({
   const extra = attachments.length - visible.length;
 
   return (
-    <div
-      className="flex items-center gap-1 flex-wrap"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {visible.map((att, idx) => (
-        <a
-          key={att.id || att.url || idx}
-          href={att.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={att.filename || `Photo ${idx + 1}`}
-          className="block shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 hover:ring-2 hover:ring-orange-400 transition-shadow"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={att.thumbUrl || att.url}
-            alt={att.filename || `Headshot ${idx + 1}`}
-            className="h-10 w-10 object-cover"
-            loading="lazy"
-          />
-        </a>
-      ))}
-      {extra > 0 ? (
-        <span
-          className="inline-flex h-10 min-w-[2rem] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-1.5 text-xs font-medium text-gray-600"
-          title={`${attachments.length} photos total`}
-        >
-          +{extra}
-        </span>
-      ) : null}
-    </div>
+    <>
+      <div
+        className="flex items-center gap-1 flex-wrap"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {visible.map((att, idx) => (
+          <button
+            key={att.id || att.url || idx}
+            type="button"
+            title={att.filename || `Photo ${idx + 1}`}
+            className="block shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 hover:ring-2 hover:ring-orange-400 transition-shadow cursor-zoom-in"
+            onClick={() => {
+              setZoomUrl(att.url);
+              setZoomAlt(att.filename || `Photo ${idx + 1}`);
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={att.thumbUrl || att.url}
+              alt={att.filename || `Headshot ${idx + 1}`}
+              className="h-10 w-10 object-cover object-top"
+              loading="lazy"
+            />
+          </button>
+        ))}
+        {extra > 0 ? (
+          <span
+            className="inline-flex h-10 min-w-[2rem] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-1.5 text-xs font-medium text-gray-600"
+            title={`${attachments.length} photos total`}
+          >
+            +{extra}
+          </span>
+        ) : null}
+      </div>
+      <HeadshotLightbox
+        open={Boolean(zoomUrl)}
+        src={zoomUrl || ""}
+        alt={zoomAlt}
+        onClose={() => setZoomUrl(null)}
+      />
+    </>
   );
 }
 

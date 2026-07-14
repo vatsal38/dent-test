@@ -423,6 +423,7 @@ const TAB_SKELETONS: Record<StudentDrawerTabId, () => ReactNode> = {
   notes: () => <NotesTabSkeleton />,
   incidents: () => <IncidentsTabSkeleton />,
   onboarding: () => <OnboardingTabSkeleton />,
+  contracts_health: () => <OnboardingTabSkeleton />,
   demographics: () => <DemographicsTabSkeleton />,
   activity: () => <ActivityTabSkeleton />,
 };

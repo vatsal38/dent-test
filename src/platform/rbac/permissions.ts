@@ -145,6 +145,23 @@ const STUDENT = pick(
   "drawer.studentDetail",
 );
 
+/**
+ * Summer staff — view roster and day-to-day ops surfaces; no roster edit
+ * (edit is reserved for leadership / support squad).
+ */
+const SUMMER_STAFF = pick(
+  "dashboard.view",
+  "roster.view",
+  "attendance.view",
+  "attendance.mark",
+  "milestones.view",
+  "inbox.view",
+  "submit.view",
+  "keyLinks.view",
+  "teams.view",
+  "drawer.studentDetail",
+);
+
 const READ_ONLY = pick("dashboard.view");
 
 /** Role → granted permission set (static matrix; extend for ABAC later). */
@@ -153,6 +170,7 @@ export const ROLE_PERMISSIONS: Record<BobOpsRole, Set<BobPermissionId>> = {
   program_manager: PROGRAM_MANAGER,
   site_supporter: SITE_SUPPORTER,
   coach: COACH,
+  summer_staff: SUMMER_STAFF,
   student: STUDENT,
   read_only: READ_ONLY,
 };

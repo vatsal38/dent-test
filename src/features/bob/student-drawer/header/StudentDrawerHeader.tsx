@@ -77,6 +77,8 @@ export function StudentDrawerHeader() {
     ? STAGE_LABELS[student.interviewStage] || student.interviewStage
     : null;
   const industryCredential = hasIndustryCredential(student);
+  const blitzTeam =
+    student.blitzSquad?.trim() || student.blitzColor?.trim() || "";
 
   return (
     <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200">
@@ -98,6 +100,9 @@ export function StudentDrawerHeader() {
               ) : null}
               {stageLabel ? (
                 <StatusBadge label={stageLabel} variant="airtable" />
+              ) : null}
+              {blitzTeam ? (
+                <StatusBadge label={`Blitz: ${blitzTeam}`} variant="app" />
               ) : null}
               {industryCredential ? (
                 <StatusBadge label="Industry credential" variant="app" />

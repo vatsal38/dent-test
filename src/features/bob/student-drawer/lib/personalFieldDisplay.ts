@@ -62,6 +62,14 @@ const SKIP_IN_PERSONAL = new Set([
   "Pod",
   "Site",
   "Programs",
+  // Staff-only medical / contract — Contracts & Health tab (33A)
+  "Health History",
+  "Allergies / Medical Notes",
+  "Over The Counter (OTC) Medicine Authorized",
+  "BoB '26 Parent Contract Status",
+  "BoB '26 Student Contract Status",
+  "BoB '26 Pre-Survey Status",
+  "BoB '26 All Forms Completed",
 ]);
 
 export function pickField(

@@ -48,7 +48,7 @@ export function OnboardingStatusChips({
     ? parent?.satisfied
       ? "Parent ✓"
       : "Parent"
-    : `Parent: ${
+    : `Parent/Guardian: ${
         parent?.label ||
         (parent?.phase === "signed"
           ? "Signed"
@@ -76,7 +76,7 @@ export function OnboardingStatusChips({
     ? status.preSurveyComplete
       ? "Survey ✓"
       : "Survey"
-    : `Survey: ${
+    : `Pre-survey: ${
         status.preSurvey.label ||
         (status.preSurveyComplete
           ? "Completed"
@@ -85,39 +85,38 @@ export function OnboardingStatusChips({
             : "—")
       }`;
 
+  // Always show all three statuses (38B).
   const items = [
-    parent
-      ? chip("parent", parentLabel, parentTone(parent.phase))
-      : chip(
-          "contract",
-          compact
-            ? status.contractSigned
-              ? "Contract ✓"
-              : "Contract"
-            : `Contract: ${
-                status.contract.phase === "signed"
-                  ? "Signed"
-                  : status.contract.phase === "in_progress"
-                    ? "Pending"
-                    : "—"
-              }`,
-          status.contract.phase === "signed"
-            ? "signed"
-            : status.contract.phase === "in_progress"
-              ? "in_progress"
-              : "not_started",
-        ),
-    youth
-      ? chip(
-          "youth",
-          youthLabel,
-          youth.phase === "signed"
-            ? "signed"
-            : youth.phase === "in_progress"
-              ? "in_progress"
-              : "not_started",
-        )
-      : null,
+    chip("youth", youthLabel, youth ? (youth.phase === "signed"
+      ? "signed"
+      : youth.phase === "in_progress"
+        ? "in_progress"
+        : youth.phase === "not_started"
+          ? "not_started"
+          : "unknown") : "unknown"),
+    chip(
+      "parent",
+      parent
+        ? parentLabel
+        : compact
+          ? status.contractSigned
+            ? "Parent ✓"
+            : "Parent"
+          : `Parent/Guardian: ${
+              status.contract.phase === "signed"
+                ? "Signed"
+                : status.contract.phase === "in_progress"
+                  ? "Pending"
+                  : "—"
+            }`,
+      parent
+        ? parentTone(parent.phase)
+        : status.contract.phase === "signed"
+          ? "signed"
+          : status.contract.phase === "in_progress"
+            ? "in_progress"
+            : "not_started",
+    ),
     chip(
       "survey",
       surveyLabel,
@@ -129,7 +128,7 @@ export function OnboardingStatusChips({
             ? "incomplete"
             : "unknown",
     ),
-  ].filter(Boolean);
+  ];
 
   return (
     <div className="flex flex-wrap items-center gap-1">

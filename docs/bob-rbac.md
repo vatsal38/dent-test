@@ -8,12 +8,13 @@ Enterprise role-based access control for **Bet on Baltimore** (Dent Ops), aligne
 |------|------------|--------|----------------|
 | **Admin** | Leadership | Organization | Full program data, settings, sync, reports |
 | **Program Manager** | Leadership | Organization | Roster, intake, tracks, attendance, deliverables |
-| **Site Supporter** | Support Squad | Assigned tracks (up to 2) | All except intake; deliverables, blitz, roster, incidents. Weekly check-in: everyone. |
-| **Fellow** | Support Squad | Assigned tracks (up to 2) | Same permissions as site supporter (`bobRole: fellow` → `site_supporter`). Weekly check-in: everyone (same as site supporter). |
-| **Coach** | Coaches | Assigned track(s) | Dashboard + **My Track** workspace; deliverables & attendance for their track; weekly check-in: Blitz team youth (fallback: track). No intake or track admin list. |
+| **Site Supporter** | Support Squad | Assigned tracks (up to 2) for Command Center / attendance / My Track; **full org roster** | All except intake; deliverables, blitz, roster, incidents. Weekly check-in: everyone. |
+| **Fellow** | Support Squad | Same as site supporter | Same permissions as site supporter (`bobRole: fellow` → `site_supporter`). Weekly check-in: everyone (same as site supporter). |
+| **Coach** | Coaches | Assigned track(s) for dashboard / attendance / My Track; **full org roster (view)** | Dashboard + **My Track** workspace; deliverables & attendance for their track; weekly check-in: Blitz team youth (fallback: track). No intake or track admin list. |
+| **Summer Staff** | Summer Staff | Organization (view) | **Roster view** (+ dashboard, attendance, deliverables view). **No roster edit** — edit reserved for leadership / Support Squad. |
 | **Student** | Students | Self | Own profile, submit forms, limited dashboard; no staff notes or org inbox |
 
-Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **client-side** via `useBobAccess()` / route guards.
+**Roster (35A):** Coaches and Site Supporters / Fellows see the **full** operational roster in `/app/bob/roster`. Track scope still applies to Command Center KPIs, attendance marking, wellness, and My Track.
 
 ## Permission matrix (whiteboard)
 
@@ -25,7 +26,7 @@ Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **cli
 - ✅ **Attendance** — mark attendance, submit reports, attendance correction triage
 - ✅ **Deliverables** — view and review/edit team submissions (`milestones.edit`)
 - ✅ **Blitz points** — accountability widgets on command center (blitz teams leaderboard)
-- ✅ **Roster** — view and edit students on assigned tracks
+- ✅ **Roster** — view and edit the **full** program roster (35A; Command Center stays track-scoped)
 - ✅ **Incidents** — operations inbox for responding to incidents
 - ✅ **Submit** — operational forms
 - ✅ **Key Links** — full staff resource hub
@@ -35,11 +36,17 @@ Scopes are enforced **server-side** via `dent-be/lib/bobCoachScope.js` and **cli
 - ❌ Program reports tab, settings, staff directory
 
 ### Coaches (`coach`)
-- ✅ Dashboard (1 track), roster, attendance, deliverables (view), submit, incidents
+- ✅ Dashboard (1 track), **full roster view** (35A), attendance, deliverables (view), submit, incidents
+- ❌ Roster **edit** (edit reserved for leadership / Support Squad)
 - ❌ Intake pipeline
 - ❌ Track assignment (`pods.edit`, `pods.create`, `pods.view` list)
 - ❌ Blitz / weekly deliverable accountability widgets (support squad only)
 - ❌ Attendance discrepancy triage (support squad)
+
+### Summer Staff (`summer_staff`)
+- ✅ **Roster view** (org-wide) — primary ask for ticket #33
+- ✅ Dashboard, attendance mark, deliverables view, submit, key links
+- ❌ Roster **edit**, intake, track admin, settings, staff directory
 
 ### Students (`student`)
 - ✅ **Personal dashboard** — attendance %, deliverables submitted & completed, project team, blitz points (scoped to linked student)

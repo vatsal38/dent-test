@@ -12,6 +12,8 @@ export function bobRoleLabel(role: BobOpsRole): string {
       return BOB_SITE_SUPPORTER;
     case "coach":
       return "Coach";
+    case "summer_staff":
+      return "Summer Staff";
     case "student":
       return "Student";
     default:
@@ -30,6 +32,7 @@ export function normalizeBobOpsRole(me: {
     canonical === "program_manager" ||
     canonical === "site_supporter" ||
     canonical === "coach" ||
+    canonical === "summer_staff" ||
     canonical === "student" ||
     canonical === "read_only"
   ) {

@@ -175,6 +175,66 @@ export function reviewStatusBadge(status: string | null | undefined) {
   }
 }
 
+/**
+ * Portfolio badge for the student drawer (ticket 40B).
+ * Prefer coach review / tracker status — do not show a vague "Submitted"
+ * just because upload rows exist.
+ */
+export function portfolioStatusBadge(deliverable: BobDeliverable): {
+  label: string;
+  className: string;
+  title: string;
+} {
+  if (isDeliverableCompleted(deliverable)) {
+    return {
+      ...reviewStatusBadge("approved"),
+      title: "Coach marked this deliverable complete",
+    };
+  }
+
+  const uploadCount = (deliverable.trackerRecords || []).reduce(
+    (n, t) => n + (t.uploads?.length || 0),
+    0,
+  );
+  const trackerStatus = (deliverable.trackerRecords || [])
+    .map((t) => String(t.deliverableStatus || "").trim())
+    .find(Boolean);
+  if (trackerStatus) {
+    const mapped = TRACKER_TO_APP_REVIEW[trackerStatus];
+    if (mapped) {
+      const badge = reviewStatusBadge(mapped);
+      return {
+        ...badge,
+        title: uploadCount
+          ? `${trackerStatus} · ${uploadCount} file${uploadCount === 1 ? "" : "s"} on file`
+          : trackerStatus,
+      };
+    }
+    return {
+      label: trackerStatus,
+      className: "bg-blue-100 text-blue-800",
+      title: uploadCount
+        ? `${uploadCount} file${uploadCount === 1 ? "" : "s"} on file`
+        : "Tracker status from Airtable",
+    };
+  }
+
+  const review = reviewStatusBadge(deliverable.reviewStatus);
+  if (uploadCount > 0 && (!deliverable.reviewStatus || deliverable.reviewStatus === "not_started")) {
+    return {
+      label: "Files uploaded",
+      className: "bg-blue-100 text-blue-800",
+      title: `${uploadCount} file${uploadCount === 1 ? "" : "s"} on file — awaiting coach review`,
+    };
+  }
+  return {
+    ...review,
+    title: uploadCount
+      ? `${review.label} · ${uploadCount} file${uploadCount === 1 ? "" : "s"} on file`
+      : "Coach review status for this deliverable",
+  };
+}
+
 export function progressStatusBadge(status: string | null | undefined) {
   if (!status) return { label: "—", className: "bg-gray-100 text-gray-600" };
   if (/complete/i.test(status)) {

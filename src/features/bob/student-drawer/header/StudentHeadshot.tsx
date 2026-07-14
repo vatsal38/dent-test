@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import type { BobStudent } from "@/platform/api/bob/students";
 import { resolveStudentHeadshotUrl } from "@/lib/bobStudentHeadshot";
 import { useBobRosterSchema } from "@/platform/query/hooks/useBobStudents";
 import { initialsOf } from "@/features/bob/roster/recordDisplay";
+import { HeadshotLightbox } from "@/features/bob/roster/HeadshotLightbox";
 
 export function StudentHeadshot({
   student,
@@ -17,25 +17,6 @@ export function StudentHeadshot({
   const { data: schemaRes } = useBobRosterSchema();
   const [expanded, setExpanded] = useState(false);
   const [broken, setBroken] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!expanded) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setExpanded(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = prev;
-    };
-  }, [expanded]);
 
   const photoUrl = useMemo(() => {
     if (broken) return "";
@@ -43,37 +24,6 @@ export function StudentHeadshot({
   }, [broken, schemaRes?.fields, student]);
 
   const initials = initialsOf(name);
-
-  const lightbox =
-    expanded && photoUrl && mounted
-      ? createPortal(
-          <div
-            className="fixed inset-0 z-200 flex items-center justify-center bg-black/70 p-6"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${name} headshot`}
-            onClick={() => setExpanded(false)}
-          >
-            <button
-              type="button"
-              className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 text-white text-xl hover:bg-white/20"
-              onClick={() => setExpanded(false)}
-              aria-label="Close headshot"
-            >
-              ✕
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photoUrl}
-              alt={name}
-              className="max-h-[90vh] max-w-[min(100%,28rem)] w-auto h-auto rounded-xl shadow-2xl object-contain"
-              referrerPolicy="no-referrer"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>,
-          document.body,
-        )
-      : null;
 
   return (
     <>
@@ -93,7 +43,7 @@ export function StudentHeadshot({
           <img
             src={photoUrl}
             alt=""
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-top"
             referrerPolicy="no-referrer"
             onError={() => setBroken(true)}
           />
@@ -101,7 +51,12 @@ export function StudentHeadshot({
           <span aria-hidden>{initials}</span>
         )}
       </button>
-      {lightbox}
+      <HeadshotLightbox
+        open={expanded}
+        src={photoUrl}
+        alt={name}
+        onClose={() => setExpanded(false)}
+      />
     </>
   );
 }
