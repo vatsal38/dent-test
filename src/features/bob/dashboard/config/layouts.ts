@@ -397,8 +397,8 @@ export const DASHBOARD_LAYOUTS: Record<
             kind: "kpi_row",
             metrics: [
               "overallAttendancePct",
-              "deliverablesSubmitted",
               "deliverablesSubmittedPctThisWeek",
+              "deliverablesCompletedPctThisWeek",
             ],
             permissions: ["dashboard.view"],
             roles: ["student"],

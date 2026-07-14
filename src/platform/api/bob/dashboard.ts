@@ -193,6 +193,7 @@ export interface BobDashboardSnapshot {
     checkedInPctToday?: number;
     deliverablesSubmitted?: number;
     deliverablesCompleted?: number;
+    deliverablesEligibleThisWeek?: number;
     deliverablesSubmittedPctThisWeek?: number;
     deliverablesCompletedPctThisWeek?: number;
     milestonesThisWeek: number;

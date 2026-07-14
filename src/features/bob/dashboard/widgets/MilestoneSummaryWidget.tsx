@@ -37,6 +37,10 @@ export function MilestoneSummaryWidget({
       snapshot.kpis.deliverablesSubmittedPctThisWeek?.value ??
       snapshot.cards.deliverablesSubmittedPctThisWeek ??
       0;
+    const completedPct =
+      snapshot.kpis.deliverablesCompletedPctThisWeek?.value ??
+      snapshot.cards.deliverablesCompletedPctThisWeek ??
+      0;
 
     return (
       <DashboardCard
@@ -51,24 +55,24 @@ export function MilestoneSummaryWidget({
           </Link>
         }
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-3">
             <p className="text-[11px] font-medium uppercase tracking-wide text-sky-800">
-              Submitted
+              Deliverables submitted %
             </p>
-            <p className="mt-1 text-2xl font-bold text-sky-950 tabular-nums">{submitted}</p>
+            <p className="mt-1 text-2xl font-bold text-sky-950 tabular-nums">
+              {submittedPct}%
+            </p>
+            <p className="mt-1 text-xs text-sky-900/70">{submitted} submitted</p>
           </div>
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-3">
             <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-800">
-              Completed
+              Deliverables completed %
             </p>
-            <p className="mt-1 text-2xl font-bold text-emerald-950 tabular-nums">{completed}</p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-600">
-              This week
+            <p className="mt-1 text-2xl font-bold text-emerald-950 tabular-nums">
+              {completedPct}%
             </p>
-            <p className="mt-1 text-2xl font-bold text-gray-900 tabular-nums">{submittedPct}%</p>
+            <p className="mt-1 text-xs text-emerald-900/70">{completed} completed</p>
           </div>
         </div>
       </DashboardCard>

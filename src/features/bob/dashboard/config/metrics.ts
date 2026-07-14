@@ -59,19 +59,19 @@ export const METRIC_CATALOG: Record<BobDashboardMetricKey, MetricDefinition> = {
   },
   deliverablesCompleted: {
     key: "deliverablesCompleted",
-    label: "Deliverables completed this week",
+    label: "Deliverables completed",
     format: (v) => v,
     href: () => "/app/bob/deliverables",
   },
   deliverablesSubmittedPctThisWeek: {
     key: "deliverablesSubmittedPctThisWeek",
-    label: "% of deliverables submitted this week",
+    label: "Deliverables submitted %",
     format: (v) => `${v}%`,
     href: () => "/app/bob/deliverables",
   },
   deliverablesCompletedPctThisWeek: {
     key: "deliverablesCompletedPctThisWeek",
-    label: "% of deliverables completed this week",
+    label: "Deliverables completed %",
     format: (v) => `${v}%`,
     href: () => "/app/bob/deliverables",
   },
@@ -127,8 +127,9 @@ export function metricsToKpiItems(
   const studentLabels: Partial<Record<BobDashboardMetricKey, string>> = {
     overallAttendancePct: "My attendance %",
     deliverablesSubmitted: "Deliverables submitted",
-    deliverablesSubmittedPctThisWeek: "Deliverable achievement this week",
-    deliverablesCompleted: "Completed this week",
+    deliverablesSubmittedPctThisWeek: "Deliverables submitted %",
+    deliverablesCompleted: "Deliverables completed",
+    deliverablesCompletedPctThisWeek: "Deliverables completed %",
   };
 
   return keys.map((key) => {
@@ -138,14 +139,30 @@ export function metricsToKpiItems(
       key === "overallAttendancePct"
         ? snapshot.cards.studentAttendanceHours
         : null;
+    const eligible = snapshot.cards.deliverablesEligibleThisWeek;
+    const submittedCount = snapshot.cards.deliverablesSubmitted;
+    const completedCount = snapshot.cards.deliverablesCompleted;
+    let hint: string | undefined;
+    if (options?.studentPersonal && hours) {
+      hint = `${hours.attended}h of ${hours.potential}h program-to-date`;
+    } else if (
+      key === "deliverablesSubmittedPctThisWeek" &&
+      typeof eligible === "number" &&
+      typeof submittedCount === "number"
+    ) {
+      hint = `${submittedCount} of ${eligible} students this week`;
+    } else if (
+      key === "deliverablesCompletedPctThisWeek" &&
+      typeof eligible === "number" &&
+      typeof completedCount === "number"
+    ) {
+      hint = `${completedCount} of ${eligible} students this week`;
+    }
     return {
       id: key,
       label: options?.studentPersonal && studentLabels[key] ? studentLabels[key]! : def.label,
       value: def.format(typeof raw === "number" ? raw : Number(raw) || 0),
-      hint:
-        options?.studentPersonal && hours
-          ? `${hours.attended}h of ${hours.potential}h program-to-date`
-          : undefined,
+      hint,
       href: def.href?.({
         podId: snapshot.scope.podId ?? undefined,
         studentId: snapshot.scope.studentId ?? undefined,
@@ -159,16 +176,16 @@ export const COMMAND_CENTER_KPIS: BobDashboardMetricKey[] = [
   "studentsEnrolled",
   "onboardingCompleted",
   "checkedInPctToday",
-  "deliverablesCompleted",
-  "openDiscrepancies",
+  "deliverablesSubmittedPctThisWeek",
+  "deliverablesCompletedPctThisWeek",
 ];
 
 export const POD_OPS_KPIS: BobDashboardMetricKey[] = [
   "studentsEnrolled",
   "checkedInPctToday",
-  "noShowsToday",
+  "deliverablesSubmittedPctThisWeek",
+  "deliverablesCompletedPctThisWeek",
   "atRiskCount",
-  "escalationCount",
 ];
 
 /** Coach / track supporter home — daily track operations. */
