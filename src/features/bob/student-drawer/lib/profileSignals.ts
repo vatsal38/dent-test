@@ -1,6 +1,7 @@
 import type { BobStudent } from "@/platform/api/bob/students";
 import type { BobSubmission } from "@/platform/api/bob/submissions";
 import type { CoachNote, WellnessSignal } from "../types";
+import { resolveStudentTrackLabel } from "@/lib/bobRosterTrackOptions";
 
 const TEXT_NOTE_FIELD_CANDIDATES = [
   "Internal Notes",
@@ -92,6 +93,25 @@ export function hasIndustryCredential(student: BobStudent | undefined): boolean 
     }
   }
   return false;
+}
+
+/** Track → industry credential students are working toward (ticket 73). */
+export function resolveIndustryCredentialTarget(student: BobStudent | undefined): {
+  credentialName: string;
+  trackLabel: string;
+  earned: boolean;
+} {
+  const trackLabel = student
+    ? resolveStudentTrackLabel(student)
+    : "Unassigned";
+  const earned = hasIndustryCredential(student);
+  const isContentCreation =
+    /content\s*creation/i.test(trackLabel) ||
+    (/marketing/i.test(trackLabel) && /content|nextgen/i.test(trackLabel));
+  const credentialName = isContentCreation
+    ? "Adobe Content Creation & Marketing Credentials"
+    : "AI × Design Thinking — Early Career Credential";
+  return { credentialName, trackLabel, earned };
 }
 
 export function computeWellnessSignals(

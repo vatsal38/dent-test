@@ -25,7 +25,7 @@ Operational CRM-style student command center for Dent Ops BoB. Usable from any B
 |-------|---------|
 | `id` | Mongo student id (canonical) |
 | `student` | Legacy alias (milestones/interview links) |
-| `tab` | One of: `overview`, `attendance`, `milestones`, `notes`, `incidents`, `journey`, `onboarding`, `demographics`, `activity` |
+| `tab` | One of: `overview`, `attendance`, `milestones`, `notes`, `incidents`, `onboarding`, `contracts_health`, `demographics`, `activity` |
 
 Example: `/app/bob/roster?id=64f…&tab=incidents&queue=active`
 

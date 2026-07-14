@@ -51,7 +51,7 @@ Enterprise role-based access control for **Bet on Baltimore** (Dent Ops), aligne
 ### Students (`student`)
 - ✅ **Personal dashboard** — attendance %, deliverables submitted & completed, project team, blitz points (scoped to linked student)
 - ✅ **Roster** — view-only cohort gallery; edit own profile only; no peer PII or stats
-- ✅ **Attendance** — personal read-only view; cannot mark or edit attendance
+- ✅ **Attendance** — personal view + **self-service correction** (absence / punch fixes via `/app/bob/attendance/correction`); cannot mark or edit attendance records
 - ✅ **Deliverables** — project team and track deliverables filtered to student scope
 - ✅ **My submissions** — own form activity only (`submissions.viewOwn`); no org inbox or staff notes
 - ✅ **Submit** — youth forms only (progress, testimony, feedback); no staff request forms

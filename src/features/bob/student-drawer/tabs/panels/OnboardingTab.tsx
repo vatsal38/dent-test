@@ -1,6 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useBobStudentOnboardingTasks } from "@/platform/query/hooks/useBobStudentOnboarding";
+import { useBobRosterSchema } from "@/platform/query/hooks/useBobStudents";
 import {
   contractStatusLabel,
   onboardingPhaseTone,
@@ -8,9 +11,30 @@ import {
 } from "@/features/bob/onboarding/statusLabels";
 import { useStudentDrawerContext } from "../../context/StudentDrawerContext";
 import { OnboardingTabSkeleton } from "../../widgets/TabPanelSkeleton";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { updateBobStudent } from "@/platform/api/bob/students";
+import { parseApiError } from "@/platform/api/errors";
+import { bobKeys } from "@/platform/query/queryKeys";
 
 const AIRTABLE_ONBOARDING_VIEW =
   "https://airtable.com/appjDzuL6WUmrcZ5d/tblWX69llgeaLCKlT/viwo67vEM2OeW9Hva?blocks=hide";
+
+const PARENT_FIELD = "BoB '26 Parent Contract Status";
+const YOUTH_FIELD = "BoB '26 Student Contract Status";
+const SURVEY_FIELD = "BoB '26 Pre-Survey Status";
+
+/** Fallback choices when roster schema has not loaded choices yet. */
+const FALLBACK_CHOICES: Record<string, string[]> = {
+  [PARENT_FIELD]: [
+    "Contract Signed",
+    "18+, Not Needed",
+    "Sent, Not Signed",
+    "Same Parent / Denter Email",
+    "No Parent Email / Not Sent",
+  ],
+  [YOUTH_FIELD]: ["Contract Signed", "Contract Sent"],
+  [SURVEY_FIELD]: ["Completed", "Still Need to Complete"],
+};
 
 function StatusCard({
   title,
@@ -36,11 +60,90 @@ function StatusCard({
   );
 }
 
+function EditableStatusCard({
+  title,
+  phase,
+  fieldName,
+  value,
+  choices,
+  saving,
+  error,
+  onSave,
+}: {
+  title: string;
+  phase: Parameters<typeof onboardingPhaseTone>[0];
+  fieldName: string;
+  value: string;
+  choices: string[];
+  saving: boolean;
+  error: string | null;
+  onSave: (next: string) => void;
+}) {
+  const options = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of choices) {
+      const s = String(c || "").trim();
+      if (s) set.add(s);
+    }
+    if (value.trim()) set.add(value.trim());
+    return [...set];
+  }, [choices, value]);
+
+  return (
+    <div className={`rounded-xl border p-3 ${onboardingPhaseTone(phase)}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+        {title}
+      </p>
+      <label className="sr-only" htmlFor={`onboard-${fieldName}`}>
+        {title}
+      </label>
+      <select
+        id={`onboard-${fieldName}`}
+        value={value}
+        disabled={saving}
+        onChange={(e) => onSave(e.target.value)}
+        className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm font-medium text-gray-900 focus:border-orange-500 focus:ring-2 focus:ring-orange-500 disabled:opacity-60"
+      >
+        <option value="">— Select —</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+      <p className="text-[10px] mt-1.5 opacity-70">Writes to {fieldName}</p>
+      {error ? (
+        <p className="text-[11px] text-red-700 mt-1">{error}</p>
+      ) : null}
+      {saving ? (
+        <p className="text-[11px] text-gray-600 mt-1">Saving…</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function OnboardingTab() {
-  const { student, tab } = useStudentDrawerContext();
+  const { student, tab, refetch } = useStudentDrawerContext();
+  const { can } = useBobAccess();
+  const qc = useQueryClient();
   const { data, isLoading } = useBobStudentOnboardingTasks(student?.id ?? null, {
     enabled: tab === "onboarding",
   });
+  const { data: schemaRes } = useBobRosterSchema();
+  const [savingField, setSavingField] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [saveOk, setSaveOk] = useState<string | null>(null);
+
+  const canEdit = can("roster.edit");
+
+  const choicesByField = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const f of schemaRes?.fields || []) {
+      if (!f?.name) continue;
+      if (f.choices?.length) map.set(f.name, f.choices);
+    }
+    return map;
+  }, [schemaRes?.fields]);
 
   if (!student) return null;
   if (isLoading) return <OnboardingTabSkeleton />;
@@ -49,6 +152,21 @@ export function OnboardingTab() {
   const done = tasks.filter((t) => t.status === "done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   const ob = student.onboardingStatus;
+  const fields = (student.airtableFields || {}) as Record<string, unknown>;
+
+  const parentField = ob?.parentContract?.field || PARENT_FIELD;
+  const youthField = ob?.youthContract?.field || YOUTH_FIELD;
+  const surveyField = ob?.preSurvey?.field || SURVEY_FIELD;
+
+  const parentValue = String(
+    fields[parentField] ?? ob?.parentContract?.label ?? "",
+  ).trim();
+  const youthValue = String(
+    fields[youthField] ?? ob?.youthContract?.label ?? "",
+  ).trim();
+  const surveyValue = String(
+    fields[surveyField] ?? ob?.preSurvey?.label ?? "",
+  ).trim();
 
   const parentPhase =
     ob?.parentContract?.phase === "signed" ||
@@ -79,6 +197,42 @@ export function OnboardingTab() {
       ? "incomplete"
       : "unknown";
 
+  async function saveStatus(fieldName: string, next: string) {
+    if (!student) return;
+    const current = String(fields[fieldName] ?? "").trim();
+    if (next === current) return;
+    setSavingField(fieldName);
+    setFieldErrors((e) => ({ ...e, [fieldName]: "" }));
+    setSaveOk(null);
+    try {
+      await updateBobStudent(student.id, {
+        airtableFields: { [fieldName]: next || null },
+      });
+      await Promise.all([
+        refetch(),
+        qc.invalidateQueries({ queryKey: bobKeys.students.detail(student.id) }),
+        qc.invalidateQueries({ queryKey: bobKeys.students.all() }),
+      ]);
+      setSaveOk("Saved — synced to Airtable.");
+    } catch (err) {
+      setFieldErrors((e) => ({
+        ...e,
+        [fieldName]: parseApiError(err),
+      }));
+    } finally {
+      setSavingField(null);
+    }
+  }
+
+  function choicesFor(fieldName: string): string[] {
+    return (
+      choicesByField.get(fieldName) ||
+      FALLBACK_CHOICES[fieldName] ||
+      FALLBACK_CHOICES[PARENT_FIELD] ||
+      []
+    );
+  }
+
   return (
     <div className="p-5 space-y-5">
       <div className="space-y-2">
@@ -96,44 +250,85 @@ export function OnboardingTab() {
           </a>
         </div>
         <p className="text-xs text-gray-500">
-          Complete when all three are done: Youth Contract, Parent/Guardian
-          Contract, and Pre-Survey.
+          {canEdit
+            ? "Staff can update these in Dent Ops — changes write back to Students & Alums."
+            : "Complete when all three are done: Youth Contract, Parent/Guardian Contract, and Pre-Survey."}
         </p>
+        {saveOk ? (
+          <p className="text-xs font-medium text-emerald-700">{saveOk}</p>
+        ) : null}
         <div className="grid gap-2 sm:grid-cols-3">
-          <StatusCard
-            title="Youth contract"
-            detail={
-              ob?.youthContract?.label
-                ? `${contractStatusLabel(ob.youthContract.phase)} — ${ob.youthContract.label}`
-                : contractStatusLabel(ob?.youthContract?.phase ?? "unknown")
-            }
-            phase={youthPhase}
-            fieldHint={
-              ob?.youthContract?.field ?? "BoB '26 Student Contract Status"
-            }
-          />
-          <StatusCard
-            title="Parent/Guardian contract"
-            detail={
-              ob?.parentContract?.label
-                ? `${contractStatusLabel(ob.parentContract.phase)} — ${ob.parentContract.label}`
-                : contractStatusLabel(
-                    ob?.parentContract?.phase ?? ob?.contract.phase ?? "unknown",
-                  )
-            }
-            phase={parentPhase}
-            fieldHint={
-              ob?.parentContract?.field ?? "BoB '26 Parent Contract Status"
-            }
-          />
-          <StatusCard
-            title="Pre-survey"
-            detail={
-              ob ? preSurveyLabel(ob.preSurvey) : contractStatusLabel("unknown")
-            }
-            phase={surveyPhase}
-            fieldHint={ob?.preSurvey.field ?? "BoB '26 Pre-Survey Status"}
-          />
+          {canEdit ? (
+            <>
+              <EditableStatusCard
+                title="Youth contract"
+                phase={youthPhase}
+                fieldName={youthField}
+                value={youthValue}
+                choices={choicesFor(youthField)}
+                saving={savingField === youthField}
+                error={fieldErrors[youthField] || null}
+                onSave={(v) => saveStatus(youthField, v)}
+              />
+              <EditableStatusCard
+                title="Parent/Guardian contract"
+                phase={parentPhase}
+                fieldName={parentField}
+                value={parentValue}
+                choices={choicesFor(parentField)}
+                saving={savingField === parentField}
+                error={fieldErrors[parentField] || null}
+                onSave={(v) => saveStatus(parentField, v)}
+              />
+              <EditableStatusCard
+                title="Pre-survey"
+                phase={surveyPhase}
+                fieldName={surveyField}
+                value={surveyValue}
+                choices={choicesFor(surveyField)}
+                saving={savingField === surveyField}
+                error={fieldErrors[surveyField] || null}
+                onSave={(v) => saveStatus(surveyField, v)}
+              />
+            </>
+          ) : (
+            <>
+              <StatusCard
+                title="Youth contract"
+                detail={
+                  ob?.youthContract?.label
+                    ? `${contractStatusLabel(ob.youthContract.phase)} — ${ob.youthContract.label}`
+                    : contractStatusLabel(ob?.youthContract?.phase ?? "unknown")
+                }
+                phase={youthPhase}
+                fieldHint={youthField}
+              />
+              <StatusCard
+                title="Parent/Guardian contract"
+                detail={
+                  ob?.parentContract?.label
+                    ? `${contractStatusLabel(ob.parentContract.phase)} — ${ob.parentContract.label}`
+                    : contractStatusLabel(
+                        ob?.parentContract?.phase ??
+                          ob?.contract.phase ??
+                          "unknown",
+                      )
+                }
+                phase={parentPhase}
+                fieldHint={parentField}
+              />
+              <StatusCard
+                title="Pre-survey"
+                detail={
+                  ob
+                    ? preSurveyLabel(ob.preSurvey)
+                    : contractStatusLabel("unknown")
+                }
+                phase={surveyPhase}
+                fieldHint={surveyField}
+              />
+            </>
+          )}
         </div>
         {ob?.contractAndPreSurveyComplete ?? ob?.readyForProgram ? (
           <p className="text-sm text-emerald-700 font-medium">
@@ -142,7 +337,7 @@ export function OnboardingTab() {
         ) : (
           <p className="text-sm text-amber-800">
             Onboarding incomplete until youth contract, parent/guardian
-            contract, and pre-survey are all complete in Airtable.
+            contract, and pre-survey are all complete.
           </p>
         )}
       </div>

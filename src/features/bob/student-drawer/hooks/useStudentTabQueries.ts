@@ -69,6 +69,7 @@ export function useStudentSubmissions(
       "overview",
       "activity",
       "notes",
+      "milestones",
     ]);
 
   return useQuery({

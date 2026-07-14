@@ -14,6 +14,9 @@ import {
 import { DetailCard, DetailCardGrid } from "../../widgets/DetailCard";
 import { AttendanceTabSkeleton } from "../../widgets/TabPanelSkeleton";
 import { WeeklyAttendanceChart } from "../../widgets/WeeklyAttendanceChart";
+import { useBobAccess } from "@/platform/rbac/useBobAccess";
+import { useBobMe } from "@/platform/query/hooks/useBobMe";
+import { isOwnStudentProfile } from "@/platform/rbac/studentProfile";
 
 const STATUS_STYLE: Record<string, string> = {
   present: "text-emerald-700 bg-emerald-50",
@@ -33,10 +36,27 @@ function dayStatusLabel(day: ReturnType<typeof buildStudentAttendanceDays>[numbe
   return statusLabel(day.date, day.dailyStatus || day.attendanceState);
 }
 
+function correctionHref(
+  date: string,
+  type?: "absence" | "time_correction" | "special",
+  returnTo?: string,
+) {
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (type) params.set("type", type);
+  if (returnTo) params.set("returnTo", returnTo);
+  const q = params.toString();
+  return q
+    ? `/app/bob/attendance/correction?${q}`
+    : "/app/bob/attendance/correction";
+}
+
 export function AttendanceTab() {
   const { student, tab } = useStudentDrawerContext();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { can, access } = useBobAccess();
+  const { data: me } = useBobMe();
   const { data, isLoading, isFetching } = useStudentAttendanceHistory(
     student?.id ?? null,
     student?.podId,
@@ -54,6 +74,17 @@ export function AttendanceTab() {
   if (isLoading) return <AttendanceTabSkeleton />;
 
   const stats = student.attendanceStats;
+  const viewingSelf = isOwnStudentProfile(
+    access,
+    me?.linkedStudent?.id,
+    student.id,
+  );
+  const isStudentViewer = access.role === "student";
+  const canSubmitCorrection = can("submit.view") && viewingSelf;
+  const canTriage =
+    !isStudentViewer &&
+    (can("attendance.discrepancies") || can("attendance.mark"));
+  const returnTo = buildBobReturnTo(pathname, searchParams.toString());
 
   const counts = days.reduce(
     (acc, day) => {
@@ -116,25 +147,36 @@ export function AttendanceTab() {
         <WeeklyAttendanceChart days={days} />
       </div>
 
-      <div className="flex justify-end">
-        {(() => {
-          const markParams = new URLSearchParams();
-          if (student.podId) markParams.set("pod", student.podId);
-          if (student.track) markParams.set("track", student.track);
-          markParams.set(
-            "returnTo",
-            buildBobReturnTo(pathname, searchParams.toString()),
-          );
-          return (
-            <Link
-              href={`/app/bob/attendance/mark?${markParams.toString()}`}
-              className="text-sm font-medium text-orange-600"
-            >
-              Open issue triage →
-            </Link>
-          );
-        })()}
-      </div>
+      {canSubmitCorrection ? (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-orange-950">
+              Need a correction?
+            </p>
+            <p className="text-xs text-orange-900/90 mt-0.5">
+              Report an absence or fix sign-in / sign-out times for a day you
+              attended.
+            </p>
+          </div>
+          <Link
+            href={correctionHref("", undefined, returnTo)}
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+          >
+            Request correction
+          </Link>
+        </div>
+      ) : null}
+
+      {canTriage ? (
+        <div className="flex justify-end gap-3">
+          <Link
+            href="/app/bob/attendance/discrepancies"
+            className="text-sm font-medium text-orange-600"
+          >
+            Open issue triage →
+          </Link>
+        </div>
+      ) : null}
 
       {isFetching && !isLoading ? (
         <p className="text-xs text-gray-400">Refreshing…</p>
@@ -149,33 +191,61 @@ export function AttendanceTab() {
           days.map((day) => {
             const label = dayStatusLabel(day);
             const styleKey =
-              label === "Future" ? "future" : day.dailyStatus || day.attendanceState || "";
+              label === "Future"
+                ? "future"
+                : day.dailyStatus || day.attendanceState || "";
             const hoursLabel = formatDayHoursPresent(day);
+            const needsFix =
+              day.missingPunchCount > 0 ||
+              day.health === "missing" ||
+              day.health === "partial";
             return (
               <li
                 key={day.key}
-                className="flex items-center justify-between gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+                className="flex flex-col gap-2 px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
               >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{day.date}</p>
-                  {hoursLabel !== "—" ? (
-                    <p className="text-xs text-gray-500">{hoursLabel} present</p>
-                  ) : null}
-                  {day.health === "missing" || day.health === "partial" ? (
-                    <p className="text-xs text-amber-700">
-                      {day.missingPunchCount > 0
-                        ? `${day.missingPunchCount} missing punch${day.missingPunchCount === 1 ? "" : "es"}`
-                        : "Incomplete punches"}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {day.date}
                     </p>
-                  ) : null}
+                    {hoursLabel !== "—" ? (
+                      <p className="text-xs text-gray-500">
+                        {hoursLabel} present
+                      </p>
+                    ) : null}
+                    {needsFix ? (
+                      <p className="text-xs text-amber-700">
+                        {day.missingPunchCount > 0
+                          ? `${day.missingPunchCount} missing punch${day.missingPunchCount === 1 ? "" : "es"}`
+                          : "Incomplete punches"}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
+                      STATUS_STYLE[styleKey] || "text-gray-600 bg-gray-100"
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </div>
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
-                    STATUS_STYLE[styleKey] || "text-gray-600 bg-gray-100"
-                  }`}
-                >
-                  {label}
-                </span>
+                {canSubmitCorrection && label !== "Future" ? (
+                  <p className="text-xs text-gray-600">
+                    <Link
+                      href={correctionHref(
+                        day.date,
+                        needsFix ? "time_correction" : undefined,
+                        returnTo,
+                      )}
+                      className="font-medium text-orange-600 hover:underline"
+                    >
+                      {needsFix
+                        ? "Report absence or fix times →"
+                        : "Request correction for this day →"}
+                    </Link>
+                  </p>
+                ) : null}
               </li>
             );
           })

@@ -1,6 +1,11 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { AttendanceCorrectionPage } from "@/features/bob/attendance/AttendanceCorrectionPage";
 
-/** Youth submit corrections via One Stop — staff triage in discrepancies. */
+/** Youth self-service attendance correction (ticket 68). */
 export default function AttendanceCorrectionRoutePage() {
-  redirect("/app/bob/attendance/discrepancies");
+  return (
+    <Suspense fallback={null}>
+      <AttendanceCorrectionPage />
+    </Suspense>
+  );
 }

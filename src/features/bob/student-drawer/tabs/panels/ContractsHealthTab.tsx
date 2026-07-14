@@ -71,7 +71,7 @@ function StatusCard({
  * Hidden from students (ticket 33A).
  */
 export function ContractsHealthTab() {
-  const { student } = useStudentDrawerContext();
+  const { student, setTab } = useStudentDrawerContext();
   const { fields, labelsForField, resolveLinked } =
     useStudentLinkedFieldDisplay(student);
 
@@ -114,7 +114,15 @@ export function ContractsHealthTab() {
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
             From Students &amp; Alums (BoB &apos;26). Staff view only — not shown
-            to youth.
+            to youth. Edit Youth / Parent / Pre-Survey statuses on the{" "}
+            <button
+              type="button"
+              onClick={() => setTab("onboarding")}
+              className="font-medium text-orange-600 hover:underline"
+            >
+              Onboarding
+            </button>{" "}
+            tab.
           </p>
         </div>
         {ob ? (
