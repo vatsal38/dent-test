@@ -197,19 +197,27 @@ export function MilestonesPage() {
   }, [data, allowedTeamNames, teamsReady]);
 
   // Deep-link: /app/bob/deliverables?id=…&team=…&tab=by_team
-  const openedFromUrlRef = useRef(false);
+  // Open when id/team in the URL change (e.g. "Open inbox" from another screen).
+  const lastDeepLinkKey = useRef("");
   useEffect(() => {
-    if (!deliverableIdParam || !data.length || openedFromUrlRef.current) return;
+    if (!deliverableIdParam || !data.length) return;
+    const key = `${deliverableIdParam}|${teamFilterParam}`;
+    if (lastDeepLinkKey.current === key) return;
     const match = data.find((d) => d.id === deliverableIdParam);
     if (!match) return;
-    openedFromUrlRef.current = true;
+    lastDeepLinkKey.current = key;
     setDetailSaveError(null);
     setDetail({
       deliverable: match,
       teamName: teamFilterParam || undefined,
     });
-    if (teamFilterParam) setTab("by_team");
-  }, [deliverableIdParam, data, teamFilterParam]);
+    if (teamFilterParam) {
+      setTab("by_team");
+      setSelectedTeam(teamFilterParam);
+    } else if (initialTab === "by_team" || initialTab === "pending_review") {
+      setTab(initialTab);
+    }
+  }, [deliverableIdParam, data, teamFilterParam, initialTab]);
 
   function openDetail(d: BobDeliverable, teamName?: string) {
     setDetailSaveError(null);

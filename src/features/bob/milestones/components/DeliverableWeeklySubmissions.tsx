@@ -30,12 +30,15 @@ function inboxHref(
   return `/app/bob/inbox?${sp.toString()}`;
 }
 
-function deliverableHref(deliverableId: string, teamName?: string) {
+/** Land on this deliverable (opens review drawer) — never the full catalog list. */
+function deliverablePageHref(deliverableId: string, teamName?: string) {
   const sp = new URLSearchParams();
   sp.set("id", deliverableId);
   if (teamName) {
     sp.set("team", teamName);
     sp.set("tab", "by_team");
+  } else {
+    sp.set("tab", "all");
   }
   return `/app/bob/deliverables?${sp.toString()}`;
 }
@@ -200,26 +203,27 @@ export function DeliverableWeeklySubmissions({
           {total ? ` (${total})` : ""}
         </h3>
         <div className="flex items-center gap-3">
-          <Link
-            href={deliverableHref(deliverableId, teamName)}
-            className="text-xs text-gray-500 hover:underline"
-          >
-            Deliverable page →
-          </Link>
-          {canOpenInbox ? (
+          {canOpenInbox && total > 0 ? (
             <Link
               href={inboxHref(deliverableId, { teamName })}
-              className="text-xs text-orange-600 hover:underline font-medium"
+              className="text-xs text-gray-500 hover:underline"
             >
-              Open inbox →
+              Filtered submissions →
             </Link>
           ) : null}
+          <Link
+            href={deliverablePageHref(deliverableId, teamName)}
+            className="text-xs text-orange-600 hover:underline font-medium"
+          >
+            Open inbox →
+          </Link>
         </div>
       </div>
       <p className="text-xs text-gray-500 mb-3">
         Each team member submits one weekly progress form for this deliverable.
         Connected submissions (including other denters on the same deliverable)
-        show here for staff review. Open inbox filters to this deliverable only.
+        show here for staff review. Open inbox goes to this deliverable&apos;s
+        page — not the full catalog.
       </p>
       {query.isLoading ? (
         <p className="text-sm text-gray-500">Loading weekly submissions…</p>
