@@ -21,17 +21,91 @@ type StaffCorrectionDaily = Pick<
   | "staffCorrectedAt"
 >;
 
-/** Youthwork / staff-entered overrides only — never Airtable auto-fill or adjusted rollup fields. */
+function easternHoursMinutes(value: string): { hour: number; minute: number } | null {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (/^\d{1,2}:\d{2}$/.test(raw)) {
+    const [h, m] = raw.split(":").map(Number);
+    return { hour: h, minute: m };
+  }
+  const twelveHour = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (twelveHour) {
+    let h = Number(twelveHour[1]);
+    const m = Number(twelveHour[2]);
+    const ampm = twelveHour[3].toUpperCase();
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return { hour: h, minute: m };
+  }
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(d);
+    let hour = Number(parts.find((p) => p.type === "hour")?.value);
+    const minute = Number(parts.find((p) => p.type === "minute")?.value);
+    if (hour === 24) hour = 0;
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    return { hour, minute };
+  } catch {
+    return { hour: d.getHours(), minute: d.getMinutes() };
+  }
+}
+
+/** Daily master often stores 4:00 PM Eastern (= 20:00 UTC) as a placeholder sign-in. */
+export function isScheduledPlaceholderTime(value?: string | null): boolean {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getUTCHours() === 20 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+}
+
+/**
+ * Airtable autofills when youth forgets to punch out:
+ * - 12:30 (morning session end)
+ * - 6:30 PM (common afternoon autofill; program ends 4:00 PM)
+ * These must never appear as staff corrections.
+ */
+export function isScheduleAutofillTime(value?: string | null): boolean {
+  if (!value) return false;
+  const hm = easternHoursMinutes(String(value));
+  if (!hm) return false;
+  return (
+    (hm.hour === 12 && hm.minute === 30) ||
+    (hm.hour === 18 && hm.minute === 30)
+  );
+}
+
+/** @deprecated Prefer isScheduleAutofillTime — kept for 6:30 PM-specific call sites. */
+export function isDefaultAfternoonOutTime(value?: string | null): boolean {
+  if (!value) return false;
+  const hm = easternHoursMinutes(String(value));
+  if (!hm) return false;
+  return hm.hour === 18 && hm.minute === 30;
+}
+
+/** Youthwork / staff-entered overrides only — never Airtable auto-fill placeholders. */
 export function hasExplicitStaffCorrection(
   daily?: StaffCorrectionDaily | null,
 ): boolean {
-  return Boolean(
-    daily?.staffCorrectionSignIn ||
-      daily?.staffCorrectionSignOut ||
-      daily?.manualStartTime ||
-      daily?.manualEndTime ||
-      daily?.manualOverride ||
-      daily?.staffCorrectedByUserId,
+  if (daily?.staffCorrectedByUserId) return true;
+  if (String(daily?.manualOverride || "").trim()) return true;
+
+  const candidates = [
+    daily?.staffCorrectionSignIn,
+    daily?.staffCorrectionSignOut,
+    daily?.manualStartTime,
+    daily?.manualEndTime,
+  ];
+  return candidates.some(
+    (t) =>
+      Boolean(t) &&
+      !isScheduledPlaceholderTime(t) &&
+      !isScheduleAutofillTime(t),
   );
 }
 
@@ -74,45 +148,10 @@ function hoursBetween(date: string, inTime: string, outTime: string): number {
   return Math.round((ms / 3600000) * 100) / 100;
 }
 
-/** Daily master often stores 4:00 PM Eastern (= 20:00 UTC) as a placeholder sign-in. */
-export function isScheduledPlaceholderTime(value?: string | null): boolean {
-  if (!value) return false;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return false;
-  return d.getUTCHours() === 20 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
-}
-
-/**
- * Airtable often autofills afternoon out at 6:30 PM. Program afternoon ends at 4:00 PM —
- * treat 6:30 as blank so it is not used as the Final record default.
- */
-export function isDefaultAfternoonOutTime(value?: string | null): boolean {
-  if (!value) return false;
-  const raw = String(value).trim();
-  if (!raw) return false;
-  if (/^\d{1,2}:\d{2}$/.test(raw)) {
-    const [h, m] = raw.split(":").map(Number);
-    return h === 18 && m === 30;
-  }
-  // Display labels like "6:30 PM"
-  const twelveHour = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (twelveHour) {
-    let h = Number(twelveHour[1]);
-    const m = Number(twelveHour[2]);
-    const ampm = twelveHour[3].toUpperCase();
-    if (ampm === "PM" && h !== 12) h += 12;
-    if (ampm === "AM" && h === 12) h = 0;
-    return h === 18 && m === 30;
-  }
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return false;
-  return d.getHours() === 18 && d.getMinutes() === 30;
-}
-
 function hoursBetweenIso(date: string, inIso?: string | null, outIso?: string | null): number {
   if (!inIso || !outIso) return 0;
   if (isScheduledPlaceholderTime(inIso)) return 0;
-  if (isDefaultAfternoonOutTime(outIso)) return 0;
+  if (isScheduleAutofillTime(outIso) || isScheduleAutofillTime(inIso)) return 0;
   return hoursBetween(date, toTimeInputValue(inIso), toTimeInputValue(outIso));
 }
 
@@ -212,7 +251,11 @@ export function staffMorningInInput(
 export function staffMorningOutInput(
   daily: StaffCorrectionDaily | null | undefined,
 ): string {
-  if (daily?.staffCorrectionSignOut) {
+  if (
+    daily?.staffCorrectionSignOut &&
+    !isScheduleAutofillTime(daily.staffCorrectionSignOut) &&
+    !isScheduledPlaceholderTime(daily.staffCorrectionSignOut)
+  ) {
     return toTimeInputValue(daily.staffCorrectionSignOut);
   }
   return "";
@@ -221,21 +264,33 @@ export function staffMorningOutInput(
 export function staffAfternoonInInput(
   daily: StaffCorrectionDaily | null | undefined,
 ): string {
-  return toTimeInputValue(
-    daily?.staffCorrectionSignIn || daily?.manualStartTime,
-  );
+  const raw = daily?.staffCorrectionSignIn || daily?.manualStartTime;
+  if (
+    raw &&
+    !isScheduleAutofillTime(raw) &&
+    !isScheduledPlaceholderTime(raw)
+  ) {
+    return toTimeInputValue(raw);
+  }
+  return "";
 }
 
 export function hasStaffAfternoonOutCorrection(
   daily: StaffCorrectionDaily | null | undefined,
   day?: Pick<StudentDayAttendance, "punches">,
 ): boolean {
-  if (!daily?.staffCorrectedByUserId) return false;
-  const out = daily.signOutTime || daily.adjustedSignOut;
-  if (!out || isDefaultAfternoonOutTime(out)) return false;
-  const youthPmOut = day?.punches?.pm_out?.youthTimeIso;
-  if (youthPmOut && sameIsoMoment(out, youthPmOut)) return false;
-  return true;
+  // Show staff PM out when YouthWorks saved a correction (staffCorrectedByUserId),
+  // or when sign-out differs from youth and is not an autofill placeholder.
+  const out = daily?.signOutTime || daily?.adjustedSignOut;
+  if (!out || isScheduleAutofillTime(out) || isScheduledPlaceholderTime(out)) {
+    return false;
+  }
+  if (daily?.staffCorrectedByUserId) {
+    const youthPmOut = day?.punches?.pm_out?.youthTimeIso;
+    if (youthPmOut && sameIsoMoment(out, youthPmOut)) return false;
+    return true;
+  }
+  return false;
 }
 
 export function staffAfternoonOutInput(
@@ -244,7 +299,7 @@ export function staffAfternoonOutInput(
 ): string {
   if (!hasStaffAfternoonOutCorrection(daily, day)) return "";
   const out = daily?.signOutTime || daily?.adjustedSignOut;
-  if (isDefaultAfternoonOutTime(out)) return "";
+  if (isScheduleAutofillTime(out) || isScheduledPlaceholderTime(out)) return "";
   return toTimeInputValue(out);
 }
 export function computeEffectiveHoursPresent(
@@ -401,17 +456,21 @@ export function syncedPunchLabel(
   day: StudentDayAttendance,
   punch: PunchType,
 ): string {
-  if (punch === "pm_out" && isDefaultAfternoonOutTime(day.punches.pm_out.youthTimeIso)) {
+  const slot = day.punches[punch];
+  if (slot.youthTimeIso && isScheduleAutofillTime(slot.youthTimeIso)) {
     return "—";
   }
-  const slot = day.punches[punch];
+  if (punch === "pm_out" && isDefaultAfternoonOutTime(slot.youthTimeIso)) {
+    return "—";
+  }
   const candidates = [
+    slot.youthTimeIso ? formatAttendanceTime(slot.youthTimeIso) : null,
     slot.timeLabel,
     slot.adjustedTimeLabel,
     slot.originalTimeLabel,
   ];
   for (const label of candidates) {
-    if (label && label !== "[object Object]") {
+    if (label && label !== "[object Object]" && !isScheduleAutofillTime(label)) {
       if (punch === "pm_out" && isDefaultAfternoonOutTime(label)) continue;
       return label;
     }

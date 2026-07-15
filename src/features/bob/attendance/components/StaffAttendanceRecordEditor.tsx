@@ -11,6 +11,12 @@ import {
 } from "@/platform/api/bob/attendance";
 import type { StudentDayAttendance } from "../types";
 import {
+  expectedHoursForDate,
+  isProgramDay,
+  PROGRAM_END_DATE,
+  PROGRAM_START_DATE,
+} from "@/lib/bobProgramCalendar";
+import {
   useBobAttendanceRecord,
   useSaveBobAttendanceRecord,
 } from "@/platform/query/hooks/useBobAttendance";
@@ -37,7 +43,6 @@ import {
 } from "../model/staffRecordDerived";
 import { resolveDayHoursNumeric } from "../model/dayHours";
 import { formatAttendanceTime } from "../model/formatAttendanceTime";
-import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
 import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 import { parseApiError } from "@/platform/api/errors";
 
@@ -315,19 +320,34 @@ export function StaffAttendanceRecordEditor({
   }
 
   const loading = Boolean(recordId) && recordQuery.isLoading;
+  const outsideProgram = !isProgramDay(day.date);
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
       <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Staff corrections
+          How times are shown
         </p>
         <p className="text-xs text-gray-600 mt-0.5">
-          Youth sign-in times are shown below for reference. Enter only the
-          punches you need to correct — leave others blank to keep the
-          student&apos;s sign-in data.
+          The hub keeps three layers separate: <strong>Youth sign-in</strong>{" "}
+          (kiosk punches), <strong>Staff corrections</strong> (times you enter
+          here), and <strong>Final record</strong> (youth + staff merged for
+          payroll). Enter only the punches you need to fix — leave others blank
+          to keep the student&apos;s data. Schedule autofills (12:30 / 6:30 PM)
+          are ignored and never shown as staff corrections.
         </p>
       </div>
+
+      {outsideProgram ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+          <p className="text-xs font-medium text-amber-900">
+            {day.date} is outside the program calendar ({PROGRAM_START_DATE} –{" "}
+            {PROGRAM_END_DATE}, weekdays only). Saves may succeed, but this day
+            will not appear on the main attendance hub. Use a program weekday
+            (e.g. July 29 showcase) if you meant a summer program day.
+          </p>
+        </div>
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-gray-500">Loading record…</p>
@@ -375,14 +395,14 @@ export function StaffAttendanceRecordEditor({
 
       <div className="rounded-lg border border-gray-200 p-3 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Synced sign-in / sign-out
+          Youth sign-in (kiosk)
         </p>
         <PunchGrid day={day} />
       </div>
 
       <div className="rounded-lg border border-orange-200 bg-orange-50/40 p-3 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-orange-800">
-          Staff corrections
+          Staff corrections (edit)
         </p>
         <div className="grid grid-cols-2 gap-3">
           <TimeField

@@ -12,6 +12,7 @@ import {
 import {
   findTrackerForTeam,
   teamNameMatchesFilter,
+  teamReviewStatus,
   teamTrackerSummaries,
 } from "../deliverableTeamReview";
 import { DeliverableWeeklySubmissions } from "./DeliverableWeeklySubmissions";
@@ -319,7 +320,7 @@ export function DeliverableDetailDrawer({
               <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
                 {teamSummaries.map(({ teamName: name, tracker: row }) => {
                   const badge = reviewStatusBadge(
-                    row?.reviewStatus || "not_started",
+                    teamReviewStatus(deliverable, name),
                   );
                   const completedBy =
                     row?.deliverableStatus === "Completed" ||

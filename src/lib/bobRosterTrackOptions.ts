@@ -158,29 +158,58 @@ export function resolveStudentTrackLabel(student: {
   return first ? formatBobTrackDisplayLabel(first) : "Unassigned";
 }
 
-/** Whether a student-day has real sign-in/out or hours evidence (not roster baseline / status-only). */
+import { isScheduleAutofillTime } from "@/features/bob/attendance/model/staffRecordDerived";
+
+/** Whether a student-day has real sign-in/out evidence (not roster baseline / status-only). */
 function hasRecordedAttendanceEvidence(day: {
   punches?: Record<
     string,
     { youthTimeIso?: string; timeLabel?: string }
   >;
-  totalHoursLabel?: string;
+  hasManualCorrection?: boolean;
+  staffCorrections?: { hasCorrections?: boolean };
+  finalRecord?: {
+    morning?: { in?: string; out?: string };
+    afternoon?: { in?: string; out?: string };
+    totalHours?: string;
+  };
 }): boolean {
   if (day.punches) {
     for (const slot of Object.values(day.punches)) {
-      if (slot.youthTimeIso) return true;
+      // Prefer youth punch ISO — timeLabel alone can be Airtable autofill bleed
       if (
-        slot.timeLabel &&
-        slot.timeLabel !== "—" &&
-        slot.timeLabel !== "[object Object]"
+        slot.youthTimeIso &&
+        !isScheduleAutofillTime(slot.youthTimeIso)
       ) {
         return true;
       }
     }
   }
-  const raw = String(day.totalHoursLabel || "").replace(/[^\d.]/g, "");
-  const hours = Number(raw);
-  return Number.isFinite(hours) && hours >= 0.5;
+  if (day.hasManualCorrection || day.staffCorrections?.hasCorrections) {
+    return true;
+  }
+  const final = day.finalRecord;
+  if (final) {
+    const times = [
+      final.morning?.in,
+      final.morning?.out,
+      final.afternoon?.in,
+      final.afternoon?.out,
+    ];
+    if (
+      times.some(
+        (t) =>
+          Boolean(t) &&
+          t !== "—" &&
+          !isScheduleAutofillTime(t),
+      )
+    ) {
+      return true;
+    }
+  }
+  // Do not use totalHoursLabel alone — Airtable rollups inflate when autofill
+  // sign-outs (12:30 / 6:30 PM) invent hours without real attendance.
+  return false;
 }
 
 /** Whether a student-day counts as present for daily attendance (not hours). */
@@ -192,6 +221,13 @@ export function isStudentPresentToday(day: {
     { youthTimeIso?: string; timeLabel?: string }
   >;
   totalHoursLabel?: string;
+  hasManualCorrection?: boolean;
+  staffCorrections?: { hasCorrections?: boolean };
+  finalRecord?: {
+    morning?: { in?: string; out?: string };
+    afternoon?: { in?: string; out?: string };
+    totalHours?: string;
+  };
 }): boolean {
   if (
     day.attendanceState === "excused" ||
@@ -208,6 +244,8 @@ export function isStudentPresentToday(day: {
   return (
     day.attendanceState === "present" ||
     day.attendanceState === "late" ||
-    day.health === "complete"
+    day.health === "complete" ||
+    day.hasManualCorrection === true ||
+    day.staffCorrections?.hasCorrections === true
   );
 }

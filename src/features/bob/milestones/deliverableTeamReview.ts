@@ -56,6 +56,10 @@ export function teamReviewStatus(
   deliverable: BobDeliverable,
   teamName?: string,
 ): string {
+  // Catalog / no team: templates stay Not started — never roll up a team or
+  // treat a past deadline as started/pending.
+  if (!teamName) return "not_started";
+
   const tracker = findTrackerForTeam(deliverable, teamName);
   const hasUploads = Boolean(tracker?.uploads?.length);
   // Blank tracker / default pending_review with no files → not started
@@ -76,20 +80,14 @@ export function teamReviewStatus(
   if (tracker?.deliverableStatus === "Not Started") {
     return hasUploads ? "pending_review" : "not_started";
   }
-  if (tracker?.reviewStatus) return tracker.reviewStatus;
-  if (!teamName) {
-    const status = deliverable.reviewStatus;
+  if (tracker?.reviewStatus) {
     if (
-      !status ||
-      status === "pending_review" ||
-      status === "not_started"
+      tracker.reviewStatus === "pending_review" &&
+      !hasUploads
     ) {
-      const anyUploads = (deliverable.trackerRecords || []).some(
-        (t) => t.uploads?.length,
-      );
-      return anyUploads ? "pending_review" : "not_started";
+      return "not_started";
     }
-    return status;
+    return tracker.reviewStatus;
   }
   return "not_started";
 }

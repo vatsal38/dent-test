@@ -2,6 +2,22 @@
 
 import type { AttendanceSession, StudentDayAttendance } from "../types";
 import { PUNCH_LABELS, PUNCH_STATE_COLORS } from "../model/constants";
+import { formatAttendanceTime } from "../model/formatAttendanceTime";
+import { isScheduleAutofillTime } from "../model/staffRecordDerived";
+
+function youthPunchLabel(slot: AttendanceSession["in"]): string {
+  if (slot.youthTimeIso && !isScheduleAutofillTime(slot.youthTimeIso)) {
+    return formatAttendanceTime(slot.youthTimeIso) || "—";
+  }
+  if (
+    slot.timeLabel &&
+    slot.timeLabel !== "[object Object]" &&
+    !isScheduleAutofillTime(slot.timeLabel)
+  ) {
+    return slot.timeLabel;
+  }
+  return "—";
+}
 
 function SessionBlock({
   title,
@@ -18,6 +34,8 @@ function SessionBlock({
 }) {
   const inColors = PUNCH_STATE_COLORS[session.in.state];
   const outColors = PUNCH_STATE_COLORS[session.out.state];
+  const inTime = youthPunchLabel(session.in);
+  const outTime = youthPunchLabel(session.out);
 
   if (compact) {
     return (
@@ -27,10 +45,10 @@ function SessionBlock({
         </p>
         <div className="flex items-center gap-1.5 text-xs text-gray-800">
           <span className={`h-2 w-2 rounded-full ${inColors.dot}`} title="In" />
-          <span>{session.in.timeLabel && session.in.timeLabel !== "[object Object]" ? session.in.timeLabel : "—"}</span>
+          <span>{inTime}</span>
           <span className="text-gray-300">→</span>
           <span className={`h-2 w-2 rounded-full ${outColors.dot}`} title="Out" />
-          <span>{session.out.timeLabel && session.out.timeLabel !== "[object Object]" ? session.out.timeLabel : "—"}</span>
+          <span>{outTime}</span>
         </div>
         <p className="text-[10px] text-gray-500 mt-0.5">
           {session.hoursLabel ? `${session.hoursLabel} · ` : ""}
@@ -51,11 +69,15 @@ function SessionBlock({
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
           <p className="text-[10px] uppercase tracking-wide text-gray-500">{inLabel}</p>
-          <p className={`font-medium ${inColors.text}`}>{session.in.timeLabel || "Missing"}</p>
+          <p className={`font-medium ${inColors.text}`}>
+            {inTime === "—" ? "Missing" : inTime}
+          </p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wide text-gray-500">{outLabel}</p>
-          <p className={`font-medium ${outColors.text}`}>{session.out.timeLabel || "Missing"}</p>
+          <p className={`font-medium ${outColors.text}`}>
+            {outTime === "—" ? "Missing" : outTime}
+          </p>
         </div>
       </div>
       <p className="text-xs text-gray-600">{session.statusLabel}</p>

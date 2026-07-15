@@ -1,4 +1,7 @@
-import type { BobSubmission, BobSubmissionType } from "@/platform/api/bob/submissions";
+import type {
+  BobSubmission,
+  BobSubmissionType,
+} from "@/platform/api/bob/submissions";
 import { progressStatusLabel } from "@/features/bob/progress/progressConstants";
 import { feedbackCategoryLabel } from "@/features/bob/submit/feedbackCategories";
 import {
@@ -41,10 +44,8 @@ export function badgeClassesForType(type: BobSubmissionType) {
 export function severityBadge(severity: string | null | undefined) {
   if (!severity) return null;
   const s = severity.toLowerCase();
-  if (s === "high")
-    return "bg-red-100 text-red-800 border-red-200";
-  if (s === "medium")
-    return "bg-amber-100 text-amber-800 border-amber-200";
+  if (s === "high") return "bg-red-100 text-red-800 border-red-200";
+  if (s === "medium") return "bg-amber-100 text-amber-800 border-amber-200";
   return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
@@ -78,8 +79,7 @@ function submitterSuffix(s: BobSubmission) {
 export function cardTitle(s: BobSubmission) {
   const student = s.student?.trim();
   const studentList =
-    student ||
-    (s.studentIds?.length ? `${s.studentIds.length} students` : "");
+    student || (s.studentIds?.length ? `${s.studentIds.length} students` : "");
   const by = submitterSuffix(s);
   if (s.type === "incident") {
     const raw = s.incidentType?.trim().toLowerCase();
@@ -97,7 +97,9 @@ export function cardTitle(s: BobSubmission) {
   }
   if (s.type === "wellness_check") {
     const score =
-      s.wellnessScore != null ? `${s.wellnessScore}/10` : formatLabel(s.wellnessLevel);
+      s.wellnessScore != null
+        ? `${s.wellnessScore}/10`
+        : formatLabel(s.wellnessLevel);
     const core = student
       ? `${student} · Weekly check-in${score ? ` · ${score}` : ""}`
       : score
@@ -181,9 +183,7 @@ export function cardTitle(s: BobSubmission) {
     const format =
       s.testimonyFormat === "video_link" ? " · Video" : " · Written";
     const who =
-      s.testimonySubject === "staff"
-        ? s.staffMemberName?.trim()
-        : student;
+      s.testimonySubject === "staff" ? s.staffMemberName?.trim() : student;
     const core = who
       ? `${who} · Dent testimony${format}`
       : `Dent testimony${format}`;
@@ -191,11 +191,8 @@ export function cardTitle(s: BobSubmission) {
   }
   if (s.type === "attendance_correction") {
     const kind = s.category || s.incidentType || "Request";
-    const date =
-      s.requestStartDate ? ` · ${s.requestStartDate}` : "";
-    const core = student
-      ? `${student} · ${kind}${date}`
-      : `${kind}${date}`;
+    const date = s.requestStartDate ? ` · ${s.requestStartDate}` : "";
+    const core = student ? `${student} · ${kind}${date}` : `${kind}${date}`;
     return `${core}${by}`;
   }
   const base = SUBMISSION_TYPE_LABELS[s.type] || s.type;
@@ -275,12 +272,17 @@ export function eventTypeLabel(type: string) {
 export function resolveActorLabel(
   actorId: string | null | undefined,
   staff: Array<{ id: string; name?: string | null; email?: string | null }>,
+  fallbackLabel?: string | null,
 ): string {
-  if (!actorId) return "System";
-  const person = staff.find((s) => s.id === actorId);
-  if (person?.name?.trim()) return person.name.trim();
-  if (person?.email?.trim()) return person.email.trim();
-  return "Staff";
+  if (actorId) {
+    const person = staff.find((s) => s.id === actorId);
+    if (person?.name?.trim()) return person.name.trim();
+    if (person?.email?.trim()) return person.email.trim();
+    if (fallbackLabel?.trim()) return fallbackLabel.trim();
+    return "Staff";
+  }
+  if (fallbackLabel?.trim()) return fallbackLabel.trim();
+  return "System";
 }
 
 export function formatEventSummary(

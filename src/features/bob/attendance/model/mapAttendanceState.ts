@@ -39,10 +39,7 @@ export function mapAttendanceStateFromRecord(
   if (record.status === "late") return "late";
   if (record.status === "present") return "present";
 
-  if (record.manualOverride || record.staffCorrectionSignIn || record.staffCorrectionSignOut) {
-    return "present";
-  }
-
+  // Manual override alone is not presence — require punches / hours elsewhere
   return "missing_punch";
 }
 

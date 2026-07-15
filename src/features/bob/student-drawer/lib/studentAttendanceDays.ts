@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import type { BobAttendance } from "@/platform/api/bob/attendance";
 import type { BobStudent } from "@/platform/api/bob/students";
 import {
@@ -8,16 +7,18 @@ import {
   UNASSIGNED_POD_ID,
 } from "@/features/bob/attendance/model/buildAttendanceIndex";
 import type { StudentDayAttendance } from "@/features/bob/attendance/types";
+import { isProgramDay } from "@/lib/bobProgramCalendar";
 
 export function buildStudentAttendanceDays(
   student: BobStudent,
   records: BobAttendance[],
 ): StudentDayAttendance[] {
+  // Weekends / holidays / off-program days are not attendance days
   const dates = [
     ...new Set(
       records
         .map((row) => String(row.date || "").slice(0, 10))
-        .filter(Boolean),
+        .filter((d) => d && isProgramDay(d)),
     ),
   ].sort();
   if (!dates.length) return [];

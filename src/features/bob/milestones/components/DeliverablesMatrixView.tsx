@@ -37,9 +37,11 @@ function DeliverableSlotCard({
   }
 
   const isTeam = variant === "team";
+  // Track catalog cards are shared templates — always Not started.
+  // Deadlines never change this; per-team status lives on the By Team tab.
   const reviewStatus = isTeam
     ? teamReviewStatus(deliverable, teamName)
-    : teamReviewStatus(deliverable);
+    : "not_started";
   const review = reviewStatusBadge(reviewStatus);
   const uploads = isTeam
     ? teamPendingUploadCount(deliverable, teamName)
@@ -137,8 +139,9 @@ export function DeliverablesTrackMatrix({
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-600">
-        Track catalog — shows program progress by track. Staff review happens
-        per project team in the{" "}
+        Track catalog — deliverable templates default to{" "}
+        <span className="font-medium text-gray-800">Not started</span> (even
+        after a deadline). Staff review status is set per project team in the{" "}
         <span className="font-medium text-gray-800">By Team</span> tab.
       </p>
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">

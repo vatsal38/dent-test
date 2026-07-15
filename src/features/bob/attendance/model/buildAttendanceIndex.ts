@@ -21,6 +21,7 @@ import {
   hasExplicitStaffCorrection,
   isScheduledPlaceholderTime,
   isDefaultAfternoonOutTime,
+  isScheduleAutofillTime,
   staffAfternoonInInput,
   staffAfternoonOutInput,
   staffMorningInInput,
@@ -114,9 +115,22 @@ function setPunchTime(
     type: pt,
     state: opts.state ?? "recorded",
     eventId: opts.eventId ?? existing.eventId,
-    timeLabel: isUsableTimeLabel(opts.display) ? opts.display : undefined,
-    originalTimeLabel: isUsableTimeLabel(opts.original) ? opts.original : undefined,
-    adjustedTimeLabel: isUsableTimeLabel(opts.adjusted) ? opts.adjusted : undefined,
+    // Never overwrite youth punch ISO — staff times live in staffCorrections / finalRecord
+    youthTimeIso: existing.youthTimeIso,
+    timeLabel: existing.youthTimeIso
+      ? existing.timeLabel || formatAttendanceTime(existing.youthTimeIso) || undefined
+      : isUsableTimeLabel(opts.display)
+        ? opts.display
+        : existing.timeLabel,
+    originalTimeLabel: isUsableTimeLabel(opts.original)
+      ? opts.original
+      : existing.originalTimeLabel,
+    adjustedTimeLabel:
+      existing.youthTimeIso && opts.force && isUsableTimeLabel(opts.display)
+        ? opts.display
+        : isUsableTimeLabel(opts.adjusted)
+          ? opts.adjusted
+          : existing.adjustedTimeLabel,
     adjustmentReason: opts.reason,
     adjustmentSource: opts.source,
   };
@@ -161,29 +175,41 @@ function populateDailyRecordPunches(
   daily: BobAttendance,
   attendanceState: AttendanceState,
 ) {
-  const amInDisplay = formatAttendanceTime(daily.adjustedSignIn || daily.signInTime);
+  const amInIso = daily.adjustedSignIn || daily.signInTime;
+  const amInDisplay = formatAttendanceTime(amInIso);
   const amInOriginal = formatAttendanceTime(daily.rawSignInTime);
   const amInAdjusted = formatAttendanceTime(daily.adjustedSignIn);
-  const pmOutDisplay = formatAttendanceTime(daily.adjustedSignOut || daily.signOutTime);
+  const pmOutIso = daily.adjustedSignOut || daily.signOutTime;
+  const pmOutDisplay = formatAttendanceTime(pmOutIso);
   const pmOutOriginal = formatAttendanceTime(daily.rawSignOutTime);
   const pmOutAdjusted = formatAttendanceTime(daily.adjustedSignOut);
 
   const manualStart = formatAttendanceTime(daily.manualStartTime);
   const manualEnd = formatAttendanceTime(daily.manualEndTime);
-  const staffIn = formatAttendanceTime(daily.staffCorrectionSignIn);
-  const staffOut = formatAttendanceTime(daily.staffCorrectionSignOut);
+  const staffInIso = daily.staffCorrectionSignIn;
+  const staffOutIso = daily.staffCorrectionSignOut;
+  const staffIn =
+    staffInIso &&
+    !isScheduleAutofillTime(staffInIso) &&
+    !isScheduledPlaceholderTime(staffInIso)
+      ? formatAttendanceTime(staffInIso)
+      : null;
+  const staffOut =
+    staffOutIso &&
+    !isScheduleAutofillTime(staffOutIso) &&
+    !isScheduledPlaceholderTime(staffOutIso)
+      ? formatAttendanceTime(staffOutIso)
+      : null;
 
   const punchState = punchStateFromAttendanceState(attendanceState);
   const correctionSource = daily.manualOverride ? "Manual override" : "Coach correction";
-  const staffCorrection = Boolean(
-    daily.manualOverride ||
-      daily.staffCorrectionSignIn ||
-      daily.staffCorrectionSignOut ||
-      daily.manualStartTime ||
-      daily.manualEndTime,
-  );
+  const staffCorrection = hasExplicitStaffCorrection(daily);
 
-  if ((amInDisplay || amInOriginal) && !isScheduledPlaceholderTime(daily.signInTime)) {
+  if (
+    (amInDisplay || amInOriginal) &&
+    !isScheduledPlaceholderTime(daily.signInTime) &&
+    !isScheduleAutofillTime(amInIso)
+  ) {
     setPunchTime(punches, "am_in", {
       display: amInDisplay || amInOriginal,
       original: amInOriginal,
@@ -197,15 +223,22 @@ function populateDailyRecordPunches(
   }
 
   if (staffOut || manualEnd) {
-    setPunchTime(punches, "am_out", {
-      display: staffOut || manualEnd,
-      original: manualEnd,
-      adjusted: staffOut,
-      state: punchState,
-      reason: staffOut ? correctionSource : undefined,
-      source: staffOut ? correctionSource : undefined,
-      force: true,
-    });
+    const amOutIso = staffOutIso || daily.manualEndTime;
+    if (
+      amOutIso &&
+      !isScheduleAutofillTime(amOutIso) &&
+      !isScheduledPlaceholderTime(amOutIso)
+    ) {
+      setPunchTime(punches, "am_out", {
+        display: staffOut || manualEnd || undefined,
+        original: manualEnd || undefined,
+        adjusted: staffOut || undefined,
+        state: punchState,
+        reason: staffOut ? correctionSource : undefined,
+        source: staffOut ? correctionSource : undefined,
+        force: true,
+      });
+    }
   } else if (pmOutDisplay || pmOutOriginal) {
     const signOutIso =
       daily.adjustedSignOut || daily.signOutTime || daily.rawSignOutTime || null;
@@ -215,9 +248,8 @@ function populateDailyRecordPunches(
       signOutIso &&
       signInIso &&
       Math.abs(new Date(signOutIso).getTime() - new Date(signInIso).getTime()) < 45 * 60 * 1000;
-    const isDefaultPmOut =
-      isAfternoonSignOutTime(signOutIso) && isDefaultAfternoonOutTime(signOutIso);
-    if (!rollupLooksBogus && !isDefaultPmOut) {
+    const isAutofillOut = isScheduleAutofillTime(signOutIso);
+    if (!rollupLooksBogus && !isAutofillOut) {
       const outType = isAfternoonSignOutTime(signOutIso) ? "pm_out" : "am_out";
       setPunchTime(punches, outType, {
         display: pmOutDisplay || pmOutOriginal,
@@ -231,16 +263,23 @@ function populateDailyRecordPunches(
     }
   }
 
-  if (manualStart || staffIn) {
-    setPunchTime(punches, "pm_in", {
-      display: staffIn || manualStart,
-      original: manualStart,
-      adjusted: staffIn,
-      state: punchState,
-      reason: staffIn ? correctionSource : undefined,
-      source: staffIn ? correctionSource : undefined,
-      force: true,
-    });
+  if (staffIn || manualStart) {
+    const pmInIso = staffInIso || daily.manualStartTime;
+    if (
+      pmInIso &&
+      !isScheduleAutofillTime(pmInIso) &&
+      !isScheduledPlaceholderTime(pmInIso)
+    ) {
+      setPunchTime(punches, "pm_in", {
+        display: staffIn || manualStart || undefined,
+        original: manualStart || undefined,
+        adjusted: staffIn || undefined,
+        state: punchState,
+        reason: staffIn ? correctionSource : undefined,
+        source: staffIn ? correctionSource : undefined,
+        force: true,
+      });
+    }
   }
 }
 
@@ -483,8 +522,10 @@ export function buildStudentDayAttendance(
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
         const timeIso = punchEventTimeIso(ev, pt);
-        // Airtable often autofills 6:30 PM afternoon out — treat as blank
-        if (pt === "pm_out" && isDefaultAfternoonOutTime(timeIso)) continue;
+        // Skip schedule autofills (12:30 / 6:30 PM) — not real youth punches
+        if (isScheduleAutofillTime(timeIso) || isDefaultAfternoonOutTime(timeIso)) {
+          continue;
+        }
         const timeLabel = formatAttendanceTime(timeIso);
         if (!timeLabel) continue;
         punches[pt] = {

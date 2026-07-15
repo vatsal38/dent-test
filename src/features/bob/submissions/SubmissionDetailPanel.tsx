@@ -114,9 +114,7 @@ export function SubmissionDetailPanel({
     data.notes ||
     data.reason ||
     [
-      data.curriculumFeedback
-        ? `Curriculum: ${data.curriculumFeedback}`
-        : "",
+      data.curriculumFeedback ? `Curriculum: ${data.curriculumFeedback}` : "",
       data.logisticsFeedback ? `Logistics: ${data.logisticsFeedback}` : "",
       data.openQuestions ? `Questions: ${data.openQuestions}` : "",
     ]
@@ -149,7 +147,8 @@ export function SubmissionDetailPanel({
               >
                 {data.staffMemberName || "View staff roster"} →
               </Link>
-            ) : data.type === "pto_request" && (data.staffMemberName || data.staffMemberId) ? (
+            ) : data.type === "pto_request" &&
+              (data.staffMemberName || data.staffMemberId) ? (
               <Link
                 href={
                   data.staffMemberId
@@ -160,7 +159,8 @@ export function SubmissionDetailPanel({
               >
                 {data.staffMemberName || "View staff roster"} →
               </Link>
-            ) : data.studentId || (data.studentIds && data.studentIds.length > 0) ? (
+            ) : data.studentId ||
+              (data.studentIds && data.studentIds.length > 0) ? (
               data.studentIds && data.studentIds.length > 1 ? (
                 <div className="text-sm text-gray-600 space-y-1">
                   <p className="font-medium text-gray-700">Students</p>
@@ -188,13 +188,17 @@ export function SubmissionDetailPanel({
               <p className="text-sm text-gray-600">{data.student || "—"}</p>
             )}
             {data.type === "incident" && data.isAnonymous ? (
-              <p className="text-xs text-gray-500 mt-1">Submitted anonymously</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Submitted anonymously
+              </p>
             ) : data.createdByLabel && !data.isAnonymous ? (
               <p className="text-xs text-gray-500 mt-1">
                 Submitted by {data.createdByLabel}
               </p>
             ) : data.isAnonymous ? (
-              <p className="text-xs text-gray-500 mt-1">Submitted anonymously</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Submitted anonymously
+              </p>
             ) : null}
             {data.routingReason ? (
               <p className="text-xs text-gray-500 mt-1">
@@ -236,7 +240,11 @@ export function SubmissionDetailPanel({
           ) : null}
           {data.requestAmount != null ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-800">
-              ${data.requestAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              $
+              {data.requestAmount.toLocaleString("en-US", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </span>
           ) : null}
           {data.requestStartDate && data.requestEndDate ? (
@@ -315,7 +323,8 @@ export function SubmissionDetailPanel({
             </span>
           ) : null}
           {data.priority &&
-          data.priority.toLowerCase() !== (data.severity || "").toLowerCase() ? (
+          data.priority.toLowerCase() !==
+            (data.severity || "").toLowerCase() ? (
             <span className="text-xs px-2 py-0.5 rounded border bg-gray-100">
               Priority: {levelLabel(data.priority)}
             </span>
@@ -447,7 +456,9 @@ export function SubmissionDetailPanel({
             <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
               Next week
             </h3>
-            <p className="whitespace-pre-wrap text-gray-800">{data.nextWeekPlan}</p>
+            <p className="whitespace-pre-wrap text-gray-800">
+              {data.nextWeekPlan}
+            </p>
           </div>
         ) : null}
 
@@ -456,7 +467,9 @@ export function SubmissionDetailPanel({
             <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">
               Proof links
             </h3>
-            <p className="whitespace-pre-wrap text-gray-800 break-all">{data.proofLinks}</p>
+            <p className="whitespace-pre-wrap text-gray-800 break-all">
+              {data.proofLinks}
+            </p>
           </div>
         ) : null}
 
@@ -576,10 +589,7 @@ export function SubmissionDetailPanel({
                     onClick={async () => {
                       setDownloadingId(a.id);
                       try {
-                        await downloadBobSubmissionAttachment(
-                          data.id,
-                          a.id,
-                        );
+                        await downloadBobSubmissionAttachment(data.id, a.id);
                       } finally {
                         setDownloadingId(null);
                       }
@@ -604,7 +614,25 @@ export function SubmissionDetailPanel({
             ) : (
               events.map((e) => {
                 const summary = formatEventSummary(e.type, e.content, e.meta);
-                const actor = resolveActorLabel(e.actorId, staff);
+                // Creation-time events historically lacked actorId — fall back to submitter
+                // (skip when anonymous so we do not reveal the creator).
+                const creationTypes = new Set([
+                  "created",
+                  "routing",
+                  "assignment",
+                  "notification",
+                  "attachment",
+                ]);
+                const useSubmitterFallback =
+                  !e.actorId &&
+                  !data?.isAnonymous &&
+                  creationTypes.has(e.type);
+                const actor = resolveActorLabel(
+                  e.actorId ||
+                    (useSubmitterFallback ? data?.createdBy : null),
+                  staff,
+                  useSubmitterFallback ? data?.createdByLabel : null,
+                );
                 return (
                   <div
                     key={e.id}
