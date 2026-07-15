@@ -29,6 +29,7 @@ export interface BobMeResponse {
     firstName?: string | null;
     lastName?: string | null;
     preferredName?: string | null;
+    airtableRecordId?: string | null;
     podId: string | null;
     track: string | null;
   } | null;

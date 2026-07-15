@@ -13,13 +13,15 @@ import {
   BOB_MILESTONES_ORG_ID,
   useBobMilestonesList,
 } from "@/platform/query/hooks/useBobMilestones";
-import { useBobProjectTeamsList } from "@/platform/query/hooks/useBobProjectTeams";
+import {
+  useBobProjectTeamsList,
+  useMyBobProjectTeams,
+} from "@/platform/query/hooks/useBobProjectTeams";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import {
   filterDeliverablesForStudent,
   projectTeamsForStudent,
 } from "@/features/bob/milestones/deliverableStudentScope";
-import { studentLabel } from "@/features/bob/submit/StudentMultiSelect";
 import { studentDisplayName } from "@/features/bob/roster/recordDisplay";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
 import { PROGRESS_DELIVERABLE_STATUS_OPTIONS } from "@/features/bob/progress/progressConstants";
@@ -61,34 +63,65 @@ export function ProgressUpdatePage() {
   );
   const students = studentsQuery.data?.students ?? [];
 
-  const selectedStudent = useMemo(() => {
+  const selectedStudent = useMemo((): BobStudent | null => {
     if (isStudent && me?.linkedStudent) {
+      const ls = me.linkedStudent;
       return {
-        id: me.linkedStudent.id,
-        firstName: me.linkedStudent.name?.split(" ")[0] ?? "",
-        lastName: me.linkedStudent.name?.split(" ").slice(1).join(" ") ?? "",
-      } as BobStudent;
+        id: ls.id,
+        firstName: ls.firstName || "",
+        lastName: ls.lastName || "",
+        preferredName: ls.preferredName || null,
+        email: null,
+        phone: null,
+        status: "active",
+        interviewStage: "placed",
+        podId: ls.podId ?? null,
+        track: ls.track ?? null,
+        airtableRecordId: ls.airtableRecordId ?? null,
+        createdAt: "",
+        updatedAt: "",
+      };
     }
     return students.find((s) => s.id === selectedStudentId) ?? null;
   }, [isStudent, me?.linkedStudent, students, selectedStudentId]);
 
   const milestonesQuery = useBobMilestonesList({ orgId: BOB_MILESTONES_ORG_ID });
-  const teamsQuery = useBobProjectTeamsList({});
+  // Youth: use server-resolved membership (same as Deliverables / My Project Team).
+  // Staff: load all teams and filter client-side for the selected roster student.
+  const allTeamsQuery = useBobProjectTeamsList({}, { enabled: !isStudent });
+  const myTeamsQuery = useMyBobProjectTeams(isStudent);
+
+  const projectTeams = useMemo(() => {
+    if (isStudent) return myTeamsQuery.data?.data ?? [];
+    if (!selectedStudent) return [];
+    return projectTeamsForStudent(
+      selectedStudent,
+      allTeamsQuery.data?.data ?? [],
+    );
+  }, [
+    isStudent,
+    myTeamsQuery.data?.data,
+    selectedStudent,
+    allTeamsQuery.data?.data,
+  ]);
 
   const deliverables = useMemo(() => {
     if (!selectedStudent) return [];
+    const teamsForFilter = isStudent
+      ? (myTeamsQuery.data?.data ?? [])
+      : (allTeamsQuery.data?.data ?? []);
     return filterDeliverablesForStudent(
       milestonesQuery.data?.data ?? [],
       selectedStudent,
-      teamsQuery.data?.data ?? [],
+      teamsForFilter,
     );
-  }, [selectedStudent, milestonesQuery.data?.data, teamsQuery.data?.data]);
-
-  const projectTeams = useMemo(() => {
-    if (!selectedStudent) return [];
-    return projectTeamsForStudent(selectedStudent, teamsQuery.data?.data ?? []);
-  }, [selectedStudent, teamsQuery.data?.data]);
-
+  }, [
+    selectedStudent,
+    milestonesQuery.data?.data,
+    isStudent,
+    myTeamsQuery.data?.data,
+    allTeamsQuery.data?.data,
+  ]);
   useEffect(() => {
     if (!effectiveStudentId || selectedStudentId) return;
     setSelectedStudentId(effectiveStudentId);
@@ -171,7 +204,7 @@ export function ProgressUpdatePage() {
       const deliverable = deliverables.find((d) => d.id === form.deliverableId);
       const payload: BobOneStopPayload = {
         studentId,
-        student: selectedStudent ? studentLabel(selectedStudent) : "",
+        student: selectedStudent ? studentDisplayName(selectedStudent) : "",
         teamName: form.teamName,
         projectTeamId: form.projectTeamId,
         deliverableId: form.deliverableId,
@@ -274,7 +307,7 @@ export function ProgressUpdatePage() {
                 studentDropdownOpen
                   ? studentSearch
                   : selectedStudent
-                    ? studentLabel(selectedStudent)
+                    ? studentDisplayName(selectedStudent)
                     : ""
               }
               onChange={(e) => {
@@ -300,11 +333,12 @@ export function ProgressUpdatePage() {
                           ...f,
                           deliverableId: "",
                           teamName: "",
+                          projectTeamId: "",
                         }));
                       }}
                       className="w-full px-3 py-2 text-left text-sm hover:bg-orange-50"
                     >
-                      {studentLabel(s)}
+                      {studentDisplayName(s)}
                     </button>
                   </li>
                 ))}
@@ -335,7 +369,11 @@ export function ProgressUpdatePage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Project team
           </label>
-          {projectTeams.length > 0 ? (
+          {isStudent && myTeamsQuery.isLoading ? (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+              Loading your project team…
+            </div>
+          ) : projectTeams.length > 0 ? (
             <select
               value={form.projectTeamId ?? ""}
               onChange={(e) => {

@@ -79,14 +79,16 @@ export function MilestonesPage() {
     const ls = me.linkedStudent;
     return {
       id: ls.id,
-      firstName: "",
-      lastName: ls.name || "",
+      firstName: ls.firstName || "",
+      lastName: ls.lastName || "",
+      preferredName: ls.preferredName || null,
       email: null,
       phone: null,
       status: "active",
       interviewStage: "placed",
       podId: ls.podId ?? null,
       track: ls.track ?? null,
+      airtableRecordId: ls.airtableRecordId ?? null,
       createdAt: "",
       updatedAt: "",
     };
