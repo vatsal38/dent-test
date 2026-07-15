@@ -26,6 +26,9 @@ export interface BobMeResponse {
   linkedStudent?: {
     id: string;
     name: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    preferredName?: string | null;
     podId: string | null;
     track: string | null;
   } | null;

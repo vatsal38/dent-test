@@ -168,11 +168,13 @@ export function reviewStatusBadge(status: string | null | undefined) {
     case "in_progress":
       return { label: "In progress", className: "bg-blue-100 text-blue-800" };
     case "pending_review":
-    default:
       return {
         label: "Pending Review",
         className: "bg-amber-100 text-amber-900",
       };
+    default:
+      // Blank / unknown statuses default to Not started (never inferred from deadlines)
+      return { label: "Not started", className: "bg-gray-100 text-gray-800" };
   }
 }
 

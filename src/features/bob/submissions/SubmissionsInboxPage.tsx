@@ -214,6 +214,45 @@ export function SubmissionsInboxPage() {
         facets={facets}
       />
 
+      {filters.deliverableId ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+          <p>
+            Showing weekly progress for this deliverable
+            {filters.teamName ? (
+              <>
+                {" "}
+                · team <span className="font-medium">{filters.teamName}</span>
+              </>
+            ) : null}
+          </p>
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              href={`/app/bob/deliverables?id=${encodeURIComponent(filters.deliverableId)}${
+                filters.teamName
+                  ? `&team=${encodeURIComponent(filters.teamName)}&tab=by_team`
+                  : ""
+              }`}
+              className="text-xs font-medium text-orange-700 hover:underline"
+            >
+              Open deliverable →
+            </Link>
+            <button
+              type="button"
+              onClick={() =>
+                handleFiltersChange({
+                  ...filters,
+                  deliverableId: "",
+                  teamName: "",
+                })
+              }
+              className="text-xs font-medium text-orange-700 hover:underline"
+            >
+              Clear filter
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <p className="text-xs text-gray-500 mb-2">
         {data?.total ?? items.length} submission
         {(data?.total ?? 0) === 1 ? "" : "s"} · drag cards between columns to

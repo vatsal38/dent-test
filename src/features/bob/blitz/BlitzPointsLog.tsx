@@ -21,8 +21,9 @@ function formatWhen(iso: string | null) {
 
 function sourceLabel(entry: BlitzPointsLogEntry) {
   if (entry.isRollup) return "Global rollup";
-  if (entry.source === "auto") return "Auto";
-  return "Manual";
+  if (entry.source === "auto") return entry.awardedBy || "Auto";
+  // Manual awards: show who submitted (falls back to Manual only for legacy rows)
+  return entry.awardedBy || "Manual";
 }
 
 export function BlitzPointsLog({ teamFilter }: { teamFilter?: string }) {
@@ -97,7 +98,6 @@ export function BlitzPointsLog({ teamFilter }: { teamFilter?: string }) {
                 <p className="text-[10px] text-gray-400 mt-1">
                   {sourceLabel(entry)}
                   {entry.category ? ` · ${entry.category}` : ""}
-                  {entry.awardedBy ? ` · ${entry.awardedBy}` : ""}
                 </p>
               </div>
               <span className="text-[10px] text-gray-400 shrink-0 tabular-nums">

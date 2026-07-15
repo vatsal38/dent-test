@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
@@ -62,9 +62,12 @@ export function MilestonesPage() {
   const searchParams = useSearchParams();
   const initialTab = searchParams?.get("tab");
   const teamFilterParam = searchParams?.get("team") || "";
+  const deliverableIdParam = searchParams?.get("id") || "";
   const orgId = BOB_MILESTONES_ORG_ID;
   const { access, can } = useBobAccess();
   const { data: me } = useBobMe();
+  const defaultReviewerName =
+    me?.user?.name?.trim() || me?.user?.email?.trim() || "";
   const studentTrack = useMemo(() => {
     if (access.role !== "student") return "";
     const raw = me?.linkedStudent?.track || "";
@@ -191,6 +194,21 @@ export function MilestonesPage() {
     return listTeamDeliverablesNeedingReview(data, allowedTeamNames);
   }, [data, allowedTeamNames, teamsReady]);
 
+  // Deep-link: /app/bob/deliverables?id=…&team=…&tab=by_team
+  const openedFromUrlRef = useRef(false);
+  useEffect(() => {
+    if (!deliverableIdParam || !data.length || openedFromUrlRef.current) return;
+    const match = data.find((d) => d.id === deliverableIdParam);
+    if (!match) return;
+    openedFromUrlRef.current = true;
+    setDetailSaveError(null);
+    setDetail({
+      deliverable: match,
+      teamName: teamFilterParam || undefined,
+    });
+    if (teamFilterParam) setTab("by_team");
+  }, [deliverableIdParam, data, teamFilterParam]);
+
   function openDetail(d: BobDeliverable, teamName?: string) {
     setDetailSaveError(null);
     setDetail({ deliverable: d, teamName });
@@ -208,6 +226,7 @@ export function MilestonesPage() {
     reviewStatus: string,
     trackerStatus?: string,
     teamName?: string,
+    reviewedBy?: string,
   ): BobDeliverable {
     const trackerValue =
       trackerStatus ||
@@ -236,7 +255,7 @@ export function MilestonesPage() {
               airtableRecordId: "pending",
               date: null,
               deliverableStatus: null,
-              reviewStatus: "pending_review",
+              reviewStatus: "not_started",
               staffReviewNotes: null,
               projectDeliverable: null,
               amountEarned: null,
@@ -245,6 +264,10 @@ export function MilestonesPage() {
             };
       nextRow.deliverableStatus = trackerValue;
       nextRow.reviewStatus = TRACKER_TO_APP_REVIEW[trackerValue] || reviewValue;
+      if (reviewedBy) {
+        nextRow.reviewedBy = reviewedBy;
+        nextRow.reviewedAt = new Date().toISOString();
+      }
       if (trackerIdx >= 0) trackers[trackerIdx] = nextRow;
       else trackers.unshift(nextRow);
     }
@@ -269,6 +292,7 @@ export function MilestonesPage() {
       reviewStatus,
       trackerStatus,
       teamName,
+      defaultReviewerName || undefined,
     );
     const tracker = findTrackerForTeam(item, teamName);
 
@@ -287,6 +311,7 @@ export function MilestonesPage() {
           trackerDeliverableStatus: trackerStatus,
           trackerId: tracker?.id,
           teamName,
+          reviewedBy: defaultReviewerName || undefined,
         },
       });
       if (detail?.deliverable.id === updated.id) {
@@ -569,7 +594,7 @@ export function MilestonesPage() {
           allowedTeamNames={allowedTeamNames}
           updatingId={updatingId}
           detailSaveError={detailSaveError}
-          defaultReviewerName={me?.user?.name || me?.user?.email || ""}
+          defaultReviewerName={defaultReviewerName}
           onClose={() => setDetail(null)}
           onReviewChange={handleReviewChange}
           onSaveStaffReview={handleSaveStaffReview}

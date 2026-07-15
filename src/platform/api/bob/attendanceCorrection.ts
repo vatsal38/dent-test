@@ -9,6 +9,11 @@ export interface AttendanceCorrectionDateOption {
   attendanceId: string;
   airtableRecordId: string;
   date: string;
+  /** Four punch slots (preferred); signIn/signOut kept for back-compat */
+  morningIn?: string | null;
+  morningOut?: string | null;
+  afternoonIn?: string | null;
+  afternoonOut?: string | null;
   signInTime: string | null;
   signOutTime: string | null;
   attendanceStatus: string | null;
@@ -19,6 +24,7 @@ export interface AttendanceCorrectionStudentOption {
   id: string;
   firstName: string;
   lastName: string;
+  preferredName?: string | null;
   email: string | null;
   school: string | null;
   airtableRecordId: string | null;

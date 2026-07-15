@@ -483,6 +483,8 @@ export function buildStudentDayAttendance(
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
         const timeIso = punchEventTimeIso(ev, pt);
+        // Airtable often autofills 6:30 PM afternoon out — treat as blank
+        if (pt === "pm_out" && isDefaultAfternoonOutTime(timeIso)) continue;
         const timeLabel = formatAttendanceTime(timeIso);
         if (!timeLabel) continue;
         punches[pt] = {

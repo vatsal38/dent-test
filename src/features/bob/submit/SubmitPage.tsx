@@ -406,8 +406,13 @@ export function SubmitPage() {
                         form.staffMemberName || selfStaff?.name || submitterName;
                 }
             }
-            if (submissionType === 'blitz_points' && blitzCategoryMeta?.fixedPoints) {
-                payload.points = String(blitzCategoryMeta.defaultPoints);
+            if (submissionType === 'blitz_points') {
+                if (blitzCategoryMeta?.fixedPoints) {
+                    payload.points = String(blitzCategoryMeta.defaultPoints);
+                }
+                if (submitterName && submitterName !== 'You') {
+                    payload.awardedBy = submitterName;
+                }
             }
             if (pendingFiles.length > 0) {
                 payload.attachments = await Promise.all(

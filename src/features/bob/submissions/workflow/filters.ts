@@ -24,6 +24,9 @@ export interface SubmissionFilterState {
   archivedOnly: boolean;
   /** When false (default), blitz / progress / feedback types are excluded unless a type filter is set. */
   includeAllTypes: boolean;
+  /** Deep-link filter from deliverable Review → Open inbox */
+  deliverableId: string;
+  teamName: string;
 }
 
 export const DEFAULT_SUBMISSION_FILTERS: SubmissionFilterState = {
@@ -36,6 +39,8 @@ export const DEFAULT_SUBMISSION_FILTERS: SubmissionFilterState = {
   excludeArchived: true,
   archivedOnly: false,
   includeAllTypes: false,
+  deliverableId: "",
+  teamName: "",
 };
 
 export function parseFiltersFromSearchParams(
@@ -52,6 +57,8 @@ export function parseFiltersFromSearchParams(
     excludeArchived: sp.get("archived") !== "1" && sp.get("archivedOnly") !== "1",
     archivedOnly: sp.get("archivedOnly") === "1",
     includeAllTypes: sp.get("allTypes") === "1" || Boolean(type),
+    deliverableId: sp.get("deliverableId") || "",
+    teamName: sp.get("teamName") || "",
   };
 }
 
@@ -68,6 +75,8 @@ export function filtersToSearchParams(
   if (filters.archivedOnly) sp.set("archivedOnly", "1");
   else if (!filters.excludeArchived) sp.set("archived", "1");
   if (filters.includeAllTypes) sp.set("allTypes", "1");
+  if (filters.deliverableId) sp.set("deliverableId", filters.deliverableId);
+  if (filters.teamName) sp.set("teamName", filters.teamName);
   return sp;
 }
 
@@ -96,6 +105,8 @@ export function filtersToListParams(
     excludeArchived: filters.archivedOnly ? false : filters.excludeArchived,
     archivedOnly: filters.archivedOnly || undefined,
     excludeTypes,
+    deliverableId: filters.deliverableId || undefined,
+    teamName: filters.teamName || undefined,
     limit: 300,
   };
 }

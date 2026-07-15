@@ -1,4 +1,4 @@
-import { API_BASE } from "@/platform/api/client";
+import { API_BASE, getIdToken } from "@/platform/api/client";
 
 export interface BlitzTeamOption {
   value: string;
@@ -50,9 +50,15 @@ export async function submitBobOneStop(
   type: string,
   payload: BobOneStopPayload,
 ): Promise<{ success: boolean; id?: string }> {
+  const token = await getIdToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`${API_BASE}/api/bob/submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ type, ...payload }),
   });
   if (!res.ok) {

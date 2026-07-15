@@ -34,6 +34,10 @@ export function studentSummaryRows(s: BobStudent): Array<{ label: string; value:
   };
 
   return [
+    {
+      label: "Preferred Name",
+      value: s.preferredName || get("Preferred Name"),
+    },
     { label: "Email", value: s.email || get("Student Email") || get("Email") },
     { label: "Phone", value: s.phone || get("Student Cell Phone Number") || get("Phone") },
     { label: "School", value: s.school || get("School") },

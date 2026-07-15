@@ -18,6 +18,15 @@ function extractUrls(text: string | null | undefined): string[] {
   return [...new Set(matches.map((u) => u.replace(/[.,);]+$/, "")))];
 }
 
+function inboxHref(deliverableId: string, teamName?: string, submissionId?: string) {
+  const sp = new URLSearchParams();
+  sp.set("type", "progress_update");
+  sp.set("deliverableId", deliverableId);
+  if (teamName) sp.set("teamName", teamName);
+  if (submissionId) sp.set("id", submissionId);
+  return `/app/bob/inbox?${sp.toString()}`;
+}
+
 function SubmissionFiles({ submission }: { submission: BobSubmission }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const proofUrls = extractUrls(submission.proofLinks);
@@ -68,6 +77,62 @@ function SubmissionFiles({ submission }: { submission: BobSubmission }) {
   );
 }
 
+function SubmissionCard({
+  submission,
+  deliverableId,
+  showTeam,
+  canOpenInbox,
+}: {
+  submission: BobSubmission;
+  deliverableId: string;
+  showTeam?: boolean;
+  canOpenInbox: boolean;
+}) {
+  return (
+    <li className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 text-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium text-gray-900 truncate">
+            {submission.student || submission.createdByLabel || "Youth"}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {formatWhen(submission.createdAt)}
+            {submission.programWeekIndex != null
+              ? ` · Week ${submission.programWeekIndex}`
+              : ""}
+            {showTeam && (submission.teamName || submission.team)
+              ? ` · ${submission.teamName || submission.team}`
+              : ""}
+          </p>
+        </div>
+        {submission.deliverableStatus ? (
+          <span className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700">
+            {progressStatusLabel(submission.deliverableStatus)}
+          </span>
+        ) : (
+          <span className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700">
+            Not started
+          </span>
+        )}
+      </div>
+      {submission.reflection ? (
+        <p className="text-gray-700 mt-2 whitespace-pre-wrap text-xs leading-relaxed">
+          {submission.reflection}
+        </p>
+      ) : null}
+      <SubmissionFiles submission={submission} />
+      {canOpenInbox ? (
+        <Link
+          href={inboxHref(deliverableId, undefined, submission.id)}
+          className="inline-block mt-2 text-xs font-medium text-orange-600 hover:underline"
+        >
+          Open submission →
+        </Link>
+      ) : null}
+    </li>
+  );
+}
+
 /** 99B — weekly progress_update submissions linked to this deliverable (+ optional team). */
 export function DeliverableWeeklySubmissions({
   deliverableId,
@@ -77,38 +142,45 @@ export function DeliverableWeeklySubmissions({
   teamName?: string;
 }) {
   const { can } = useBobAccess();
+  // Load all submissions for this deliverable so Review can link to other denters
   const query = useBobSubmissionsList({
     type: "progress_update",
     deliverableId,
-    teamName: teamName || undefined,
     excludeArchived: true,
     limit: 100,
   });
 
-  const submissions = useMemo(() => {
-    const rows = query.data?.submissions || [];
-    const sorted = [...rows].sort(
+  const { teamSubmissions, otherSubmissions } = useMemo(() => {
+    const rows = [...(query.data?.submissions || [])].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    if (!teamName) return sorted;
-    return sorted.filter((s) => {
+    if (!teamName) {
+      return { teamSubmissions: rows, otherSubmissions: [] as BobSubmission[] };
+    }
+    const team: BobSubmission[] = [];
+    const other: BobSubmission[] = [];
+    for (const s of rows) {
       const label = s.teamName || s.team || "";
-      if (!label) return true;
-      return teamNameMatchesFilter(label, teamName);
-    });
+      if (!label || teamNameMatchesFilter(label, teamName)) team.push(s);
+      else other.push(s);
+    }
+    return { teamSubmissions: team, otherSubmissions: other };
   }, [query.data?.submissions, teamName]);
+
+  const canOpenInbox = can("inbox.view");
+  const total = teamSubmissions.length + otherSubmissions.length;
 
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
           Weekly progress submissions
-          {submissions.length ? ` (${submissions.length})` : ""}
+          {total ? ` (${total})` : ""}
         </h3>
-        {can("inbox.view") ? (
+        {canOpenInbox ? (
           <Link
-            href="/app/bob/inbox?type=progress_update"
+            href={inboxHref(deliverableId)}
             className="text-xs text-orange-600 hover:underline"
           >
             Open inbox →
@@ -123,57 +195,51 @@ export function DeliverableWeeklySubmissions({
         <p className="text-sm text-gray-500">Loading weekly submissions…</p>
       ) : query.error ? (
         <p className="text-sm text-red-600">Could not load weekly submissions.</p>
-      ) : submissions.length === 0 ? (
+      ) : total === 0 ? (
         <p className="text-sm text-gray-500 rounded-lg border border-dashed border-gray-200 px-3 py-3">
           No weekly progress updates linked yet
           {teamName ? ` for ${teamName}` : ""}. Youth submit via Weekly progress
           update.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {submissions.map((s) => (
-            <li
-              key={s.id}
-              className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 text-sm"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {s.student || s.createdByLabel || "Youth"}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {formatWhen(s.createdAt)}
-                    {s.programWeekIndex != null
-                      ? ` · Week ${s.programWeekIndex}`
-                      : ""}
-                    {s.teamName || s.team
-                      ? ` · ${s.teamName || s.team}`
-                      : ""}
-                  </p>
-                </div>
-                {s.deliverableStatus ? (
-                  <span className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700">
-                    {progressStatusLabel(s.deliverableStatus)}
-                  </span>
-                ) : null}
-              </div>
-              {s.reflection ? (
-                <p className="text-gray-700 mt-2 whitespace-pre-wrap text-xs leading-relaxed">
-                  {s.reflection}
-                </p>
-              ) : null}
-              <SubmissionFiles submission={s} />
-              {can("inbox.view") ? (
-                <Link
-                  href={`/app/bob/inbox?id=${encodeURIComponent(s.id)}&type=progress_update`}
-                  className="inline-block mt-2 text-xs font-medium text-orange-600 hover:underline"
-                >
-                  Open submission →
-                </Link>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          {teamSubmissions.length ? (
+            <ul className="space-y-3">
+              {teamSubmissions.map((s) => (
+                <SubmissionCard
+                  key={s.id}
+                  submission={s}
+                  deliverableId={deliverableId}
+                  showTeam={!teamName}
+                  canOpenInbox={canOpenInbox}
+                />
+              ))}
+            </ul>
+          ) : teamName ? (
+            <p className="text-sm text-gray-500 rounded-lg border border-dashed border-gray-200 px-3 py-3">
+              No weekly progress updates for {teamName} yet.
+            </p>
+          ) : null}
+
+          {otherSubmissions.length ? (
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                Other denters on this deliverable
+              </h4>
+              <ul className="space-y-3">
+                {otherSubmissions.map((s) => (
+                  <SubmissionCard
+                    key={s.id}
+                    submission={s}
+                    deliverableId={deliverableId}
+                    showTeam
+                    canOpenInbox={canOpenInbox}
+                  />
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

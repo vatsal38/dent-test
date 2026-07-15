@@ -37,9 +37,7 @@ import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttenda
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { buildHoursAttendanceRollup } from "./model/hoursRollup";
-import { studentDisplayName } from "@/features/bob/roster/recordDisplay";
-import { syncedPunchLabel } from "./model/staffRecordDerived";
-import { ATTENDANCE_STATE_LABELS } from "./model/constants";
+import { buildAttendanceCsv } from "./model/attendanceCsvExport";
 import {
   isBeforeProgramStart,
   PROGRAM_END_DATE,
@@ -211,59 +209,7 @@ export function AttendanceHubPage() {
   );
 
   const exportCsv = useCallback(() => {
-    const headers = [
-      "Date",
-      "Track",
-      "Student",
-      "Status",
-      "Health",
-      "Hours",
-      "AM In",
-      "AM Out",
-      "PM In",
-      "PM Out",
-      "Morning hours",
-      "Afternoon hours",
-      "Final AM In",
-      "Final AM Out",
-      "Final PM In",
-      "Final PM Out",
-      "Final total hours",
-      "Missing punches",
-      "Staff corrected",
-      "Notes",
-    ];
-    const rows = tableDays.map((d) => {
-      const student = workspace.studentById.get(d.studentId);
-      const pod = workspace.podById.get(d.podId);
-      const name = student ? studentDisplayName(student) : "Unknown";
-      const final = d.finalRecord;
-      return [
-        d.date,
-        pod?.name ?? d.track ?? "",
-        name,
-        ATTENDANCE_STATE_LABELS[d.attendanceState] || d.attendanceState || "",
-        d.health,
-        d.totalHoursLabel || "",
-        syncedPunchLabel(d, "am_in"),
-        syncedPunchLabel(d, "am_out"),
-        syncedPunchLabel(d, "pm_in"),
-        syncedPunchLabel(d, "pm_out"),
-        d.morning.hoursLabel || "",
-        d.afternoon.hoursLabel || "",
-        final.morning.in || "",
-        final.morning.out || "",
-        final.afternoon.in || "",
-        final.afternoon.out || "",
-        final.totalHours || "",
-        String(d.missingPunchCount),
-        d.staffCorrections.hasCorrections ? "Yes" : "No",
-        d.notes || "",
-      ]
-        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
-        .join(",");
-    });
-    const csv = [headers.join(","), ...rows].join("\n");
+    const csv = buildAttendanceCsv(tableDays, workspace);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

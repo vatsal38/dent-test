@@ -159,6 +159,21 @@ export function DeliverableDetailDrawer({
 
           {isTeamReview ? (
             <>
+              {(tracker?.deliverableStatus === "Completed" ||
+                tracker?.reviewStatus === "approved") &&
+              tracker?.reviewedBy ? (
+                <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
+                  Marked complete by{" "}
+                  <span className="font-medium">{tracker.reviewedBy}</span>
+                  {tracker.reviewedAt
+                    ? ` · ${new Date(tracker.reviewedAt).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}`
+                    : ""}
+                </div>
+              ) : null}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Staff review (tracker status)
@@ -171,7 +186,7 @@ export function DeliverableDetailDrawer({
                     if (!v) return;
                     onReviewChange(
                       deliverable,
-                      TRACKER_TO_APP_REVIEW[v] || "pending_review",
+                      TRACKER_TO_APP_REVIEW[v] || "not_started",
                       v,
                       teamName,
                     );
@@ -193,7 +208,9 @@ export function DeliverableDetailDrawer({
                 </label>
                 <select
                   value={
-                    tracker?.reviewStatus || deliverable.reviewStatus || ""
+                    tracker?.reviewStatus ||
+                    deliverable.reviewStatus ||
+                    "not_started"
                   }
                   disabled={updatingId === deliverable.id}
                   onChange={(e) => {
@@ -304,6 +321,11 @@ export function DeliverableDetailDrawer({
                   const badge = reviewStatusBadge(
                     row?.reviewStatus || "not_started",
                   );
+                  const completedBy =
+                    row?.deliverableStatus === "Completed" ||
+                    row?.reviewStatus === "approved"
+                      ? row?.reviewedBy
+                      : null;
                   return (
                     <li
                       key={name}
@@ -313,7 +335,11 @@ export function DeliverableDetailDrawer({
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {name}
                         </p>
-                        {row?.staffReviewNotes ? (
+                        {completedBy ? (
+                          <p className="text-xs text-gray-500 truncate">
+                            Marked complete by {completedBy}
+                          </p>
+                        ) : row?.staffReviewNotes ? (
                           <p className="text-xs text-gray-500 truncate">
                             {row.staffReviewNotes}
                           </p>
@@ -358,11 +384,14 @@ export function DeliverableDetailDrawer({
                   >
                     <p className="font-medium text-gray-900">
                       {t.date || "Submission"} ·{" "}
-                      {t.deliverableStatus || "Status pending"}
+                      {t.deliverableStatus || "Not Started"}
                     </p>
                     {t.reviewedBy ? (
                       <p className="text-xs text-gray-500 mt-1">
-                        Reviewed by {t.reviewedBy}
+                        {t.deliverableStatus === "Completed"
+                          ? "Marked complete by"
+                          : "Reviewed by"}{" "}
+                        {t.reviewedBy}
                         {t.reviewedAt
                           ? ` · ${new Date(t.reviewedAt).toLocaleString(undefined, {
                               dateStyle: "medium",

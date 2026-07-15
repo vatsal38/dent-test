@@ -26,6 +26,9 @@ import {
 import { decodeBobReturnTo } from '@/lib/bobReturnUrl';
 import { BOB_ATTENDANCE_CORRECTION_AIRTABLE_FORM } from '@/features/bob/submit/formsConfig';
 import { Skeleton } from '@/components/Skeleton';
+import { studentDisplayName } from '@/features/bob/roster/recordDisplay';
+import type { BobStudent } from '@/platform/api/bob/students';
+
 const REQUEST_TYPES: Array<{
   id: AttendanceCorrectionRequestType;
   label: string;
@@ -42,23 +45,41 @@ const REQUEST_TYPES: Array<{
   {
     id: 'time_correction',
     label: 'Sign-in / sign-out correction',
-    description: 'Fix sign-in or sign-out times you believe are wrong.',
+    description: 'Fix sign-in or sign-out times for a specific program day.',
     pillClass: 'bg-blue-100 text-blue-900 border-blue-200',
   },
   {
     id: 'special',
     label: 'Special circumstance',
-    description: 'Explain a unique situation affecting attendance.',
+    description: 'Explain a unique situation affecting attendance on a specific day.',
     pillClass: 'bg-teal-100 text-teal-900 border-teal-200',
   },
 ];
 
-function studentLabel(s: {
+function correctionStudentLabel(s: {
   firstName?: string | null;
   lastName?: string | null;
+  preferredName?: string | null;
   id?: string;
 }) {
-  return [s.firstName, s.lastName].filter(Boolean).join(' ') || s.id || '';
+  return (
+    studentDisplayName({
+      id: s.id || '',
+      firstName: s.firstName || '',
+      lastName: s.lastName || '',
+      preferredName: s.preferredName || null,
+      email: null,
+      phone: null,
+      status: 'active',
+      interviewStage: 'placed',
+      podId: null,
+      track: null,
+      createdAt: '',
+      updatedAt: '',
+    } as BobStudent) ||
+    s.id ||
+    ''
+  );
 }
 
 function toTimeInputValue(iso?: string | null) {
@@ -105,6 +126,8 @@ export function AttendanceCorrectionPage() {
   const [datesLoading, setDatesLoading] = useState(false);
   const [selectedDateId, setSelectedDateId] = useState('');
   const [absenceDate, setAbsenceDate] = useState('');
+  const [correctionDay, setCorrectionDay] = useState('');
+  const [specialDate, setSpecialDate] = useState('');
 
   const [absenceReason, setAbsenceReason] = useState('');
   const [correctionDetail, setCorrectionDetail] = useState('');
@@ -143,6 +166,7 @@ export function AttendanceCorrectionPage() {
         id: fromDetail.id,
         firstName: fromDetail.firstName,
         lastName: fromDetail.lastName,
+        preferredName: fromDetail.preferredName ?? null,
         email: fromDetail.email,
         school: fromDetail.school ?? null,
         airtableRecordId: null,
@@ -158,15 +182,21 @@ export function AttendanceCorrectionPage() {
     [dateOptions, selectedDateId],
   );
 
+  // Include upcoming program days so youth can plan future absences
   const programDateOptions = useMemo(
-    () => listProgramDates({ startDate: PROGRAM_START_DATE, endDate: PROGRAM_END_DATE }),
+    () =>
+      listProgramDates({
+        startDate: PROGRAM_START_DATE,
+        endDate: PROGRAM_END_DATE,
+        throughToday: false,
+      }),
     [],
   );
 
   const lockedStudentName =
     meQuery.data?.linkedStudent?.name ||
     demoScope?.studentName ||
-    (selectedStudent ? studentLabel(selectedStudent) : null);
+    (selectedStudent ? correctionStudentLabel(selectedStudent) : null);
 
   useEffect(() => {
     if (lockedStudentId) setStudentId(lockedStudentId);
@@ -223,14 +253,30 @@ export function AttendanceCorrectionPage() {
     }
     if (!prefillDate) return;
     if (prefillType === 'time_correction' || (!prefillType && requestType === 'time_correction')) {
+      setCorrectionDay(prefillDate);
       if (dateOptions.length) {
         const match = dateOptions.find((d) => d.date === prefillDate);
         if (match) setSelectedDateId(match.attendanceId);
       }
       return;
     }
+    if (prefillType === 'special') {
+      setSpecialDate(prefillDate);
+      return;
+    }
     setAbsenceDate(prefillDate);
   }, [searchParams, dateOptions, requestType]);
+
+  // Keep attendance record link in sync when youth picks a correction day
+  useEffect(() => {
+    if (requestType !== 'time_correction' || !correctionDay) return;
+    const match = dateOptions.find((d) => d.date === correctionDay);
+    setSelectedDateId(match?.attendanceId || '');
+    if (!match) {
+      setCorrectedSignInTime('');
+      setCorrectedSignOutTime('');
+    }
+  }, [correctionDay, dateOptions, requestType]);
 
   const loadDates = useCallback(async (id: string) => {
     if (!id || !/^[a-f\d]{24}$/i.test(id)) {
@@ -271,6 +317,8 @@ export function AttendanceCorrectionPage() {
   function selectStudent(s: AttendanceCorrectionStudentOption | null) {
     setStudentId(s?.id ?? '');
     setSelectedDateId('');
+    setCorrectionDay('');
+    setSpecialDate('');
     setDateOptions([]);
     setStudentSearch('');
     setStudentDropdownOpen(false);
@@ -292,6 +340,31 @@ export function AttendanceCorrectionPage() {
       requestType === 'absence'
         ? dateOptions.find((d) => d.date === absenceDate) ?? null
         : null;
+    const matchedCorrectionOption =
+      requestType === 'time_correction'
+        ? dateOptions.find((d) => d.date === correctionDay) ?? selectedDate
+        : null;
+    const matchedSpecialOption =
+      requestType === 'special'
+        ? dateOptions.find((d) => d.date === specialDate) ?? null
+        : null;
+
+    const dayForRequest =
+      requestType === 'absence'
+        ? absenceDate
+        : requestType === 'time_correction'
+          ? correctionDay
+          : specialDate;
+
+    if (
+      (requestType === 'absence' ||
+        requestType === 'time_correction' ||
+        requestType === 'special') &&
+      !dayForRequest
+    ) {
+      setError('Select the specific program day for this request.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -300,22 +373,25 @@ export function AttendanceCorrectionPage() {
         requestType,
         attendanceId:
           requestType === 'time_correction'
-            ? selectedDate?.attendanceId
-            : matchedAbsenceOption?.attendanceId,
+            ? matchedCorrectionOption?.attendanceId
+            : requestType === 'absence'
+              ? matchedAbsenceOption?.attendanceId
+              : matchedSpecialOption?.attendanceId,
         attendanceAirtableRecordId:
           requestType === 'time_correction'
-            ? selectedDate?.airtableRecordId
-            : matchedAbsenceOption?.airtableRecordId,
-        attendanceDate:
-          requestType === 'absence' ? absenceDate : selectedDate?.date,
+            ? matchedCorrectionOption?.airtableRecordId
+            : requestType === 'absence'
+              ? matchedAbsenceOption?.airtableRecordId
+              : matchedSpecialOption?.airtableRecordId,
+        attendanceDate: dayForRequest,
         absenceReason: absenceReason || undefined,
         correctionDetail: correctionDetail || undefined,
         specialCircumstance: specialCircumstance || undefined,
         correctedSignInDate:
-          requestType === 'time_correction' ? selectedDate?.date : undefined,
+          requestType === 'time_correction' ? dayForRequest : undefined,
         correctedSignInTime: correctedSignInTime || undefined,
         correctedSignOutDate:
-          requestType === 'time_correction' ? selectedDate?.date : undefined,
+          requestType === 'time_correction' ? dayForRequest : undefined,
         correctedSignOutTime: correctedSignOutTime || undefined,
       });
       setSubmitted(true);
@@ -357,6 +433,8 @@ export function AttendanceCorrectionPage() {
                 setCorrectedSignOutTime('');
                 setSelectedDateId('');
                 setAbsenceDate('');
+                setCorrectionDay('');
+                setSpecialDate('');
               }}
               className="px-4 py-2 rounded-lg bg-white border border-green-300 text-sm font-medium text-green-900 hover:bg-green-100"
             >
@@ -376,10 +454,11 @@ export function AttendanceCorrectionPage() {
 
   const showTimeCorrectionDates = requestType === 'time_correction';
   const showAbsenceDate = requestType === 'absence';
+  const showSpecialDate = requestType === 'special';
   const canSubmit =
-    requestType === 'special' ||
     (showAbsenceDate && Boolean(absenceDate)) ||
-    (showTimeCorrectionDates && Boolean(selectedDateId));
+    (showTimeCorrectionDates && Boolean(correctionDay)) ||
+    (showSpecialDate && Boolean(specialDate));
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6">
@@ -467,7 +546,7 @@ export function AttendanceCorrectionPage() {
                 className="w-full text-left px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white hover:border-orange-300 focus:ring-2 focus:ring-orange-500"
               >
                 {selectedStudent
-                  ? studentLabel(selectedStudent)
+                  ? correctionStudentLabel(selectedStudent)
                   : 'Search student with attendance…'}
               </button>
               {studentDropdownOpen ? (
@@ -496,7 +575,7 @@ export function AttendanceCorrectionPage() {
                               className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50"
                             >
                               <span className="font-medium text-gray-900">
-                                {studentLabel(s)}
+                                {correctionStudentLabel(s)}
                               </span>
                               <span className="block text-xs text-gray-500 mt-0.5">
                                 {s.attendanceDays} attendance day
@@ -542,6 +621,12 @@ export function AttendanceCorrectionPage() {
                     setError(null);
                     if (t.id === 'absence' && selectedDate?.date) {
                       setAbsenceDate(selectedDate.date);
+                    }
+                    if (t.id === 'time_correction' && (absenceDate || specialDate)) {
+                      setCorrectionDay(absenceDate || specialDate);
+                    }
+                    if (t.id === 'special' && (absenceDate || correctionDay)) {
+                      setSpecialDate(absenceDate || correctionDay);
                     }
                   }}
                   className={`w-full text-left rounded-xl border px-4 py-3 transition-all ${
@@ -592,53 +677,74 @@ export function AttendanceCorrectionPage() {
               Day to correct <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-2">
-              Choose any program day with attendance on file. Staff will review
-              your request even if the day is not yet in Airtable.
+              Pick the specific program day first — then enter the corrected
+              times for that day.
             </p>
-            {datesLoading ? (
-              <p className="text-sm text-gray-500">Loading your dates…</p>
-            ) : dateOptions.length === 0 ? (
-              <p className="text-sm text-amber-700 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                No attendance records found yet. If you need to report an upcoming
-                absence, switch to <strong>Report absence</strong>.
-              </p>
-            ) : (
-              <select
-                value={selectedDateId}
-                onChange={(e) => {
-                  setSelectedDateId(e.target.value);
-                  setCorrectedSignInTime('');
-                  setCorrectedSignOutTime('');
-                }}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="">Select a date…</option>
-                {dateOptions.map((d) => (
-                  <option key={d.attendanceId} value={d.attendanceId}>
-                    {d.date}
-                    {d.signInTime || d.signOutTime
-                      ? ` · in ${formatAttendanceTime(d.signInTime) || '—'} · out ${formatAttendanceTime(d.signOutTime) || '—'}`
-                      : ''}
+            <select
+              value={correctionDay}
+              onChange={(e) => {
+                setCorrectionDay(e.target.value);
+                setCorrectedSignInTime('');
+                setCorrectedSignOutTime('');
+              }}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">Select a program day…</option>
+              {programDateOptions.map((date) => {
+                const match = dateOptions.find((d) => d.date === date);
+                return (
+                  <option key={date} value={date}>
+                    {formatProgramDateLabel(date)} ({date})
+                    {match ? ' · attendance on file' : ''}
                   </option>
-                ))}
-              </select>
-            )}
+                );
+              })}
+            </select>
+            {datesLoading ? (
+              <p className="text-sm text-gray-500 mt-2">Loading recorded punches…</p>
+            ) : null}
             {selectedDate ? (
-              <div className="mt-3 grid grid-cols-2 gap-3 text-xs rounded-lg bg-gray-50 border border-gray-100 p-3">
-                <div>
-                  <p className="text-gray-500">Current sign in</p>
-                  <p className="font-medium text-gray-900">
-                    {formatAttendanceTime(selectedDate.signInTime) || '—'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Current sign out</p>
-                  <p className="font-medium text-gray-900">
-                    {formatAttendanceTime(selectedDate.signOutTime) || '—'}
-                  </p>
+              <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Current in / out for {formatProgramDateLabel(selectedDate.date)}
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-gray-500">AM In</p>
+                    <p className="font-medium text-gray-900">
+                      {formatAttendanceTime(selectedDate.morningIn || selectedDate.signInTime) || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">AM Out</p>
+                    <p className="font-medium text-gray-900">
+                      {formatAttendanceTime(selectedDate.morningOut) || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">PM In</p>
+                    <p className="font-medium text-gray-900">
+                      {formatAttendanceTime(selectedDate.afternoonIn) || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">PM Out</p>
+                    <p className="font-medium text-gray-900">
+                      {formatAttendanceTime(
+                        selectedDate.afternoonOut ||
+                          (selectedDate.morningOut ? null : selectedDate.signOutTime),
+                      ) || '—'}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ) : correctionDay ? (
+              <p className="mt-2 text-xs text-amber-700 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                No punches on file yet for this day. You can still request corrected
+                times — staff will review for{' '}
+                <strong>{formatProgramDateLabel(correctionDay)}</strong>.
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -656,8 +762,10 @@ export function AttendanceCorrectionPage() {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
-              {selectedDate ? (
-                <p className="text-xs text-gray-500 mt-1">Date: {selectedDate.date}</p>
+              {correctionDay ? (
+                <p className="text-xs text-gray-500 mt-1">
+                  Day: {formatProgramDateLabel(correctionDay)} ({correctionDay})
+                </p>
               ) : null}
             </div>
             <div>
@@ -671,10 +779,36 @@ export function AttendanceCorrectionPage() {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
-              {selectedDate ? (
-                <p className="text-xs text-gray-500 mt-1">Date: {selectedDate.date}</p>
+              {correctionDay ? (
+                <p className="text-xs text-gray-500 mt-1">
+                  Day: {formatProgramDateLabel(correctionDay)} ({correctionDay})
+                </p>
               ) : null}
             </div>
+          </div>
+        ) : null}
+
+        {showSpecialDate ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Day affected <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Select the specific program day this circumstance applies to.
+            </p>
+            <select
+              value={specialDate}
+              onChange={(e) => setSpecialDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">Select a program day…</option>
+              {programDateOptions.map((date) => (
+                <option key={date} value={date}>
+                  {formatProgramDateLabel(date)} ({date})
+                </option>
+              ))}
+            </select>
           </div>
         ) : null}
 

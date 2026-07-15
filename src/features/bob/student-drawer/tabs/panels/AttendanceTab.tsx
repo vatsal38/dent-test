@@ -230,19 +230,25 @@ export function AttendanceTab() {
                     {label}
                   </span>
                 </div>
-                {canSubmitCorrection && label !== "Future" ? (
+                {canSubmitCorrection ? (
                   <p className="text-xs text-gray-600">
                     <Link
                       href={correctionHref(
                         day.date,
-                        needsFix ? "time_correction" : undefined,
+                        label === "Future"
+                          ? "absence"
+                          : needsFix
+                            ? "time_correction"
+                            : undefined,
                         returnTo,
                       )}
                       className="font-medium text-orange-600 hover:underline"
                     >
-                      {needsFix
-                        ? "Report absence or fix times →"
-                        : "Request correction for this day →"}
+                      {label === "Future"
+                        ? "Report planned absence →"
+                        : needsFix
+                          ? "Report absence or fix times →"
+                          : "Request correction for this day →"}
                     </Link>
                   </p>
                 ) : null}
