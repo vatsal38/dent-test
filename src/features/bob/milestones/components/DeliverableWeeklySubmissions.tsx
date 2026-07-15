@@ -33,7 +33,8 @@ function inboxHref(
 /** Land on this deliverable (opens review drawer) — never the full catalog list. */
 function deliverablePageHref(deliverableId: string, teamName?: string) {
   const sp = new URLSearchParams();
-  sp.set("id", deliverableId);
+  // Prefer deliverableId so global student drawer (?id=) is not triggered
+  sp.set("deliverableId", deliverableId);
   if (teamName) {
     sp.set("team", teamName);
     sp.set("tab", "by_team");

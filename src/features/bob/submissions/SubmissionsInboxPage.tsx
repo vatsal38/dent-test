@@ -227,7 +227,7 @@ export function SubmissionsInboxPage() {
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <Link
-              href={`/app/bob/deliverables?id=${encodeURIComponent(filters.deliverableId)}${
+              href={`/app/bob/deliverables?deliverableId=${encodeURIComponent(filters.deliverableId)}${
                 filters.teamName
                   ? `&team=${encodeURIComponent(filters.teamName)}&tab=by_team`
                   : ""

@@ -4,10 +4,12 @@ import { usePathname } from "next/navigation";
 import { StudentCommandDrawer } from "./StudentCommandDrawer";
 import { useStudentDrawerUrl } from "./hooks/useStudentDrawerUrl";
 
-/** Routes that use `?id=` for non-student records (intake, submissions). */
+/** Routes that use `?id=` for non-student records (intake, submissions, deliverables). */
 const STUDENT_DRAWER_EXCLUDED_PREFIXES = [
   "/app/bob/recruitment",
   "/app/bob/inbox",
+  "/app/bob/deliverables",
+  "/app/bob/milestones",
 ];
 
 function isStudentDrawerRoute(pathname: string): boolean {
@@ -22,7 +24,13 @@ function isStudentDrawerRoute(pathname: string): boolean {
  */
 export function StudentDrawerHost() {
   const pathname = usePathname();
-  const { studentId, tab, open: urlOpen, closeStudent, setTab } = useStudentDrawerUrl();
+  const {
+    studentId,
+    tab,
+    open: urlOpen,
+    closeStudent,
+    setTab,
+  } = useStudentDrawerUrl();
   const routeOpen = urlOpen && isStudentDrawerRoute(pathname);
   const allowedId = routeOpen && studentId ? studentId : null;
 

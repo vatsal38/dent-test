@@ -62,7 +62,8 @@ export function MilestonesPage() {
   const searchParams = useSearchParams();
   const initialTab = searchParams?.get("tab");
   const teamFilterParam = searchParams?.get("team") || "";
-  const deliverableIdParam = searchParams?.get("id") || "";
+  const deliverableIdParam =
+    searchParams?.get("deliverableId") || searchParams?.get("id") || "";
   const orgId = BOB_MILESTONES_ORG_ID;
   const { access, can } = useBobAccess();
   const { data: me } = useBobMe();
@@ -196,8 +197,8 @@ export function MilestonesPage() {
     return listTeamDeliverablesNeedingReview(data, allowedTeamNames);
   }, [data, allowedTeamNames, teamsReady]);
 
-  // Deep-link: /app/bob/deliverables?id=…&team=…&tab=by_team
-  // Open when id/team in the URL change (e.g. "Open inbox" from another screen).
+  // Deep-link: /app/bob/deliverables?deliverableId=…&team=…&tab=by_team
+  // (also accepts legacy ?id= for deliverable — student drawer excludes this route)
   const lastDeepLinkKey = useRef("");
   useEffect(() => {
     if (!deliverableIdParam || !data.length) return;
