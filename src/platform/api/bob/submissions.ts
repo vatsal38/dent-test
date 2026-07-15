@@ -151,6 +151,8 @@ export interface BobSubmissionsListParams {
   assignedTo?: string;
   studentId?: string;
   deliverableId?: string;
+  /** Match progress updates by label / milestone text (OR with deliverableId). */
+  deliverableLabel?: string;
   teamName?: string;
   projectTeamId?: string;
   search?: string;
@@ -215,6 +217,7 @@ function buildSubmissionsQuery(params?: BobSubmissionsListParams) {
   if (params?.assignedTo) sp.set("assignedTo", params.assignedTo);
   if (params?.studentId) sp.set("studentId", params.studentId);
   if (params?.deliverableId) sp.set("deliverableId", params.deliverableId);
+  if (params?.deliverableLabel) sp.set("deliverableLabel", params.deliverableLabel);
   if (params?.teamName) sp.set("teamName", params.teamName);
   if (params?.projectTeamId) sp.set("projectTeamId", params.projectTeamId);
   if (params?.search) sp.set("search", params.search);

@@ -286,15 +286,18 @@ export function MilestonesPage() {
     reviewStatus: string,
     trackerStatus?: string,
     teamName?: string,
+    reviewedByName?: string,
   ) {
     const previous =
       detail?.deliverable.id === item.id ? detail.deliverable : item;
+    const reviewer =
+      String(reviewedByName || defaultReviewerName || "").trim() || undefined;
     const optimistic = applyOptimisticDeliverable(
       item,
       reviewStatus,
       trackerStatus,
       teamName,
-      defaultReviewerName || undefined,
+      reviewer,
     );
     const tracker = findTrackerForTeam(item, teamName);
 
@@ -313,7 +316,7 @@ export function MilestonesPage() {
           trackerDeliverableStatus: trackerStatus,
           trackerId: tracker?.id,
           teamName,
-          reviewedBy: defaultReviewerName || undefined,
+          reviewedBy: reviewer,
         },
       });
       if (detail?.deliverable.id === updated.id) {

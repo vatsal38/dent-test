@@ -18,13 +18,26 @@ function extractUrls(text: string | null | undefined): string[] {
   return [...new Set(matches.map((u) => u.replace(/[.,);]+$/, "")))];
 }
 
-function inboxHref(deliverableId: string, teamName?: string, submissionId?: string) {
+function inboxHref(
+  deliverableId: string,
+  opts?: { teamName?: string; submissionId?: string },
+) {
   const sp = new URLSearchParams();
   sp.set("type", "progress_update");
   sp.set("deliverableId", deliverableId);
-  if (teamName) sp.set("teamName", teamName);
-  if (submissionId) sp.set("id", submissionId);
+  if (opts?.teamName) sp.set("teamName", opts.teamName);
+  if (opts?.submissionId) sp.set("id", opts.submissionId);
   return `/app/bob/inbox?${sp.toString()}`;
+}
+
+function deliverableHref(deliverableId: string, teamName?: string) {
+  const sp = new URLSearchParams();
+  sp.set("id", deliverableId);
+  if (teamName) {
+    sp.set("team", teamName);
+    sp.set("tab", "by_team");
+  }
+  return `/app/bob/deliverables?${sp.toString()}`;
 }
 
 function SubmissionFiles({ submission }: { submission: BobSubmission }) {
@@ -80,11 +93,13 @@ function SubmissionFiles({ submission }: { submission: BobSubmission }) {
 function SubmissionCard({
   submission,
   deliverableId,
+  teamName,
   showTeam,
   canOpenInbox,
 }: {
   submission: BobSubmission;
   deliverableId: string;
+  teamName?: string;
   showTeam?: boolean;
   canOpenInbox: boolean;
 }) {
@@ -123,7 +138,10 @@ function SubmissionCard({
       <SubmissionFiles submission={submission} />
       {canOpenInbox ? (
         <Link
-          href={inboxHref(deliverableId, undefined, submission.id)}
+          href={inboxHref(deliverableId, {
+            teamName,
+            submissionId: submission.id,
+          })}
           className="inline-block mt-2 text-xs font-medium text-orange-600 hover:underline"
         >
           Open submission →
@@ -133,12 +151,14 @@ function SubmissionCard({
   );
 }
 
-/** 99B — weekly progress_update submissions linked to this deliverable (+ optional team). */
+/** Weekly progress_update submissions linked to this deliverable (+ optional team). */
 export function DeliverableWeeklySubmissions({
   deliverableId,
+  deliverableLabel,
   teamName,
 }: {
   deliverableId: string;
+  deliverableLabel?: string | null;
   teamName?: string;
 }) {
   const { can } = useBobAccess();
@@ -146,6 +166,7 @@ export function DeliverableWeeklySubmissions({
   const query = useBobSubmissionsList({
     type: "progress_update",
     deliverableId,
+    deliverableLabel: deliverableLabel || undefined,
     excludeArchived: true,
     limit: 100,
   });
@@ -173,23 +194,32 @@ export function DeliverableWeeklySubmissions({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
           Weekly progress submissions
           {total ? ` (${total})` : ""}
         </h3>
-        {canOpenInbox ? (
+        <div className="flex items-center gap-3">
           <Link
-            href={inboxHref(deliverableId)}
-            className="text-xs text-orange-600 hover:underline"
+            href={deliverableHref(deliverableId, teamName)}
+            className="text-xs text-gray-500 hover:underline"
           >
-            Open inbox →
+            Deliverable page →
           </Link>
-        ) : null}
+          {canOpenInbox ? (
+            <Link
+              href={inboxHref(deliverableId, { teamName })}
+              className="text-xs text-orange-600 hover:underline font-medium"
+            >
+              Open inbox →
+            </Link>
+          ) : null}
+        </div>
       </div>
       <p className="text-xs text-gray-500 mb-3">
         Each team member submits one weekly progress form for this deliverable.
-        Connected submissions show here for staff review.
+        Connected submissions (including other denters on the same deliverable)
+        show here for staff review. Open inbox filters to this deliverable only.
       </p>
       {query.isLoading ? (
         <p className="text-sm text-gray-500">Loading weekly submissions…</p>
@@ -210,6 +240,7 @@ export function DeliverableWeeklySubmissions({
                   key={s.id}
                   submission={s}
                   deliverableId={deliverableId}
+                  teamName={teamName}
                   showTeam={!teamName}
                   canOpenInbox={canOpenInbox}
                 />
@@ -218,6 +249,9 @@ export function DeliverableWeeklySubmissions({
           ) : teamName ? (
             <p className="text-sm text-gray-500 rounded-lg border border-dashed border-gray-200 px-3 py-3">
               No weekly progress updates for {teamName} yet.
+              {otherSubmissions.length
+                ? " Other denters’ submissions for this deliverable are below."
+                : ""}
             </p>
           ) : null}
 
@@ -232,6 +266,7 @@ export function DeliverableWeeklySubmissions({
                     key={s.id}
                     submission={s}
                     deliverableId={deliverableId}
+                    teamName={teamName}
                     showTeam
                     canOpenInbox={canOpenInbox}
                   />

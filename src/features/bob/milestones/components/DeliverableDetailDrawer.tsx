@@ -41,6 +41,7 @@ export function DeliverableDetailDrawer({
     reviewStatus: string,
     trackerStatus?: string,
     teamName?: string,
+    reviewedBy?: string,
   ) => void;
   onSaveStaffReview: (
     item: BobDeliverable,
@@ -190,6 +191,7 @@ export function DeliverableDetailDrawer({
                       TRACKER_TO_APP_REVIEW[v] || "not_started",
                       v,
                       teamName,
+                      reviewedBy.trim() || defaultReviewerName,
                     );
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60 disabled:cursor-wait"
@@ -222,6 +224,7 @@ export function DeliverableDetailDrawer({
                       v,
                       APP_REVIEW_TO_TRACKER[v],
                       teamName,
+                      reviewedBy.trim() || defaultReviewerName,
                     );
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60 disabled:cursor-wait"
@@ -369,6 +372,16 @@ export function DeliverableDetailDrawer({
 
           <DeliverableWeeklySubmissions
             deliverableId={deliverable.id}
+            deliverableLabel={
+              deliverable.label ||
+              [
+                deliverable.deliverableNumber,
+                deliverable.deliverableName,
+              ]
+                .filter(Boolean)
+                .join(" · ") ||
+              deliverable.deliverableName
+            }
             teamName={teamName}
           />
 
@@ -378,36 +391,57 @@ export function DeliverableDetailDrawer({
                 Submission history
               </h3>
               <ul className="space-y-3">
-                {(tracker ? [tracker] : deliverable.trackerRecords).map((t) => (
-                  <li
-                    key={t.id}
-                    className="rounded-lg border border-gray-200 p-3 text-sm"
-                  >
-                    <p className="font-medium text-gray-900">
-                      {t.date || "Submission"} ·{" "}
-                      {t.deliverableStatus || "Not Started"}
-                    </p>
-                    {t.reviewedBy ? (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {t.deliverableStatus === "Completed"
-                          ? "Marked complete by"
-                          : "Reviewed by"}{" "}
-                        {t.reviewedBy}
-                        {t.reviewedAt
-                          ? ` · ${new Date(t.reviewedAt).toLocaleString(undefined, {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}`
-                          : ""}
+                {(tracker ? [tracker] : deliverable.trackerRecords).map((t) => {
+                  const statusLabel =
+                    t.deliverableStatus ||
+                    (t.reviewStatus === "approved"
+                      ? "Completed"
+                      : t.reviewStatus === "in_progress"
+                        ? "In Progress, On Track"
+                        : t.reviewStatus === "changes_requested"
+                          ? "Behind"
+                          : "Not Started");
+                  const isComplete =
+                    t.deliverableStatus === "Completed" ||
+                    t.reviewStatus === "approved";
+                  return (
+                    <li
+                      key={t.id}
+                      className="rounded-lg border border-gray-200 p-3 text-sm"
+                    >
+                      <p className="font-medium text-gray-900">
+                        {t.date || "Tracker update"} · {statusLabel}
                       </p>
-                    ) : null}
-                    {t.staffReviewNotes ? (
-                      <p className="text-gray-600 mt-1 whitespace-pre-wrap">
-                        {t.staffReviewNotes}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
+                      {t.reviewedBy ? (
+                        <p className="text-xs text-gray-600 mt-1">
+                          {isComplete ? "Marked complete by" : "Reviewed by"}{" "}
+                          <span className="font-medium text-gray-800">
+                            {t.reviewedBy}
+                          </span>
+                          {t.reviewedAt
+                            ? ` · ${new Date(t.reviewedAt).toLocaleString(
+                                undefined,
+                                {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                },
+                              )}`
+                            : ""}
+                        </p>
+                      ) : isComplete ? (
+                        <p className="text-xs text-amber-700 mt-1">
+                          Marked complete — reviewer name not recorded. Re-save
+                          with &quot;Reviewed by&quot; filled in.
+                        </p>
+                      ) : null}
+                      {t.staffReviewNotes ? (
+                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                          {t.staffReviewNotes}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}
