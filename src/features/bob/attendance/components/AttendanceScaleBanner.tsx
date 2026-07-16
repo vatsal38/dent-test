@@ -60,7 +60,9 @@ export function AttendanceScaleBanner({
     <div className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-950">
       {scale.enrollmentCount} students in scope
       {scale.recommendPodScope ? " — filter by track for faster scanning." : ""}
-      {scale.weekViewHeavy ? " Week view works best with a track selected." : ""}
+      {scale.weekViewHeavy
+        ? " Week/Month view works best with a track selected."
+        : ""}
     </div>
   );
 }

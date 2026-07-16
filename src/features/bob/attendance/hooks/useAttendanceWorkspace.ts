@@ -9,18 +9,27 @@ import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { filterPodsByAccess } from "@/platform/rbac/scopedFilters";
 import { PROGRAM_END_DATE, PROGRAM_START_DATE } from "@/lib/bobProgramCalendar";
-import { getWeekMonday, getWeekSunday } from "../weekDates";
+import {
+  getCalendarMonthBounds,
+  getWeekMonday,
+  getWeekSunday,
+} from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
 import { filterStudentsByCoachAttendanceScope } from "../model/coachAttendanceScope";
 import {
   ATTENDANCE_FETCH_LIMIT,
+  ATTENDANCE_MONTH_FETCH_LIMIT,
   ATTENDANCE_WEEK_FETCH_LIMIT,
   countEnrollment,
 } from "../model/scale";
 
+export type AttendanceViewMode = "day" | "week" | "month";
+
 export interface UseAttendanceWorkspaceOptions {
   focusDate: string;
+  /** @deprecated Prefer `viewMode` */
   weekMode?: boolean;
+  viewMode?: AttendanceViewMode;
   podFilter?: string;
   trackFilter?: string;
 }
@@ -47,6 +56,7 @@ function studentAttendanceEndDate(focusDate: string): string {
 export function useAttendanceWorkspace({
   focusDate,
   weekMode = false,
+  viewMode: viewModeProp,
   podFilter = "",
   trackFilter = "",
 }: UseAttendanceWorkspaceOptions) {
@@ -57,18 +67,38 @@ export function useAttendanceWorkspace({
   const effectivePod = isStudentViewer ? "" : podFilter;
   const effectiveTrack = isStudentViewer ? "" : trackFilter;
 
+  const viewMode: AttendanceViewMode =
+    viewModeProp ?? (weekMode ? "week" : "day");
+  const weekModeActive = viewMode === "week";
+  const monthModeActive = viewMode === "month";
+  const rangeMode = weekModeActive || monthModeActive;
+
   const weekMonday = getWeekMonday(new Date(focusDate + "T12:00:00"));
+  const monthBounds = getCalendarMonthBounds(focusDate);
+  const monthStart =
+    monthBounds.startDate < PROGRAM_START_DATE
+      ? PROGRAM_START_DATE
+      : monthBounds.startDate;
+  const monthEnd =
+    monthBounds.endDate > PROGRAM_END_DATE
+      ? PROGRAM_END_DATE
+      : monthBounds.endDate;
+
   // 119B — load full program history so hours/% match roster attendanceStats
   const startDate = isStudentViewer
     ? PROGRAM_START_DATE
-    : weekMode
+    : weekModeActive
       ? weekMonday
-      : focusDate;
+      : monthModeActive
+        ? monthStart
+        : focusDate;
   const endDate = isStudentViewer
     ? studentAttendanceEndDate(focusDate)
-    : weekMode
+    : weekModeActive
       ? getWeekSunday(weekMonday)
-      : focusDate;
+      : monthModeActive
+        ? monthEnd
+        : focusDate;
 
   const podsQuery = useBobPodsList(
     { limit: 100 },
@@ -129,9 +159,11 @@ export function useAttendanceWorkspace({
 
   const attendanceFetchLimit = isStudentViewer
     ? 500
-    : weekMode
+    : weekModeActive
       ? ATTENDANCE_WEEK_FETCH_LIMIT
-      : ATTENDANCE_FETCH_LIMIT;
+      : monthModeActive
+        ? ATTENDANCE_MONTH_FETCH_LIMIT
+        : ATTENDANCE_FETCH_LIMIT;
 
   const attendanceParams = useMemo(
     () => ({
@@ -159,10 +191,10 @@ export function useAttendanceWorkspace({
     [weekMonday, studentAttendanceParams],
   );
   const weekRollupQuery = useBobAttendanceList(weekRollupParams, {
-    enabled: !weekMode && !isStudentViewer,
+    enabled: !weekModeActive && !isStudentViewer,
   });
   const weekRecordsForRollup = filterRecordsForStudent(
-    weekMode ? records : (weekRollupQuery.data?.attendance ?? []),
+    weekModeActive ? records : (weekRollupQuery.data?.attendance ?? []),
     isStudentViewer ? linkedStudentId : null,
   );
 
@@ -243,8 +275,8 @@ export function useAttendanceWorkspace({
     () =>
       computeAttendanceWorkspace({
         focusDate,
-        startDate: isStudentViewer || weekMode ? startDate : undefined,
-        endDate: isStudentViewer || weekMode ? endDate : undefined,
+        startDate: isStudentViewer || rangeMode ? startDate : undefined,
+        endDate: isStudentViewer || rangeMode ? endDate : undefined,
         podFilter: effectivePod || undefined,
         trackFilter: effectiveTrack || undefined,
         pods,
@@ -256,7 +288,7 @@ export function useAttendanceWorkspace({
       }),
     [
       focusDate,
-      weekMode,
+      rangeMode,
       startDate,
       endDate,
       isStudentViewer,
@@ -266,7 +298,6 @@ export function useAttendanceWorkspace({
       scopedStudents,
       records,
       enrollmentCount,
-      isStudentViewer,
       linkedStudentId,
     ],
   );
@@ -286,7 +317,7 @@ export function useAttendanceWorkspace({
     attendanceQuery.refetch();
     if (!isStudentViewer) podsQuery.refetch();
     studentsQuery.refetch();
-    if (!weekMode) weekRollupQuery.refetch();
+    if (!weekModeActive) weekRollupQuery.refetch();
   };
 
   return {

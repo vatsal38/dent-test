@@ -178,30 +178,51 @@ export function teamTrackerSummaries(
 export function teamDeliverableNeedsReview(
   deliverable: BobDeliverable,
   teamName: string,
+  progressReviewKeys?: Set<string>,
 ): boolean {
   if (teamPendingUploadCount(deliverable, teamName) > 0) return true;
   const status = teamReviewStatus(deliverable, teamName);
-  // Only queue items awaiting review — blank/not-started should not flood "to review"
-  return status === "pending_review";
+  if (status === "pending_review") return true;
+  // Flag when youth submitted a weekly progress update for this team/deliverable
+  if (progressReviewKeys?.size) {
+    const short = shortProjectTeamName(teamName);
+    if (progressReviewKeys.has(`${deliverable.id}|${short}`)) {
+      // Already staff-approved — don't keep in queue
+      if (status === "approved") return false;
+      return true;
+    }
+  }
+  return false;
 }
 
 export function listTeamDeliverablesNeedingReview(
   deliverables: BobDeliverable[],
   allowedTeamNames?: string[],
+  progressReviewKeys?: Set<string>,
 ): Array<{ deliverable: BobDeliverable; teamName: string }> {
   const out: Array<{ deliverable: BobDeliverable; teamName: string }> = [];
   if (allowedTeamNames !== undefined && allowedTeamNames.length === 0) {
     return out;
   }
   for (const d of deliverables) {
-    for (const team of teamNamesFromDeliverables([d])) {
+    const teams = new Set(teamNamesFromDeliverables([d]));
+    // Progress updates may name teams not yet on tracker rows — include them
+    if (progressReviewKeys?.size) {
+      for (const key of progressReviewKeys) {
+        const prefix = `${d.id}|`;
+        if (!key.startsWith(prefix)) continue;
+        const team = key.slice(prefix.length);
+        if (team) teams.add(team);
+      }
+    }
+    for (const team of teams) {
       if (
         allowedTeamNames?.length &&
         !allowedTeamNames.some((allowed) => teamNamesMatch(team, allowed))
       ) {
         continue;
       }
-      if (teamDeliverableNeedsReview(d, team)) {
+      if (teamDeliverableNeedsReview(d, team, progressReviewKeys)) {
         out.push({ deliverable: d, teamName: team });
       }
     }
@@ -217,9 +238,13 @@ export function listTeamDeliverablesNeedingReview(
 export function countTeamDeliverablesNeedingReview(
   deliverables: BobDeliverable[],
   allowedTeamNames?: string[],
+  progressReviewKeys?: Set<string>,
 ): number {
-  return listTeamDeliverablesNeedingReview(deliverables, allowedTeamNames)
-    .length;
+  return listTeamDeliverablesNeedingReview(
+    deliverables,
+    allowedTeamNames,
+    progressReviewKeys,
+  ).length;
 }
 
 export function teamNameMatchesFilter(

@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AttendanceHubSkeleton } from "./components/AttendancePageSkeletons";
 import { BobPermissionGuard } from "@/platform/rbac/BobPermissionGuard";
-import { getWeekMonday, getWeekSunday } from "./weekDates";
-import { useAttendanceWorkspace } from "./hooks/useAttendanceWorkspace";
+import { getCalendarMonthBounds, getWeekMonday, getWeekSunday } from "./weekDates";
+import {
+  useAttendanceWorkspace,
+  type AttendanceViewMode,
+} from "./hooks/useAttendanceWorkspace";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { filterDaysByHealth } from "./model/computeWorkspace";
 import { ATTENDANCE_PAGE_SIZE } from "./model/scale";
@@ -14,6 +17,7 @@ import { AttendanceHubControls } from "./components/AttendanceHubControls";
 import { AttendanceHoursRollup } from "./components/AttendanceHoursRollup";
 import { AttendanceScaleBanner } from "./components/AttendanceScaleBanner";
 import { DailyAttendanceTable } from "./components/DailyAttendanceTable";
+import { MonthlyAttendanceView } from "./components/MonthlyAttendanceView";
 import { StudentMyAttendanceCards } from "./components/StudentMyAttendanceCards";
 import { PodSiteAnalytics } from "./components/PodSiteAnalytics";
 import { BOB_POD_SINGULAR } from "@/lib/bobDisplayTerminology";
@@ -57,7 +61,7 @@ export function AttendanceHubPage() {
 
   const [focusDate, setFocusDate] = useState(initialDate);
   const [trackFilter, setTrackFilter] = useState(initialTrack);
-  const [viewMode, setViewMode] = useState<"day" | "week">("day");
+  const [viewMode, setViewMode] = useState<AttendanceViewMode>("day");
   const [healthFilter, setHealthFilter] = useState<IssueFilter>(initialFilter);
   const [selectedDay, setSelectedDay] = useState<StudentDayAttendance | null>(
     null,
@@ -113,7 +117,7 @@ export function AttendanceHubPage() {
     linkedStudentId,
   } = useAttendanceWorkspace({
     focusDate,
-    weekMode: viewMode === "week",
+    viewMode,
     trackFilter,
   });
 
@@ -189,9 +193,25 @@ export function AttendanceHubPage() {
     });
   }, [viewMode, focusDate]);
 
+  const monthDates = useMemo(() => {
+    if (viewMode !== "month") return [];
+    const bounds = getCalendarMonthBounds(focusDate);
+    const start =
+      bounds.startDate < PROGRAM_START_DATE
+        ? PROGRAM_START_DATE
+        : bounds.startDate;
+    const end =
+      bounds.endDate > PROGRAM_END_DATE ? PROGRAM_END_DATE : bounds.endDate;
+    return listProgramDates({
+      startDate: start,
+      endDate: end,
+      throughDate: end,
+    });
+  }, [viewMode, focusDate]);
+
   const tableDays = useMemo(() => {
     const scoped =
-      viewMode === "week"
+      viewMode === "week" || viewMode === "month"
         ? workspace.days
         : workspace.days.filter((d) => d.date === focusDate);
     return filterDaysByHealth(scoped, healthFilter);
@@ -461,16 +481,30 @@ export function AttendanceHubPage() {
             trackFilter={trackFilter}
           />
 
-          <DailyAttendanceTable
-            days={tableDays}
-            workspace={workspace}
-            focusDate={focusDate}
-            weekDates={viewMode === "week" ? weekDates : undefined}
-            onSelectDay={setSelectedDay}
-            search={debouncedSearch}
-            page={page}
-            onPageChange={setPage}
-          />
+          {viewMode === "month" ? (
+            <MonthlyAttendanceView
+              days={tableDays}
+              workspace={workspace}
+              focusDate={focusDate}
+              monthDates={monthDates}
+              onSelectDay={setSelectedDay}
+              onFocusDateChange={setFocusDate}
+              search={debouncedSearch}
+              page={page}
+              onPageChange={setPage}
+            />
+          ) : (
+            <DailyAttendanceTable
+              days={tableDays}
+              workspace={workspace}
+              focusDate={focusDate}
+              weekDates={viewMode === "week" ? weekDates : undefined}
+              onSelectDay={setSelectedDay}
+              search={debouncedSearch}
+              page={page}
+              onPageChange={setPage}
+            />
+          )}
         </>
       )}
 

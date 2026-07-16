@@ -119,6 +119,7 @@ const COACH = pick(
   "attendance.view",
   "attendance.mark",
   "milestones.view",
+  "milestones.edit",
   "inbox.view",
   "notes.viewStaff",
   "myPod.view",

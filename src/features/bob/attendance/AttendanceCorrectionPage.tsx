@@ -711,25 +711,25 @@ export function AttendanceCorrectionPage() {
                 </p>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <p className="text-gray-500">AM In</p>
+                    <p className="text-gray-500">Morning In</p>
                     <p className="font-medium text-gray-900">
                       {formatAttendanceTime(selectedDate.morningIn || selectedDate.signInTime) || '—'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">AM Out</p>
+                    <p className="text-gray-500">Morning Out</p>
                     <p className="font-medium text-gray-900">
                       {formatAttendanceTime(selectedDate.morningOut) || '—'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">PM In</p>
+                    <p className="text-gray-500">Afternoon In</p>
                     <p className="font-medium text-gray-900">
                       {formatAttendanceTime(selectedDate.afternoonIn) || '—'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">PM Out</p>
+                    <p className="text-gray-500">Afternoon Out</p>
                     <p className="font-medium text-gray-900">
                       {formatAttendanceTime(
                         selectedDate.afternoonOut ||

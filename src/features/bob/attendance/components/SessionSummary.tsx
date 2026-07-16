@@ -112,8 +112,8 @@ export function SessionSummary({
 export function SessionLegend() {
   return (
     <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-      <span>Morning: AM In → AM Out</span>
-      <span>Afternoon: PM In → PM Out</span>
+      <span>Morning: Morning In → Morning Out</span>
+      <span>Afternoon: Afternoon In → Afternoon Out</span>
     </div>
   );
 }

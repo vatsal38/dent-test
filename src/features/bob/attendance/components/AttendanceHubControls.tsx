@@ -139,8 +139,8 @@ export function AttendanceHubControls({
   trackOptions: RosterTrackOption[];
   tracksLoading?: boolean;
   requiresScope: boolean;
-  viewMode: "day" | "week";
-  onViewModeChange: (mode: "day" | "week") => void;
+  viewMode: "day" | "week" | "month";
+  onViewModeChange: (mode: "day" | "week" | "month") => void;
   healthFilter: IssueFilter;
   onHealthFilterChange: (filter: IssueFilter) => void;
   summary: AttendanceWorkspaceData["summary"];
@@ -193,8 +193,11 @@ export function AttendanceHubControls({
             options={[
               { id: "day", label: "Day" },
               { id: "week", label: "Week" },
+              { id: "month", label: "Month" },
             ]}
-            onChange={(id) => onViewModeChange(id as "day" | "week")}
+            onChange={(id) =>
+              onViewModeChange(id as "day" | "week" | "month")
+            }
           />
         ) : null}
 

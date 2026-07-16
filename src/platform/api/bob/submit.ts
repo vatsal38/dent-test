@@ -1,4 +1,4 @@
-import { API_BASE, getIdToken } from "@/platform/api/client";
+import { API_BASE, getIdToken, isNetworkFetchError, apiUnreachableMessage } from "@/platform/api/client";
 
 export interface BlitzTeamOption {
   value: string;
@@ -56,11 +56,19 @@ export async function submitBobOneStop(
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}/api/bob/submit`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ type, ...payload }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/bob/submit`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ type, ...payload }),
+    });
+  } catch (err) {
+    if (isNetworkFetchError(err)) {
+      throw new Error(apiUnreachableMessage());
+    }
+    throw err;
+  }
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
     throw new Error(

@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 import {
-  REVIEW_STATUS_OPTIONS,
   TRACKER_STATUS_OPTIONS,
-  APP_REVIEW_TO_TRACKER,
   TRACKER_TO_APP_REVIEW,
   reviewStatusBadge,
 } from "../deliverableDisplay";
@@ -203,38 +201,10 @@ export function DeliverableDetailDrawer({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  App review status
-                </label>
-                <select
-                  value={
-                    tracker?.reviewStatus ||
-                    deliverable.reviewStatus ||
-                    "not_started"
-                  }
-                  disabled={updatingId === deliverable.id}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (!v) return;
-                    onReviewChange(
-                      deliverable,
-                      v,
-                      APP_REVIEW_TO_TRACKER[v],
-                      teamName,
-                      reviewedBy.trim() || defaultReviewerName,
-                    );
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-60 disabled:cursor-wait"
-                >
-                  {REVIEW_STATUS_OPTIONS.filter((o) => o.value).map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Staff set this step. Weekly progress submissions do not change
+                  it automatically.
+                </p>
               </div>
 
               <div className="rounded-lg border border-orange-200 bg-orange-50/40 p-3 space-y-3">

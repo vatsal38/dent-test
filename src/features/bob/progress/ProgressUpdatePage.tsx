@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import type { BobStudent } from "@/platform/api/bob/students";
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
 import { submitBobOneStop, type BobOneStopPayload } from "@/platform/api/bob/submit";
+import { isNetworkFetchError, apiUnreachableMessage } from "@/platform/api/client";
 import { useAuth } from "@/context/AuthContext";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { useBobStudentsList } from "@/platform/query/hooks/useBobStudents";
@@ -231,7 +232,11 @@ export function ProgressUpdatePage() {
       setForm({});
       setPendingFiles([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submit failed");
+      if (isNetworkFetchError(err)) {
+        setError(apiUnreachableMessage());
+      } else {
+        setError(err instanceof Error ? err.message : "Submit failed");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -452,7 +457,7 @@ export function ProgressUpdatePage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Deliverable status
+            My progress this week
           </label>
           <select
             value={form.deliverableStatus ?? ""}
@@ -469,6 +474,10 @@ export function ProgressUpdatePage() {
               </option>
             ))}
           </select>
+          <p className="text-[11px] text-gray-500 mt-1">
+            This is your weekly self-report only. Staff set the deliverable
+            tracker step separately — it does not auto-update from this form.
+          </p>
         </div>
 
         <div>

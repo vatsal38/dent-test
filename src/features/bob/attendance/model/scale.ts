@@ -17,6 +17,9 @@ export const ATTENDANCE_FETCH_LIMIT = 1000;
 /** Week grid needs ~6 records × students × 5 days — default 500 truncated Monday. */
 export const ATTENDANCE_WEEK_FETCH_LIMIT = 3000;
 
+/** Month grid: ~20 program days × students — prefer track filter at scale. */
+export const ATTENDANCE_MONTH_FETCH_LIMIT = 5000;
+
 export const STUDENT_IDS_BATCH_MAX = 500;
 
 export function countEnrollment(

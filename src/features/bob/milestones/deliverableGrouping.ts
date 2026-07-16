@@ -1,4 +1,5 @@
 import type { BobDeliverable } from "@/platform/api/bob/milestones";
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import {
   deliverableAppliesToTeam,
   teamNamesFromDeliverables,
@@ -77,14 +78,35 @@ export interface DeliverableTeamRow {
 export function deliverablesToTeamSlotMap(
   teamName: string,
   items: BobDeliverable[],
+  teamTrackLabel?: string | null,
 ): DeliverableSlotMap {
   const map: DeliverableSlotMap = new Map();
   for (const d of sortByDeliverableNumber(items)) {
-    if (!deliverableAppliesToTeam(d, teamName)) continue;
+    if (!deliverableAppliesToTeamWithTrack(d, teamName, teamTrackLabel)) continue;
     const slot = parseDeliverableSlot(d.deliverableNumber);
     if (slot && !map.has(slot)) map.set(slot, d);
   }
   return map;
+}
+
+function tracksMatch(
+  teamTrack: string | null | undefined,
+  deliverableTrack: string | null | undefined,
+): boolean {
+  const a = formatBobTrackDisplayLabel(teamTrack || "").toLowerCase().trim();
+  const b = formatBobTrackDisplayLabel(deliverableTrack || "").toLowerCase().trim();
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+/** Catalog templates apply to every project team on the same track. */
+export function deliverableAppliesToTeamWithTrack(
+  deliverable: BobDeliverable,
+  teamName: string,
+  teamTrackLabel?: string | null,
+): boolean {
+  if (deliverableAppliesToTeam(deliverable, teamName)) return true;
+  return tracksMatch(teamTrackLabel, deliverable.trackName);
 }
 
 export function groupDeliverablesByTeam(

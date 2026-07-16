@@ -30,7 +30,7 @@ export function PunchDots({
 export function PunchLegend() {
   return (
     <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-      <span>AM In · AM Out · PM In · PM Out</span>
+      <span>Morning In · Morning Out · Afternoon In · Afternoon Out</span>
     </div>
   );
 }

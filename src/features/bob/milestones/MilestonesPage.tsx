@@ -27,6 +27,7 @@ import {
 import {
   groupDeliverablesByTrack,
   deliverablesToTeamSlotMap,
+  deliverableAppliesToTeamWithTrack,
 } from "./deliverableGrouping";
 import { DeliverablesProgressTable } from "./components/DeliverablesProgressTable";
 import {
@@ -41,12 +42,13 @@ import {
   teamNameMatchesFilter,
   countTeamDeliverablesNeedingReview,
   listTeamDeliverablesNeedingReview,
-  deliverableAppliesToTeam,
+  shortProjectTeamName,
 } from "./deliverableTeamReview";
 import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobMe } from "@/platform/query/hooks/useBobMe";
 import { useBobProjectTeamsList, useMyBobProjectTeams } from "@/platform/query/hooks/useBobProjectTeams";
+import { useBobSubmissionsList } from "@/platform/query/hooks/useBobSubmissions";
 import type { BobStudent } from "@/platform/api/bob/students";
 import {
   filterDeliverablesForStudent,
@@ -120,33 +122,33 @@ export function MilestonesPage() {
     ? (myProjectTeamsQuery.data?.data ?? [])
     : (projectTeamsQuery.data?.data ?? []);
   const updateMilestone = useUpdateBobMilestone();
+  const progressSubmissionsQuery = useBobSubmissionsList({
+    type: "progress_update",
+    excludeArchived: true,
+    limit: 300,
+  });
+  /** Keys: `${deliverableId}|${shortTeamName}` for open weekly progress awaiting staff look. */
+  const progressReviewKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const s of progressSubmissionsQuery.data?.submissions || []) {
+      if (!s.deliverableId) continue;
+      if (s.status === "done" || s.status === "archived") continue;
+      const team = shortProjectTeamName(s.teamName || s.team || "");
+      if (team) keys.add(`${s.deliverableId}|${team}`);
+    }
+    return keys;
+  }, [progressSubmissionsQuery.data?.submissions]);
+
   const rawData = milestonesQuery.data?.data ?? [];
   const data = useMemo(() => {
     let rows = rawData;
+    // Students only see deliverables for their project teams / track.
+    // Coaches and site supporters see the full catalog (scoped review is per-team).
     if (linkedStudent) {
       rows = filterDeliverablesForStudent(rows, linkedStudent, projectTeams);
-    } else if (
-      (access.role === "coach" || access.role === "site_supporter") &&
-      (me?.assignedPods?.length || 0) > 0
-    ) {
-      const allowed = new Set(
-        (me?.assignedPods || [])
-          .flatMap((p) => [p.name])
-          .map((n) => formatBobTrackDisplayLabel(n || "").toLowerCase())
-          .filter(Boolean),
-      );
-      if (allowed.size) {
-        rows = rows.filter((d) => {
-          const track = formatBobTrackDisplayLabel(d.trackName || "").toLowerCase();
-          if (!track) return false;
-          return [...allowed].some(
-            (a) => track.includes(a) || a.includes(track),
-          );
-        });
-      }
     }
     return rows;
-  }, [rawData, linkedStudent, projectTeams, access.role, me?.assignedPods]);
+  }, [rawData, linkedStudent, projectTeams]);
   const loading = milestonesQuery.isLoading;
   const error = milestonesQuery.error
     ? parseApiError(milestonesQuery.error)
@@ -163,8 +165,12 @@ export function MilestonesPage() {
 
   const pendingCount = useMemo(() => {
     if (!teamsReady) return 0;
-    return countTeamDeliverablesNeedingReview(data, allowedTeamNames);
-  }, [data, allowedTeamNames, teamsReady]);
+    return countTeamDeliverablesNeedingReview(
+      data,
+      allowedTeamNames,
+      progressReviewKeys,
+    );
+  }, [data, allowedTeamNames, teamsReady, progressReviewKeys]);
 
   const groupedByTrack = useMemo(() => groupDeliverablesByTrack(data), [data]);
 
@@ -179,8 +185,10 @@ export function MilestonesPage() {
         : projectTeams;
       let grouped = teams.map((team) => ({
         teamName: team.name,
-        items: data.filter((d) => deliverableAppliesToTeam(d, team.name)),
-        slots: deliverablesToTeamSlotMap(team.name, data),
+        items: data.filter((d) =>
+          deliverableAppliesToTeamWithTrack(d, team.name, team.trackLabel),
+        ),
+        slots: deliverablesToTeamSlotMap(team.name, data, team.trackLabel),
       }));
       if (selectedTeam) {
         grouped = grouped.filter((row) =>
@@ -194,8 +202,12 @@ export function MilestonesPage() {
 
   const pendingReviewItems = useMemo(() => {
     if (!teamsReady) return [];
-    return listTeamDeliverablesNeedingReview(data, allowedTeamNames);
-  }, [data, allowedTeamNames, teamsReady]);
+    return listTeamDeliverablesNeedingReview(
+      data,
+      allowedTeamNames,
+      progressReviewKeys,
+    );
+  }, [data, allowedTeamNames, teamsReady, progressReviewKeys]);
 
   // Deep-link: /app/bob/deliverables?deliverableId=…&team=…&tab=by_team
   // (also accepts legacy ?id= for deliverable — student drawer excludes this route)

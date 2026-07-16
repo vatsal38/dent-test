@@ -2,17 +2,17 @@ import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
 import type { AttendanceState, PunchType, PunchVisualState } from "../types";
 
 export const PUNCH_LABELS: Record<PunchType, string> = {
-  am_in: "AM In",
-  am_out: "AM Out",
-  pm_in: "PM In",
-  pm_out: "PM Out",
+  am_in: "Morning In",
+  am_out: "Morning Out",
+  pm_in: "Afternoon In",
+  pm_out: "Afternoon Out",
 };
 
 export const PUNCH_SHORT: Record<PunchType, string> = {
-  am_in: "AM In",
-  am_out: "AM Out",
-  pm_in: "PM In",
-  pm_out: "PM Out",
+  am_in: "Morning In",
+  am_out: "Morning Out",
+  pm_in: "Afternoon In",
+  pm_out: "Afternoon Out",
 };
 
 export const STATUS_LABELS: Record<BobAttendanceStatus, string> = {
