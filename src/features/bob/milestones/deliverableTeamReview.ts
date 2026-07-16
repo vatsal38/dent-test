@@ -2,6 +2,7 @@ import type {
   BobDeliverable,
   BobDeliverableTrackerRecord,
 } from "@/platform/api/bob/milestones";
+import { formatBobTrackDisplayLabel } from "@/lib/bobDisplayTerminology";
 
 /** Display label: "Jay's Water | Denternship" → "Jay's Water" */
 export function shortProjectTeamName(name: string | null | undefined): string {
@@ -186,7 +187,12 @@ export function teamDeliverableNeedsReview(
   // Flag when youth submitted a weekly progress update for this team/deliverable
   if (progressReviewKeys?.size) {
     const short = shortProjectTeamName(teamName);
-    if (progressReviewKeys.has(`${deliverable.id}|${short}`)) {
+    const hasOpenProgress = [...progressReviewKeys].some((key) => {
+      const prefix = `${deliverable.id}|`;
+      if (!key.startsWith(prefix)) return false;
+      return teamNamesMatch(key.slice(prefix.length), short);
+    });
+    if (hasOpenProgress) {
       // Already staff-approved — don't keep in queue
       if (status === "approved") return false;
       return true;
@@ -199,6 +205,8 @@ export function listTeamDeliverablesNeedingReview(
   deliverables: BobDeliverable[],
   allowedTeamNames?: string[],
   progressReviewKeys?: Set<string>,
+  /** When provided, also queue catalog deliverables for project teams on the same track. */
+  projectTeams?: Array<{ name: string; trackLabel?: string | null }>,
 ): Array<{ deliverable: BobDeliverable; teamName: string }> {
   const out: Array<{ deliverable: BobDeliverable; teamName: string }> = [];
   if (allowedTeamNames !== undefined && allowedTeamNames.length === 0) {
@@ -206,6 +214,31 @@ export function listTeamDeliverablesNeedingReview(
   }
   for (const d of deliverables) {
     const teams = new Set(teamNamesFromDeliverables([d]));
+    // Include BoB '26 project teams on this deliverable's track (catalog templates)
+    for (const team of projectTeams || []) {
+      if (!team?.name) continue;
+      if (
+        allowedTeamNames?.length &&
+        !allowedTeamNames.some((allowed) => teamNamesMatch(team.name, allowed))
+      ) {
+        continue;
+      }
+      const teamTrack = formatBobTrackDisplayLabel(team.trackLabel || "")
+        .toLowerCase()
+        .trim();
+      const dTrack = formatBobTrackDisplayLabel(d.trackName || "")
+        .toLowerCase()
+        .trim();
+      if (
+        teamTrack &&
+        dTrack &&
+        (teamTrack === dTrack ||
+          teamTrack.includes(dTrack) ||
+          dTrack.includes(teamTrack))
+      ) {
+        teams.add(shortProjectTeamName(team.name));
+      }
+    }
     // Progress updates may name teams not yet on tracker rows — include them
     if (progressReviewKeys?.size) {
       for (const key of progressReviewKeys) {
@@ -239,11 +272,13 @@ export function countTeamDeliverablesNeedingReview(
   deliverables: BobDeliverable[],
   allowedTeamNames?: string[],
   progressReviewKeys?: Set<string>,
+  projectTeams?: Array<{ name: string; trackLabel?: string | null }>,
 ): number {
   return listTeamDeliverablesNeedingReview(
     deliverables,
     allowedTeamNames,
     progressReviewKeys,
+    projectTeams,
   ).length;
 }
 

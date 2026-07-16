@@ -169,8 +169,9 @@ export function MilestonesPage() {
       data,
       allowedTeamNames,
       progressReviewKeys,
+      projectTeams,
     );
-  }, [data, allowedTeamNames, teamsReady, progressReviewKeys]);
+  }, [data, allowedTeamNames, teamsReady, progressReviewKeys, projectTeams]);
 
   const groupedByTrack = useMemo(() => groupDeliverablesByTrack(data), [data]);
 
@@ -206,8 +207,9 @@ export function MilestonesPage() {
       data,
       allowedTeamNames,
       progressReviewKeys,
+      projectTeams,
     );
-  }, [data, allowedTeamNames, teamsReady, progressReviewKeys]);
+  }, [data, allowedTeamNames, teamsReady, progressReviewKeys, projectTeams]);
 
   // Deep-link: /app/bob/deliverables?deliverableId=…&team=…&tab=by_team
   // (also accepts legacy ?id= for deliverable — student drawer excludes this route)
