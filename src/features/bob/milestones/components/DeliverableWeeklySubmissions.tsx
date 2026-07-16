@@ -207,24 +207,25 @@ export function DeliverableWeeklySubmissions({
           {canOpenInbox && total > 0 ? (
             <Link
               href={inboxHref(deliverableId, { teamName })}
-              className="text-xs text-gray-500 hover:underline"
+              className="text-xs text-orange-600 hover:underline font-medium"
             >
-              Filtered submissions →
+              Open inbox →
             </Link>
           ) : null}
           <Link
             href={deliverablePageHref(deliverableId, teamName)}
-            className="text-xs text-orange-600 hover:underline font-medium"
+            className="text-xs text-gray-500 hover:underline"
           >
-            Open inbox →
+            Open deliverable →
           </Link>
         </div>
       </div>
       <p className="text-xs text-gray-500 mb-3">
         Each team member submits one weekly progress form for this deliverable.
         Connected submissions (including other denters on the same deliverable)
-        show here for staff review. Open inbox goes to this deliverable&apos;s
-        page — not the full catalog.
+        show here for staff review. Open inbox jumps straight to the filtered
+        submissions view for this deliverable, and Open deliverable returns to
+        this review drawer.
       </p>
       {query.isLoading ? (
         <p className="text-sm text-gray-500">Loading weekly submissions…</p>
