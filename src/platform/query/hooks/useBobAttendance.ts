@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import {
   createBobAttendance,
+  getAllBobAttendance,
   getBobAttendance,
   getBobAttendanceDateBounds,
   getBobAttendanceRecord,
@@ -22,11 +23,13 @@ import { bobKeys } from "@/platform/query/queryKeys";
 
 export function useBobAttendanceList(
   params: BobAttendanceListParams,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; fetchAll?: boolean },
 ) {
+  const fetchAll = options?.fetchAll !== false;
   return useQuery({
-    queryKey: bobKeys.attendance.list(params),
-    queryFn: () => getBobAttendance(params),
+    queryKey: [...bobKeys.attendance.list(params), fetchAll ? "all" : "page"] as const,
+    queryFn: () =>
+      fetchAll ? getAllBobAttendance(params) : getBobAttendance(params),
     placeholderData: keepPreviousData,
     enabled: options?.enabled ?? true,
   });

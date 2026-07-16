@@ -112,6 +112,35 @@ export async function getBobAttendance(
   );
 }
 
+/** Page through attendance until every record in the query is loaded. */
+export async function getAllBobAttendance(
+  params?: Omit<BobAttendanceListParams, "offset">,
+): Promise<BobAttendanceListResponse> {
+  const pageSize = Math.min(Math.max(Number(params?.limit) || 5000, 1), 10000);
+  const base = { ...params, limit: pageSize };
+  const all: BobAttendance[] = [];
+  let offset = 0;
+  let total = Infinity;
+
+  while (offset < total) {
+    const page = await getBobAttendance({ ...base, offset });
+    total = Number(page.total) || 0;
+    const batch = page.attendance || [];
+    all.push(...batch);
+    if (batch.length === 0) break;
+    offset += batch.length;
+    // Safety: avoid infinite loops if API mis-reports total
+    if (offset > 200000) break;
+  }
+
+  return {
+    attendance: all,
+    total: total === Infinity ? all.length : total,
+    limit: all.length,
+    offset: 0,
+  };
+}
+
 export async function getBobAttendanceRecord(
   id: string,
 ): Promise<BobAttendance> {

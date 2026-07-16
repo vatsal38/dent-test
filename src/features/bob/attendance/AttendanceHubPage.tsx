@@ -43,6 +43,12 @@ import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { buildHoursAttendanceRollup } from "./model/hoursRollup";
 import { buildAttendanceCsv } from "./model/attendanceCsvExport";
 import {
+  resolveAttendanceExportRange,
+  selectAttendanceExportDays,
+} from "./model/attendanceExportSelection";
+import { computeAttendanceWorkspace } from "./model/computeWorkspace";
+import { getAllBobAttendance } from "@/platform/api/bob/attendance";
+import {
   isBeforeProgramStart,
   PROGRAM_END_DATE,
   PROGRAM_START_DATE,
@@ -115,11 +121,15 @@ export function AttendanceHubPage() {
     lastSyncedAt,
     isStudentViewer,
     linkedStudentId,
+    pods,
+    enrollmentCount,
   } = useAttendanceWorkspace({
     focusDate,
     viewMode,
     trackFilter,
   });
+
+  const [exporting, setExporting] = useState(false);
 
   const hoursRollup = useMemo(
     () =>
@@ -228,16 +238,73 @@ export function AttendanceHubPage() {
     [workspace.alerts],
   );
 
-  const exportCsv = useCallback(() => {
-    const csv = buildAttendanceCsv(tableDays, workspace);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `attendance-${focusDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [tableDays, workspace, focusDate]);
+  const exportCsv = useCallback(async () => {
+    setExporting(true);
+    setSyncError(null);
+    try {
+      const range = resolveAttendanceExportRange(viewMode, focusDate);
+      const recordsResponse = await getAllBobAttendance({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        limit: 5000,
+      });
+
+      const exportWorkspace = computeAttendanceWorkspace({
+        focusDate,
+        startDate: range.startDate,
+        endDate: range.endDate,
+        trackFilter: trackFilter || undefined,
+        pods,
+        students: workspace.students,
+        records: recordsResponse.attendance,
+        enrollmentCount,
+        studentsRequested: workspace.students.length,
+        studentOnlyId: null,
+      });
+
+      const exportDays = selectAttendanceExportDays({
+        days: exportWorkspace.days,
+        workspace: exportWorkspace,
+        healthFilter,
+        search: debouncedSearch,
+        focusDate,
+      });
+
+      if (!exportDays.length) {
+        setSyncError(
+          "No attendance rows match your current Day/Week/Month view, filters, and search.",
+        );
+        return;
+      }
+
+      const csv = buildAttendanceCsv(exportDays, exportWorkspace);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const trackPart = trackFilter
+        ? `-${trackFilter.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 40)}`
+        : "";
+      const filterPart =
+        healthFilter && healthFilter !== "all" ? `-${healthFilter}` : "";
+      a.download = `attendance-${range.fileLabel}${trackPart}${filterPart}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setSyncError(parseApiError(err) || "Failed to export attendance.");
+    } finally {
+      setExporting(false);
+    }
+  }, [
+    viewMode,
+    focusDate,
+    trackFilter,
+    healthFilter,
+    debouncedSearch,
+    pods,
+    workspace.students,
+    enrollmentCount,
+  ]);
 
   if (loading) {
     return <AttendanceHubSkeleton />;
@@ -369,11 +436,12 @@ export function AttendanceHubPage() {
                 ) : null}
               </div>
               <BobActionButton
-                label="Export"
+                label={exporting ? "Exporting…" : "Export"}
                 icon={<FiDownload />}
                 variant="outline"
-                disabled={!tableDays.length}
+                disabled={exporting}
                 onClick={exportCsv}
+                title={`Export ${viewMode} attendance for your current filters`}
               />
               <BobActionButton
                 href="/app/bob/attendance/discrepancies"
