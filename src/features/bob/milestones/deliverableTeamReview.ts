@@ -183,7 +183,9 @@ export function teamDeliverableNeedsReview(
 ): boolean {
   if (teamPendingUploadCount(deliverable, teamName) > 0) return true;
   const status = teamReviewStatus(deliverable, teamName);
-  if (status === "pending_review") return true;
+  // Staff tracker actively in progress or awaiting review — show in Deliverables to Review
+  // (matches admin queue cards that badge "In progress" / "Pending Review").
+  if (status === "pending_review" || status === "in_progress") return true;
   // Flag when youth submitted a weekly progress update for this team/deliverable
   if (progressReviewKeys?.size) {
     const short = shortProjectTeamName(teamName);

@@ -109,10 +109,10 @@ export function MilestonesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [detailSaveError, setDetailSaveError] = useState<string | null>(null);
 
-  const milestonesQuery = useBobMilestonesList({
-    orgId,
-    track: trackFilter || undefined,
-  });
+  // Always fetch the full catalog. Track chips filter Catalog/By Team client-side;
+  // Deliverables to Review always uses the unscoped list (so coaches see Denternship
+  // items even when browsing Made@Dent).
+  const milestonesQuery = useBobMilestonesList({ orgId });
   const isStudent = access.role === "student";
   const projectTeamsQuery = useBobProjectTeamsList(undefined, {
     enabled: !isStudent,
@@ -140,15 +140,26 @@ export function MilestonesPage() {
   }, [progressSubmissionsQuery.data?.submissions]);
 
   const rawData = milestonesQuery.data?.data ?? [];
-  const data = useMemo(() => {
+  const scopedData = useMemo(() => {
     let rows = rawData;
     // Students only see deliverables for their project teams / track.
-    // Coaches and site supporters see the full catalog (scoped review is per-team).
+    // Coaches and site supporters always keep the full catalog — never filter by
+    // pod name ≈ track (that hid Denternship items for Demo Coach).
     if (linkedStudent) {
       rows = filterDeliverablesForStudent(rows, linkedStudent, projectTeams);
     }
     return rows;
   }, [rawData, linkedStudent, projectTeams]);
+  /** Track chip filters Catalog / progress table only — not Deliverables to Review. */
+  const data = useMemo(() => {
+    if (!trackFilter) return scopedData;
+    const needle = formatBobTrackDisplayLabel(trackFilter).toLowerCase();
+    return scopedData.filter((d) => {
+      const track = formatBobTrackDisplayLabel(d.trackName || "").toLowerCase();
+      return track.includes(needle) || needle.includes(track);
+    });
+  }, [scopedData, trackFilter]);
+  const reviewData = scopedData;
   const loading = milestonesQuery.isLoading;
   const error = milestonesQuery.error
     ? parseApiError(milestonesQuery.error)
@@ -166,12 +177,18 @@ export function MilestonesPage() {
   const pendingCount = useMemo(() => {
     if (!teamsReady) return 0;
     return countTeamDeliverablesNeedingReview(
-      data,
+      reviewData,
       allowedTeamNames,
       progressReviewKeys,
       projectTeams,
     );
-  }, [data, allowedTeamNames, teamsReady, progressReviewKeys, projectTeams]);
+  }, [
+    reviewData,
+    allowedTeamNames,
+    teamsReady,
+    progressReviewKeys,
+    projectTeams,
+  ]);
 
   const groupedByTrack = useMemo(() => groupDeliverablesByTrack(data), [data]);
 
@@ -204,21 +221,27 @@ export function MilestonesPage() {
   const pendingReviewItems = useMemo(() => {
     if (!teamsReady) return [];
     return listTeamDeliverablesNeedingReview(
-      data,
+      reviewData,
       allowedTeamNames,
       progressReviewKeys,
       projectTeams,
     );
-  }, [data, allowedTeamNames, teamsReady, progressReviewKeys, projectTeams]);
+  }, [
+    reviewData,
+    allowedTeamNames,
+    teamsReady,
+    progressReviewKeys,
+    projectTeams,
+  ]);
 
   // Deep-link: /app/bob/deliverables?deliverableId=…&team=…&tab=by_team
   // (also accepts legacy ?id= for deliverable — student drawer excludes this route)
   const lastDeepLinkKey = useRef("");
   useEffect(() => {
-    if (!deliverableIdParam || !data.length) return;
+    if (!deliverableIdParam || !reviewData.length) return;
     const key = `${deliverableIdParam}|${teamFilterParam}`;
     if (lastDeepLinkKey.current === key) return;
-    const match = data.find((d) => d.id === deliverableIdParam);
+    const match = reviewData.find((d) => d.id === deliverableIdParam);
     if (!match) return;
     lastDeepLinkKey.current = key;
     setDetailSaveError(null);
@@ -232,7 +255,7 @@ export function MilestonesPage() {
     } else if (initialTab === "by_team" || initialTab === "pending_review") {
       setTab(initialTab);
     }
-  }, [deliverableIdParam, data, teamFilterParam, initialTab]);
+  }, [deliverableIdParam, reviewData, teamFilterParam, initialTab]);
 
   function openDetail(d: BobDeliverable, teamName?: string) {
     setDetailSaveError(null);
