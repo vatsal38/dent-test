@@ -203,6 +203,20 @@ export const DASHBOARD_LAYOUTS: Record<
           },
         ],
       },
+      {
+        id: "accountability",
+        title: "Accountability",
+        columns: 2,
+        widgets: [
+          {
+            id: "coach-blitz",
+            kind: "blitz_teams",
+            title: "Blitz teams",
+            colSpan: 6,
+            permissions: ["dashboard.view"],
+          },
+        ],
+      },
     ],
   },
   site_supporter_home: {
