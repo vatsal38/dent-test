@@ -225,14 +225,14 @@ export function StudentMyAttendanceCards({
 
               <AttendancePunchBlock title="Sign-in & sign-out">
                 <AttendancePunchRow
-                  label="AM"
+                  label="Morning"
                   inTime={final?.morning?.in}
                   outTime={final?.morning?.out}
                   hours={final?.morning?.hours}
                   size="large"
                 />
                 <AttendancePunchRow
-                  label="PM"
+                  label="Afternoon"
                   inTime={final?.afternoon?.in}
                   outTime={final?.afternoon?.out}
                   hours={final?.afternoon?.hours}
@@ -254,7 +254,7 @@ export function StudentMyAttendanceCards({
                   <div className="mt-2">
                     <AttendancePunchBlock title="Youth sign-in" tone="gray">
                       <AttendancePunchRow
-                        label="AM"
+                        label="Morning"
                         inTime={day.morning.in.timeLabel}
                         outTime={day.morning.out.timeLabel}
                         hours={day.morning.hoursLabel}
@@ -262,7 +262,7 @@ export function StudentMyAttendanceCards({
                         size="large"
                       />
                       <AttendancePunchRow
-                        label="PM"
+                        label="Afternoon"
                         inTime={day.afternoon.in.timeLabel}
                         outTime={day.afternoon.out.timeLabel}
                         hours={day.afternoon.hoursLabel}

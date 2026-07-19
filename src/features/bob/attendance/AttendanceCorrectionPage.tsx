@@ -134,6 +134,9 @@ export function AttendanceCorrectionPage() {
   const [specialCircumstance, setSpecialCircumstance] = useState('');
   const [correctedSignInTime, setCorrectedSignInTime] = useState('');
   const [correctedSignOutTime, setCorrectedSignOutTime] = useState('');
+  const [correctionSession, setCorrectionSession] = useState<'morning' | 'afternoon'>(
+    'morning',
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -306,13 +309,23 @@ export function AttendanceCorrectionPage() {
 
   useEffect(() => {
     if (!selectedDate) return;
-    if (!correctedSignInTime && selectedDate.signInTime) {
-      setCorrectedSignInTime(toTimeInputValue(selectedDate.signInTime));
+    if (correctedSignInTime || correctedSignOutTime) return;
+    if (correctionSession === 'morning') {
+      if (selectedDate.morningIn) {
+        setCorrectedSignInTime(toTimeInputValue(selectedDate.morningIn));
+      }
+      if (selectedDate.morningOut) {
+        setCorrectedSignOutTime(toTimeInputValue(selectedDate.morningOut));
+      }
+    } else {
+      if (selectedDate.afternoonIn) {
+        setCorrectedSignInTime(toTimeInputValue(selectedDate.afternoonIn));
+      }
+      if (selectedDate.afternoonOut) {
+        setCorrectedSignOutTime(toTimeInputValue(selectedDate.afternoonOut));
+      }
     }
-    if (!correctedSignOutTime && selectedDate.signOutTime) {
-      setCorrectedSignOutTime(toTimeInputValue(selectedDate.signOutTime));
-    }
-  }, [selectedDate, correctedSignInTime, correctedSignOutTime]);
+  }, [selectedDate, correctedSignInTime, correctedSignOutTime, correctionSession]);
 
   function selectStudent(s: AttendanceCorrectionStudentOption | null) {
     setStudentId(s?.id ?? '');
@@ -385,7 +398,15 @@ export function AttendanceCorrectionPage() {
               : matchedSpecialOption?.airtableRecordId,
         attendanceDate: dayForRequest,
         absenceReason: absenceReason || undefined,
-        correctionDetail: correctionDetail || undefined,
+        correctionDetail:
+          requestType === 'time_correction'
+            ? [
+                `Session: ${correctionSession === 'morning' ? 'Morning' : 'Afternoon'}`,
+                correctionDetail || null,
+              ]
+                .filter(Boolean)
+                .join('. ')
+            : correctionDetail || undefined,
         specialCircumstance: specialCircumstance || undefined,
         correctedSignInDate:
           requestType === 'time_correction' ? dayForRequest : undefined,
@@ -750,40 +771,80 @@ export function AttendanceCorrectionPage() {
         ) : null}
 
         {requestType === 'time_correction' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                Corrected sign in <span className="text-red-500">*</span>
+                Which session? <span className="text-red-500">*</span>
               </label>
-              <input
-                type="time"
-                value={correctedSignInTime}
-                onChange={(e) => setCorrectedSignInTime(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              {correctionDay ? (
-                <p className="text-xs text-gray-500 mt-1">
-                  Day: {formatProgramDateLabel(correctionDay)} ({correctionDay})
-                </p>
-              ) : null}
+              <div className="flex gap-2">
+                {(
+                  [
+                    { id: 'morning' as const, label: 'Morning' },
+                    { id: 'afternoon' as const, label: 'Afternoon' },
+                  ] as const
+                ).map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setCorrectionSession(s.id);
+                      setCorrectedSignInTime('');
+                      setCorrectedSignOutTime('');
+                    }}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      correctionSession === s.id
+                        ? 'border-orange-400 bg-orange-50 text-orange-900'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Pick Morning or Afternoon so staff know which sign-in / sign-out to
+                fix.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Corrected sign out <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="time"
-                value={correctedSignOutTime}
-                onChange={(e) => setCorrectedSignOutTime(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-              {correctionDay ? (
-                <p className="text-xs text-gray-500 mt-1">
-                  Day: {formatProgramDateLabel(correctionDay)} ({correctionDay})
-                </p>
-              ) : null}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Corrected{' '}
+                  {correctionSession === 'morning' ? 'Morning' : 'Afternoon'} sign
+                  in <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={correctedSignInTime}
+                  onChange={(e) => setCorrectedSignInTime(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                {correctionDay ? (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Day: {formatProgramDateLabel(correctionDay)} ({correctionDay})
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Corrected{' '}
+                  {correctionSession === 'morning' ? 'Morning' : 'Afternoon'} sign
+                  out <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={correctedSignOutTime}
+                  onChange={(e) => setCorrectedSignOutTime(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                {correctionDay ? (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Day: {formatProgramDateLabel(correctionDay)} ({correctionDay})
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}

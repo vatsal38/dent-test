@@ -66,9 +66,10 @@ export function isScheduledPlaceholderTime(value?: string | null): boolean {
 
 /**
  * Airtable autofills when youth forgets to punch out:
- * - 12:30 (morning session end)
- * - 6:30 PM (common afternoon autofill; program ends 4:00 PM)
- * These must never appear as staff corrections.
+ * - 12:30 (morning session end) — ONLY treat as autofill on untrusted daily
+ *   rollup fields (no staffCorrectedByUserId). Real am_out punches and staff
+ *   corrections at 12:30 are valid.
+ * - 6:30 PM (afternoon autofill; program ends 4:00 PM)
  */
 export function isScheduleAutofillTime(value?: string | null): boolean {
   if (!value) return false;
@@ -80,20 +81,33 @@ export function isScheduleAutofillTime(value?: string | null): boolean {
   );
 }
 
-/** @deprecated Prefer isScheduleAutofillTime — kept for 6:30 PM-specific call sites. */
-export function isDefaultAfternoonOutTime(value?: string | null): boolean {
+/** Afternoon-only autofill (6:30 PM). Morning end 12:30 is a real session boundary. */
+export function isAfternoonAutofillTime(value?: string | null): boolean {
   if (!value) return false;
   const hm = easternHoursMinutes(String(value));
   if (!hm) return false;
   return hm.hour === 18 && hm.minute === 30;
 }
 
+/** @deprecated Prefer isAfternoonAutofillTime / isScheduleAutofillTime. */
+export function isDefaultAfternoonOutTime(value?: string | null): boolean {
+  return isAfternoonAutofillTime(value);
+}
+
+function isTrustedStaffCorrection(
+  daily?: StaffCorrectionDaily | null,
+): boolean {
+  return Boolean(
+    daily?.staffCorrectedByUserId ||
+      String(daily?.manualOverride || "").trim(),
+  );
+}
+
 /** Youthwork / staff-entered overrides only — never Airtable auto-fill placeholders. */
 export function hasExplicitStaffCorrection(
   daily?: StaffCorrectionDaily | null,
 ): boolean {
-  if (daily?.staffCorrectedByUserId) return true;
-  if (String(daily?.manualOverride || "").trim()) return true;
+  if (isTrustedStaffCorrection(daily)) return true;
 
   const candidates = [
     daily?.staffCorrectionSignIn,
@@ -151,7 +165,8 @@ function hoursBetween(date: string, inTime: string, outTime: string): number {
 function hoursBetweenIso(date: string, inIso?: string | null, outIso?: string | null): number {
   if (!inIso || !outIso) return 0;
   if (isScheduledPlaceholderTime(inIso)) return 0;
-  if (isScheduleAutofillTime(outIso) || isScheduleAutofillTime(inIso)) return 0;
+  // Only exclude afternoon autofill (6:30 PM). 12:30 is a valid morning out.
+  if (isAfternoonAutofillTime(outIso) || isAfternoonAutofillTime(inIso)) return 0;
   return hoursBetween(date, toTimeInputValue(inIso), toTimeInputValue(outIso));
 }
 
@@ -205,7 +220,7 @@ export function syncedTimeInput(
   punch: PunchType,
 ): string {
   const iso = day.punches[punch].youthTimeIso;
-  if (punch === "pm_out" && isDefaultAfternoonOutTime(iso)) return "";
+  if (punch === "pm_out" && isAfternoonAutofillTime(iso)) return "";
   return toTimeInputValue(iso);
 }
 
@@ -216,7 +231,7 @@ export function effectiveStaffTime(
 ): string {
   const entered = String(staffInput || "").trim();
   if (entered) {
-    if (punch === "pm_out" && isDefaultAfternoonOutTime(entered)) return "";
+    if (punch === "pm_out" && isAfternoonAutofillTime(entered)) return "";
     return entered;
   }
   return syncedTimeInput(day, punch);
@@ -251,28 +266,27 @@ export function staffMorningInInput(
 export function staffMorningOutInput(
   daily: StaffCorrectionDaily | null | undefined,
 ): string {
-  if (
-    daily?.staffCorrectionSignOut &&
-    !isScheduleAutofillTime(daily.staffCorrectionSignOut) &&
-    !isScheduledPlaceholderTime(daily.staffCorrectionSignOut)
-  ) {
-    return toTimeInputValue(daily.staffCorrectionSignOut);
+  const raw = daily?.staffCorrectionSignOut;
+  if (!raw || isScheduledPlaceholderTime(raw)) return "";
+  // Staff-saved morning out must stick — including 12:30 (session end).
+  if (isTrustedStaffCorrection(daily)) {
+    return toTimeInputValue(raw);
   }
-  return "";
+  // Untrusted Airtable autofill at 12:30 — hide so staff can enter the real time.
+  if (isScheduleAutofillTime(raw)) return "";
+  return toTimeInputValue(raw);
 }
 
 export function staffAfternoonInInput(
   daily: StaffCorrectionDaily | null | undefined,
 ): string {
   const raw = daily?.staffCorrectionSignIn || daily?.manualStartTime;
-  if (
-    raw &&
-    !isScheduleAutofillTime(raw) &&
-    !isScheduledPlaceholderTime(raw)
-  ) {
+  if (!raw || isScheduledPlaceholderTime(raw)) return "";
+  if (isTrustedStaffCorrection(daily)) {
     return toTimeInputValue(raw);
   }
-  return "";
+  if (isScheduleAutofillTime(raw)) return "";
+  return toTimeInputValue(raw);
 }
 
 export function hasStaffAfternoonOutCorrection(
@@ -282,7 +296,12 @@ export function hasStaffAfternoonOutCorrection(
   // Show staff PM out when YouthWorks saved a correction (staffCorrectedByUserId),
   // or when sign-out differs from youth and is not an autofill placeholder.
   const out = daily?.signOutTime || daily?.adjustedSignOut;
-  if (!out || isScheduleAutofillTime(out) || isScheduledPlaceholderTime(out)) {
+  if (!out || isScheduledPlaceholderTime(out)) {
+    return false;
+  }
+  if (isAfternoonAutofillTime(out)) return false;
+  // Untrusted 12:30 on afternoon-out field is not a real PM correction.
+  if (!isTrustedStaffCorrection(daily) && isScheduleAutofillTime(out)) {
     return false;
   }
   if (daily?.staffCorrectedByUserId) {
@@ -299,7 +318,9 @@ export function staffAfternoonOutInput(
 ): string {
   if (!hasStaffAfternoonOutCorrection(daily, day)) return "";
   const out = daily?.signOutTime || daily?.adjustedSignOut;
-  if (isScheduleAutofillTime(out) || isScheduledPlaceholderTime(out)) return "";
+  if (!out || isScheduledPlaceholderTime(out) || isAfternoonAutofillTime(out)) {
+    return "";
+  }
   return toTimeInputValue(out);
 }
 export function computeEffectiveHoursPresent(
@@ -457,10 +478,11 @@ export function syncedPunchLabel(
   punch: PunchType,
 ): string {
   const slot = day.punches[punch];
-  if (slot.youthTimeIso && isScheduleAutofillTime(slot.youthTimeIso)) {
+  // Hide afternoon autofill only — 12:30 is a valid morning out.
+  if (slot.youthTimeIso && isAfternoonAutofillTime(slot.youthTimeIso)) {
     return "—";
   }
-  if (punch === "pm_out" && isDefaultAfternoonOutTime(slot.youthTimeIso)) {
+  if (punch === "pm_out" && isAfternoonAutofillTime(slot.youthTimeIso)) {
     return "—";
   }
   const candidates = [
@@ -470,8 +492,8 @@ export function syncedPunchLabel(
     slot.originalTimeLabel,
   ];
   for (const label of candidates) {
-    if (label && label !== "[object Object]" && !isScheduleAutofillTime(label)) {
-      if (punch === "pm_out" && isDefaultAfternoonOutTime(label)) continue;
+    if (label && label !== "[object Object]" && !isAfternoonAutofillTime(label)) {
+      if (punch === "pm_out" && isAfternoonAutofillTime(label)) continue;
       return label;
     }
   }

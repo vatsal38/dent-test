@@ -188,22 +188,22 @@ function populateDailyRecordPunches(
   const manualEnd = formatAttendanceTime(daily.manualEndTime);
   const staffInIso = daily.staffCorrectionSignIn;
   const staffOutIso = daily.staffCorrectionSignOut;
+  const staffCorrection = hasExplicitStaffCorrection(daily);
   const staffIn =
     staffInIso &&
-    !isScheduleAutofillTime(staffInIso) &&
-    !isScheduledPlaceholderTime(staffInIso)
+    !isScheduledPlaceholderTime(staffInIso) &&
+    (staffCorrection || !isScheduleAutofillTime(staffInIso))
       ? formatAttendanceTime(staffInIso)
       : null;
   const staffOut =
     staffOutIso &&
-    !isScheduleAutofillTime(staffOutIso) &&
-    !isScheduledPlaceholderTime(staffOutIso)
+    !isScheduledPlaceholderTime(staffOutIso) &&
+    (staffCorrection || !isScheduleAutofillTime(staffOutIso))
       ? formatAttendanceTime(staffOutIso)
       : null;
 
   const punchState = punchStateFromAttendanceState(attendanceState);
   const correctionSource = daily.manualOverride ? "Manual override" : "Coach correction";
-  const staffCorrection = hasExplicitStaffCorrection(daily);
 
   if (
     (amInDisplay || amInOriginal) &&
@@ -226,8 +226,8 @@ function populateDailyRecordPunches(
     const amOutIso = staffOutIso || daily.manualEndTime;
     if (
       amOutIso &&
-      !isScheduleAutofillTime(amOutIso) &&
-      !isScheduledPlaceholderTime(amOutIso)
+      !isScheduledPlaceholderTime(amOutIso) &&
+      (staffCorrection || !isScheduleAutofillTime(amOutIso))
     ) {
       setPunchTime(punches, "am_out", {
         display: staffOut || manualEnd || undefined,
@@ -299,7 +299,7 @@ function buildSession(
     hoursLabel,
     statusLabel: sessionStatusLabel(
       attendanceState ?? "missing_punch",
-      missingLabels.map((l) => `${inType.includes("am") ? "AM" : "PM"} ${l}`),
+      missingLabels.map((l) => `${inType.includes("am") ? "Morning" : "Afternoon"} ${l}`),
     ),
   };
 }
@@ -522,8 +522,9 @@ export function buildStudentDayAttendance(
         const pt = normalizeSignType(ev.signType);
         if (!pt) continue;
         const timeIso = punchEventTimeIso(ev, pt);
-        // Skip schedule autofills (12:30 / 6:30 PM) — not real youth punches
-        if (isScheduleAutofillTime(timeIso) || isDefaultAfternoonOutTime(timeIso)) {
+        // Skip afternoon autofill (6:30 PM) only. Morning end 12:30 is a valid
+        // am_out — Airtable schedule autofills live on daily rollup fields.
+        if (isDefaultAfternoonOutTime(timeIso)) {
           continue;
         }
         const timeLabel = formatAttendanceTime(timeIso);

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-/** Compact AM/PM sign-in → sign-out row for mobile attendance cards. */
+/** Compact Morning/Afternoon sign-in → sign-out row for mobile attendance cards. */
 export function AttendancePunchRow({
   label,
   inTime,
@@ -33,7 +33,7 @@ export function AttendancePunchRow({
 
   return (
     <div className={`flex items-center gap-2 ${textSize}`}>
-      <span className={`w-14 sm:w-16 shrink-0 font-semibold uppercase tracking-wide ${labelTone}`}>
+      <span className={`w-[4.75rem] sm:w-24 shrink-0 font-semibold tracking-wide ${labelTone}`}>
         {label}
       </span>
       <span className="flex-1 min-w-0 tabular-nums text-gray-900">

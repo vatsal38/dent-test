@@ -72,13 +72,13 @@ function DailyStudentCard({
           Final record
         </p>
         <AttendancePunchRow
-          label="AM"
+          label="Morning"
           inTime={final.morning.in}
           outTime={final.morning.out}
           hours={final.morning.hours}
         />
         <AttendancePunchRow
-          label="PM"
+          label="Afternoon"
           inTime={final.afternoon.in}
           outTime={final.afternoon.out}
           hours={final.afternoon.hours}
@@ -106,14 +106,14 @@ function DailyStudentCard({
         </summary>
         <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2 space-y-1.5">
           <AttendancePunchRow
-            label="AM"
+            label="Morning"
             inTime={today.morning.in.timeLabel}
             outTime={today.morning.out.timeLabel}
             hours={today.morning.hoursLabel}
             tone="gray"
           />
           <AttendancePunchRow
-            label="PM"
+            label="Afternoon"
             inTime={today.afternoon.in.timeLabel}
             outTime={today.afternoon.out.timeLabel}
             hours={today.afternoon.hoursLabel}
