@@ -115,8 +115,8 @@ export function BobSettingsPage() {
     try {
       try {
         await startEvaluationsDemographicsSync({
-          sinceHours: 2160,
-          limit: 100,
+          sinceHours: 0,
+          limit: 500,
           force: true,
         });
       } catch (err) {
@@ -242,10 +242,10 @@ export function BobSettingsPage() {
             >
               Students &amp; Alums
             </a>{" "}
-            (matched by email). Linked school/org records stay in Evaluations —
+            (matched by email or BCPSS ID). Linked school/org records stay in Evaluations —
             labels are copied as text because the tables are in different bases.
-            Students must already be on the roster. Each run re-applies the last
-            90 days of submissions.
+            Students must already be on the roster. Each run re-syncs the full demographics
+            view (all submissions) and overwrites prior syncs when forced.
           </p>
           <button
             type="button"

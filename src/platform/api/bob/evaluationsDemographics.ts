@@ -39,8 +39,8 @@ export async function startEvaluationsDemographicsSync(params?: {
   return apiRequest("/api/bob/evaluations/demographics/sync", {
     method: "POST",
     body: JSON.stringify({
-      sinceHours: params?.sinceHours ?? 2160,
-      limit: params?.limit ?? 100,
+      sinceHours: params?.sinceHours ?? 0,
+      limit: params?.limit ?? 500,
       force: params?.force ?? true,
     }),
   });
