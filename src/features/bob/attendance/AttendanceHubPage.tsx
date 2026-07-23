@@ -229,7 +229,7 @@ export function AttendanceHubPage() {
 
   const rowCount = useMemo(() => {
     const keys = new Set<string>();
-    for (const d of tableDays) keys.add(`${d.podId}|${d.studentId}`);
+    for (const d of tableDays) keys.add(d.studentId);
     return keys.size;
   }, [tableDays]);
 

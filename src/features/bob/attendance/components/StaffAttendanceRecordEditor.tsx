@@ -32,7 +32,6 @@ import {
   deriveAttendanceStatusLabel,
   effectiveStaffTime,
   formatHoursValue,
-  hasStaffAfternoonOutCorrection,
   hasStaffMorningInCorrection,
   isScheduledPlaceholderTime,
   staffAfternoonInInput,
@@ -280,9 +279,7 @@ export function StaffAttendanceRecordEditor({
     const afternoonOutIso = staffCorrectionIso(
       day.date,
       afternoonOut,
-      hasStaffAfternoonOutCorrection(source, day)
-        ? source?.signOutTime || source?.adjustedSignOut
-        : null,
+      source?.signOutTime || source?.adjustedSignOut,
     );
     if (afternoonOutIso !== undefined) payload.signOutTime = afternoonOutIso;
 

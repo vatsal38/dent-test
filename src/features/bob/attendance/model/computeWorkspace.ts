@@ -19,6 +19,7 @@ import {
 import { PUNCH_LABELS } from "./constants";
 import {
   buildStudentDayAttendance,
+  dedupeEnrollmentsByStudent,
   listExpectedEnrollments,
   supplementEnrollmentsFromAttendance,
   supplementEnrollmentsFromStudents,
@@ -349,15 +350,19 @@ export function computeAttendanceWorkspace(
     rosterEnrollments,
     podFilter,
   );
-  const enrollments = studentOnlyId
-    ? cohortEnrollments.filter((e) => e.studentId === studentOnlyId)
-    : supplementEnrollmentsFromAttendance(
-        scopedRecords,
-        dates,
-        cohortEnrollments,
-        studentById,
-        podFilter,
-      );
+  const enrollments = dedupeEnrollmentsByStudent(
+    studentOnlyId
+      ? cohortEnrollments.filter((e) => e.studentId === studentOnlyId)
+      : supplementEnrollmentsFromAttendance(
+          scopedRecords,
+          dates,
+          cohortEnrollments,
+          studentById,
+          podFilter,
+        ),
+    studentById,
+    podFilter,
+  );
 
   if (enrollments.some((e) => e.podId === UNASSIGNED_POD_ID)) {
     podById.set(UNASSIGNED_POD_ID, {

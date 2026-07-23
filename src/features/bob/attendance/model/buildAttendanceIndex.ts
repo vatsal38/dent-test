@@ -363,6 +363,38 @@ export interface ExpectedEnrollment {
 
 export const UNASSIGNED_POD_ID = "__unassigned__";
 
+/** Prefer roster pod; fall back to filter scope or record pod. */
+export function resolveCanonicalEnrollmentPod(
+  studentId: string,
+  fallbackPodId: string,
+  studentById: Map<string, BobStudent>,
+  podFilter?: string,
+): string {
+  const studentPod = studentById.get(studentId)?.podId;
+  if (studentPod) return String(studentPod);
+  if (podFilter) return podFilter;
+  return fallbackPodId || UNASSIGNED_POD_ID;
+}
+
+/** One enrollment per student — avoids duplicate hub rows when roster and attendance disagree on podId. */
+export function dedupeEnrollmentsByStudent(
+  enrollments: ExpectedEnrollment[],
+  studentById: Map<string, BobStudent>,
+  podFilter?: string,
+): ExpectedEnrollment[] {
+  const byStudent = new Map<string, ExpectedEnrollment>();
+  for (const e of enrollments) {
+    const podId = resolveCanonicalEnrollmentPod(
+      e.studentId,
+      e.podId,
+      studentById,
+      podFilter,
+    );
+    byStudent.set(e.studentId, { studentId: e.studentId, podId });
+  }
+  return [...byStudent.values()];
+}
+
 export function isBaselineDailyRecord(record: {
   source?: string | null;
 }): boolean {
@@ -451,10 +483,12 @@ export function supplementEnrollmentsFromAttendance(
   for (const r of records) {
     if (!r.studentId || !r.date || !dateSet.has(r.date)) continue;
     const studentId = String(r.studentId);
-    const podId =
-      (r.podId && String(r.podId)) ||
-      studentById.get(studentId)?.podId ||
-      UNASSIGNED_POD_ID;
+    const podId = resolveCanonicalEnrollmentPod(
+      studentId,
+      (r.podId && String(r.podId)) || UNASSIGNED_POD_ID,
+      studentById,
+      podFilter,
+    );
     if (podFilter && podId !== podFilter) continue;
 
     const key = `${podId}|${studentId}`;
@@ -491,8 +525,11 @@ export function buildStudentDayAttendance(
       punchEvents.push(r);
       continue;
     }
-    const podId =
-      r.podId || studentById.get(studentId)?.podId || UNASSIGNED_POD_ID;
+    const podId = resolveCanonicalEnrollmentPod(
+      studentId,
+      r.podId || UNASSIGNED_POD_ID,
+      studentById,
+    );
     const dayKey = `${podId}|${studentId}|${r.date}`;
     rememberDayRecord(dayKey, r);
 

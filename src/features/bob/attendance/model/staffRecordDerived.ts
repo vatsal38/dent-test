@@ -289,12 +289,20 @@ export function staffAfternoonInInput(
   return toTimeInputValue(raw);
 }
 
+function youthPmOutIso(
+  day?: Pick<StudentDayAttendance, "punches">,
+): string | null {
+  const youthPmOut = day?.punches?.pm_out?.youthTimeIso;
+  if (!youthPmOut || isAfternoonAutofillTime(youthPmOut)) return null;
+  return youthPmOut;
+}
+
 export function hasStaffAfternoonOutCorrection(
   daily: StaffCorrectionDaily | null | undefined,
   day?: Pick<StudentDayAttendance, "punches">,
 ): boolean {
-  // Show staff PM out when YouthWorks saved a correction (staffCorrectedByUserId),
-  // or when sign-out differs from youth and is not an autofill placeholder.
+  // Show staff PM out when YouthWorks saved a correction, or when sign-out
+  // differs from youth and is not an autofill placeholder (mirrors morning out).
   const out = daily?.signOutTime || daily?.adjustedSignOut;
   if (!out || isScheduledPlaceholderTime(out)) {
     return false;
@@ -304,12 +312,11 @@ export function hasStaffAfternoonOutCorrection(
   if (!isTrustedStaffCorrection(daily) && isScheduleAutofillTime(out)) {
     return false;
   }
-  if (daily?.staffCorrectedByUserId) {
-    const youthPmOut = day?.punches?.pm_out?.youthTimeIso;
-    if (youthPmOut && sameIsoMoment(out, youthPmOut)) return false;
-    return true;
-  }
-  return false;
+
+  const youthOut = youthPmOutIso(day);
+  if (youthOut && sameIsoMoment(out, youthOut)) return false;
+
+  return true;
 }
 
 export function staffAfternoonOutInput(

@@ -58,7 +58,7 @@ export function DailyAttendanceTable({
       }
     >();
     for (const d of days) {
-      const rk = `${d.podId}|${d.studentId}`;
+      const rk = d.studentId;
       if (!map.has(rk)) {
         map.set(rk, {
           podId: d.podId,
@@ -66,7 +66,16 @@ export function DailyAttendanceTable({
           byDate: new Map(),
         });
       }
-      map.get(rk)!.byDate.set(d.date, d);
+      const row = map.get(rk)!;
+      const prev = row.byDate.get(d.date);
+      if (
+        !prev ||
+        (d.dailyRecordId && !prev.dailyRecordId) ||
+        d.missingPunchCount < prev.missingPunchCount
+      ) {
+        row.byDate.set(d.date, d);
+        row.podId = d.podId;
+      }
     }
     return Array.from(map.values())
       .filter((row) => {
@@ -240,11 +249,11 @@ export function DailyAttendanceTable({
                     <input
                       type="checkbox"
                       checked={
-                        selectedKeys?.has(`${row.podId}|${row.studentId}`) ??
+                        selectedKeys?.has(row.studentId) ??
                         false
                       }
                       onChange={() =>
-                        onToggleSelect?.(`${row.podId}|${row.studentId}`)
+                        onToggleSelect?.(row.studentId)
                       }
                       className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                     />

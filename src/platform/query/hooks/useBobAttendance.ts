@@ -91,7 +91,11 @@ export function useSaveBobAttendanceRecord() {
       }
       return createBobAttendance(input.data);
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      const id = variables.id || data.id;
+      if (id) {
+        qc.setQueryData(bobKeys.attendance.detail(id), data);
+      }
       qc.invalidateQueries({ queryKey: bobKeys.attendance.all() });
       qc.invalidateQueries({ queryKey: bobKeys.stats() });
       qc.invalidateQueries({ queryKey: bobKeys.dashboard() });
