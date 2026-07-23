@@ -324,8 +324,8 @@ export function StaffRequestFormFields({
     return (
       <>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 leading-relaxed">
-          Reimbursements cover program-related expenses only. Driving to or from
-          your normal work location is not reimbursable.
+          Reimbursements cover program-related expenses only. Commuting to or
+          from home or your normal work site is not reimbursable.
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

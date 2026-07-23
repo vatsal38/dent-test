@@ -91,7 +91,7 @@ export function FormsHub({
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 {studentMode
-                  ? "Absence corrections, progress updates, testimony, and program feedback. View past submissions on My submissions."
+                  ? "Absence corrections, progress updates, testimony, reimbursements, and program feedback. View past submissions on My submissions."
                   : "Program submissions, student forms, and staff requests."}
               </p>
             </div>

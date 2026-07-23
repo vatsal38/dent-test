@@ -54,7 +54,7 @@ Enterprise role-based access control for **Bet on Baltimore** (Dent Ops), aligne
 - ✅ **Attendance** — personal view + **self-service correction** (absence / punch fixes via `/app/bob/attendance/correction`); cannot mark or edit attendance records
 - ✅ **Deliverables** — project team and track deliverables filtered to student scope
 - ✅ **My submissions** — own form activity only (`submissions.viewOwn`); no org inbox or staff notes
-- ✅ **Submit** — youth forms only (progress, testimony, feedback); no staff request forms
+- ✅ **Submit** — youth forms (progress, testimony, feedback) plus reimbursement; no other staff request forms
 - ✅ **Key Links** — youth-facing calendars, curriculum, photos, Dentie.ai tools, wellness resources
 - ❌ **Submissions inbox** — no other students’ submissions (`inbox.view`)
 - ❌ **Staff notes** (`notes.viewStaff`)

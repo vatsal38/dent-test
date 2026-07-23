@@ -16,6 +16,7 @@ import { decodeBobReturnTo } from "@/lib/bobReturnUrl";
 import { useAuth } from "@/context/AuthContext";
 import { FormsHub } from "@/features/bob/submit/FormsHub";
 import {
+  BOB_STUDENT_ALLOWED_FORM_TYPES,
   getBobFormDefinition,
   isBobFormType,
 } from "@/features/bob/submit/formsConfig";
@@ -440,7 +441,10 @@ export function SubmitPage() {
         return <FormsHub returnHref={returnHref} studentMode={isStudent} />;
     }
 
-    if (isStudent && submissionType !== "anonymous_feedback") {
+    if (
+        isStudent &&
+        !BOB_STUDENT_ALLOWED_FORM_TYPES.includes(submissionType)
+    ) {
         return <FormsHub returnHref={returnHref} studentMode />;
     }
 

@@ -33,6 +33,13 @@ const ACTIONS = [
     cta: "View deliverables",
   },
   {
+    title: "Reimbursement",
+    description:
+      "Submit program-related expenses or mileage between two locations.",
+    href: "/app/bob/submit?type=reimbursement_request",
+    cta: "Open reimbursement form",
+  },
+  {
     title: "One-Stop Submit",
     description:
       "Report an incident, share feedback, or log parent contact.",

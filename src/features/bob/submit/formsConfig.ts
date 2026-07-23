@@ -143,6 +143,20 @@ export const BOB_STUDENT_FORM_LINKS: BobExternalFormLink[] = [
     href: "/app/bob/submit?type=anonymous_feedback",
     cta: "Open feedback form",
   },
+  {
+    id: "reimbursement",
+    title: "Reimbursement",
+    description:
+      "Submit program-related expenses or mileage between two locations. Commuting to or from home is not reimbursable.",
+    href: "/app/bob/submit?type=reimbursement_request",
+    cta: "Open reimbursement form",
+  },
+];
+
+/** In-app submit types students may open directly (not staff-only requests). */
+export const BOB_STUDENT_ALLOWED_FORM_TYPES: BobFormType[] = [
+  "anonymous_feedback",
+  "reimbursement_request",
 ];
 
 /** Official Airtable one-stop form (fallback when in-app link is unavailable). */
