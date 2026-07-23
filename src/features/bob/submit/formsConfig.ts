@@ -159,6 +159,10 @@ export const BOB_STUDENT_ALLOWED_FORM_TYPES: BobFormType[] = [
   "reimbursement_request",
 ];
 
+export function isStudentAllowedSubmitType(type: BobFormType): boolean {
+  return BOB_STUDENT_ALLOWED_FORM_TYPES.includes(type);
+}
+
 /** Official Airtable one-stop form (fallback when in-app link is unavailable). */
 export const BOB_ATTENDANCE_CORRECTION_AIRTABLE_FORM =
   "https://airtable.com/appKnMenSN4RSG1ZV/pagkOVTlSpunIWWUZ/form";

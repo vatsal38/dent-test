@@ -16,9 +16,10 @@ import { decodeBobReturnTo } from "@/lib/bobReturnUrl";
 import { useAuth } from "@/context/AuthContext";
 import { FormsHub } from "@/features/bob/submit/FormsHub";
 import {
-  BOB_STUDENT_ALLOWED_FORM_TYPES,
   getBobFormDefinition,
   isBobFormType,
+  isStudentAllowedSubmitType,
+  type BobFormType,
 } from "@/features/bob/submit/formsConfig";
 import {
   isStaffFormType,
@@ -38,7 +39,7 @@ import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 
-function isValidFormType(value: string | null): boolean {
+function isValidFormType(value: string | null): value is BobFormType {
   return isBobFormType(value);
 }
 
@@ -441,10 +442,7 @@ export function SubmitPage() {
         return <FormsHub returnHref={returnHref} studentMode={isStudent} />;
     }
 
-    if (
-        isStudent &&
-        !BOB_STUDENT_ALLOWED_FORM_TYPES.includes(submissionType)
-    ) {
+    if (isStudent && !isStudentAllowedSubmitType(submissionType)) {
         return <FormsHub returnHref={returnHref} studentMode />;
     }
 
