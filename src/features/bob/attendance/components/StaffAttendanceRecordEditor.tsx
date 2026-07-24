@@ -42,7 +42,7 @@ import {
 } from "../model/staffRecordDerived";
 import { resolveDayHoursNumeric } from "../model/dayHours";
 import { formatAttendanceTime } from "../model/formatAttendanceTime";
-import { resolveAttendanceStaffNote, resolveStaffCorrectionAttribution } from "../model/attendanceStaffNotes";
+import { resolveAttendanceStaffNote, resolveStaffCorrectionAttribution, notesWithoutStaffCorrectionAudit } from "../model/attendanceStaffNotes";
 import { parseApiError } from "@/platform/api/errors";
 
 function formatFinalTimeLabel(date: string, hhmm: string): string {
@@ -162,7 +162,11 @@ export function StaffAttendanceRecordEditor({
     setMorningOut(staffMorningOutInput(r));
     setAfternoonIn(staffAfternoonInInput(r));
     setAfternoonOut(staffAfternoonOutInput(r, day));
-    setNotes(r?.notes || resolveAttendanceStaffNote(day) || "");
+    setNotes(
+      notesWithoutStaffCorrectionAudit(
+        r?.notes || resolveAttendanceStaffNote(day) || "",
+      ),
+    );
     setPaid(Boolean(r?.paid));
     setPaidAmount(r?.paidAmount != null ? String(r.paidAmount) : "");
     setYouthWorksBatch(r?.youthWorksBatch || "");

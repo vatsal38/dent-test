@@ -34,7 +34,7 @@ export function mergeStaffAnnotations(
 export function resolveAttendanceStaffNote(
   day: Pick<StudentDayAttendance, "notes" | "manualOverride">,
 ): string | null {
-  const note = String(day.notes || "").trim();
+  const note = notesWithoutStaffCorrectionAudit(day.notes);
   const override = String(day.manualOverride || "").trim();
   if (note && override && note !== override) {
     return `${note} · ${override}`;
@@ -45,7 +45,6 @@ export function resolveAttendanceStaffNote(
 const STAFF_CORRECTION_AUDIT_RE =
   /\[Staff correction\s+([^\]]+?)\s+by\s+([^\]]+?)\]/gi;
 
-/** Latest staff edit stamp appended when saving in Dent (see applyStaffFields). */
 export function parseLatestStaffCorrectionAudit(
   notes?: string | null,
 ): { at?: string; by?: string } | null {
@@ -59,6 +58,14 @@ export function parseLatestStaffCorrectionAudit(
     };
   }
   return last;
+}
+
+/** Human-written notes only — strips legacy `[Staff correction … by …]` audit lines. */
+export function notesWithoutStaffCorrectionAudit(notes?: string | null): string {
+  return String(notes || "")
+    .replace(STAFF_CORRECTION_AUDIT_RE, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export function resolveStaffCorrectionAttribution(daily?: {
