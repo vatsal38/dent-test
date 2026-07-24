@@ -1,4 +1,4 @@
-import { API_BASE, apiRequest, getIdToken } from "@/platform/api/client";
+import { getApiBase, apiRequest, getIdToken } from "@/platform/api/client";
 
 export const BOB_SUBMISSION_TYPES = [
   "incident",
@@ -346,7 +346,7 @@ export async function downloadBobSubmissionAttachment(
   const token = await getIdToken();
   if (!token) throw new Error("Not authenticated");
   const res = await fetch(
-    `${API_BASE}/api/bob/submissions/${submissionId}/attachments/${attachmentId}`,
+    `${getApiBase()}/api/bob/submissions/${submissionId}/attachments/${attachmentId}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
   if (!res.ok) throw new Error("Download failed");

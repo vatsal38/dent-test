@@ -3,6 +3,8 @@ export { auth };
 
 import {
   API_BASE,
+  CONFIGURED_API_BASE,
+  getApiBase,
   apiRequest,
   apiUnreachableMessage,
   getIdToken,
@@ -11,6 +13,8 @@ import {
 
 export {
   API_BASE,
+  CONFIGURED_API_BASE,
+  getApiBase,
   getIdToken,
   apiRequest,
   apiUnreachableMessage,
@@ -47,7 +51,7 @@ export async function bootstrap(): Promise<BootstrapResponse> {
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}/api/auth/bootstrap`, {
+    response = await fetch(`${getApiBase()}/api/auth/bootstrap`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -486,7 +490,7 @@ export async function createPartnership(
     throw new Error("Not authenticated. Please sign in.");
   }
 
-  const response = await fetch(`${API_BASE}/api/education/partnerships`, {
+  const response = await fetch(`${getApiBase()}/api/education/partnerships`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -689,7 +693,7 @@ export async function downloadGmailAttachment(
 
   const params = new URLSearchParams({ filename, mimeType });
   const response = await fetch(
-    `${API_BASE}/api/education/inbox/messages/${messageId}/attachments/${attachmentId}?${params.toString()}`,
+    `${getApiBase()}/api/education/inbox/messages/${messageId}/attachments/${attachmentId}?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -836,7 +840,7 @@ export async function disconnectGmail(): Promise<{ success: boolean }> {
 
 /** Initiate Gmail OAuth connection - redirects to Google */
 export function initiateGmailConnection(): void {
-  window.location.href = `${API_BASE}/api/integrations/gmail/connect`;
+  window.location.href = `${getApiBase()}/api/integrations/gmail/connect`;
 }
 
 /** Trigger manual Gmail sync to fetch latest emails */

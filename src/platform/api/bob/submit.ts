@@ -1,4 +1,4 @@
-import { API_BASE, getIdToken, isNetworkFetchError, apiUnreachableMessage } from "@/platform/api/client";
+import { getApiBase, getIdToken, isNetworkFetchError, apiUnreachableMessage } from "@/platform/api/client";
 
 export interface BlitzTeamOption {
   value: string;
@@ -36,7 +36,7 @@ export interface BobOneStopAttachment {
 export type BobOneStopPayload = Record<string, string | boolean | string[] | BobOneStopAttachment[] | undefined>;
 
 export async function getBlitzTeamOptions(): Promise<BlitzTeamOptionsResponse> {
-  const res = await fetch(`${API_BASE}/api/bob/submit/blitz-teams`);
+  const res = await fetch(`${getApiBase()}/api/bob/submit/blitz-teams`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
@@ -58,7 +58,7 @@ export async function submitBobOneStop(
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/bob/submit`, {
+    res = await fetch(`${getApiBase()}/api/bob/submit`, {
       method: "POST",
       headers,
       body: JSON.stringify({ type, ...payload }),

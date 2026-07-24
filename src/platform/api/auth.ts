@@ -1,4 +1,4 @@
-import { API_BASE } from "@/platform/api/client";
+import { getApiBase, apiUnreachableMessage, isNetworkFetchError } from "@/platform/api/client";
 
 export type DemoLoginRole =
   | "admin"
@@ -25,15 +25,14 @@ export async function postDemoLogin(
 ): Promise<DemoLoginResponse> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}/api/auth/demo-login`, {
+    response = await fetch(`${getApiBase()}/api/auth/demo-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role }),
     });
-  } catch {
-    throw new Error(
-      `Cannot reach the API at ${API_BASE}. Start the backend with: cd dent-be && npm run dev`,
-    );
+  } catch (err) {
+    if (isNetworkFetchError(err)) throw new Error(apiUnreachableMessage());
+    throw err;
   }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -46,7 +45,7 @@ export async function postDemoLogin(
 
 export async function getDemoMode(): Promise<{ enabled: boolean } | null> {
   try {
-    const response = await fetch(`${API_BASE}/api/auth/demo-mode`, {
+    const response = await fetch(`${getApiBase()}/api/auth/demo-mode`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -87,15 +86,14 @@ export async function postStudentLogin(
 ): Promise<StudentLoginResponse> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}/api/auth/student-login`, {
+    response = await fetch(`${getApiBase()}/api/auth/student-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email.trim(), password }),
     });
-  } catch {
-    throw new Error(
-      `Cannot reach the API at ${API_BASE}. Start the backend with: cd dent-be && npm run dev`,
-    );
+  } catch (err) {
+    if (isNetworkFetchError(err)) throw new Error(apiUnreachableMessage());
+    throw err;
   }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
