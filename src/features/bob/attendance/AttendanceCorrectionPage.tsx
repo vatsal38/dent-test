@@ -180,10 +180,17 @@ export function AttendanceCorrectionPage() {
     return null;
   }, [studentId, studentOptions, prefilledStudentQuery.data]);
 
-  const selectedDate = useMemo(
-    () => dateOptions.find((d) => d.attendanceId === selectedDateId) ?? null,
-    [dateOptions, selectedDateId],
-  );
+  const selectedDate = useMemo(() => {
+    if (correctionDay) {
+      return dateOptions.find((d) => d.date === correctionDay) ?? null;
+    }
+    if (!selectedDateId) return null;
+    return (
+      dateOptions.find(
+        (d) => d.attendanceId && d.attendanceId === selectedDateId,
+      ) ?? null
+    );
+  }, [correctionDay, dateOptions, selectedDateId]);
 
   // Include upcoming program days so youth can plan future absences
   const programDateOptions = useMemo(
@@ -259,7 +266,7 @@ export function AttendanceCorrectionPage() {
       setCorrectionDay(prefillDate);
       if (dateOptions.length) {
         const match = dateOptions.find((d) => d.date === prefillDate);
-        if (match) setSelectedDateId(match.attendanceId);
+        if (match) setSelectedDateId(match.attendanceId || '');
       }
       return;
     }
@@ -292,7 +299,7 @@ export function AttendanceCorrectionPage() {
       const data = await getAttendanceCorrectionOptions(id);
       setDateOptions(data.dates);
       if (data.dates.length === 1) {
-        setSelectedDateId(data.dates[0].attendanceId);
+        setSelectedDateId(data.dates[0].attendanceId || '');
       }
     } catch (e) {
       setDateOptions([]);
@@ -386,10 +393,10 @@ export function AttendanceCorrectionPage() {
         requestType,
         attendanceId:
           requestType === 'time_correction'
-            ? matchedCorrectionOption?.attendanceId
+            ? matchedCorrectionOption?.attendanceId ?? undefined
             : requestType === 'absence'
-              ? matchedAbsenceOption?.attendanceId
-              : matchedSpecialOption?.attendanceId,
+              ? matchedAbsenceOption?.attendanceId ?? undefined
+              : matchedSpecialOption?.attendanceId ?? undefined,
         attendanceAirtableRecordId:
           requestType === 'time_correction'
             ? matchedCorrectionOption?.airtableRecordId
@@ -398,15 +405,7 @@ export function AttendanceCorrectionPage() {
               : matchedSpecialOption?.airtableRecordId,
         attendanceDate: dayForRequest,
         absenceReason: absenceReason || undefined,
-        correctionDetail:
-          requestType === 'time_correction'
-            ? [
-                `Session: ${correctionSession === 'morning' ? 'Morning' : 'Afternoon'}`,
-                correctionDetail || null,
-              ]
-                .filter(Boolean)
-                .join('. ')
-            : correctionDetail || undefined,
+        correctionDetail: correctionDetail || undefined,
         specialCircumstance: specialCircumstance || undefined,
         correctedSignInDate:
           requestType === 'time_correction' ? dayForRequest : undefined,
@@ -414,6 +413,8 @@ export function AttendanceCorrectionPage() {
         correctedSignOutDate:
           requestType === 'time_correction' ? dayForRequest : undefined,
         correctedSignOutTime: correctedSignOutTime || undefined,
+        correctionSession:
+          requestType === "time_correction" ? correctionSession : undefined,
       });
       setSubmitted(true);
     } catch (err) {
@@ -439,8 +440,12 @@ export function AttendanceCorrectionPage() {
         <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
           <p className="text-lg font-semibold text-green-900">Request submitted</p>
           <p className="text-sm text-green-800 mt-2">
-            Your absence or correction request was sent for staff review. You will
-            hear back once it is processed in Airtable.
+            Your absence or correction request was sent for staff review. Track
+            it under{" "}
+            <Link href="/app/bob/my-submissions" className="font-medium underline">
+              My submissions
+            </Link>
+            . Staff will process it in Airtable.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button

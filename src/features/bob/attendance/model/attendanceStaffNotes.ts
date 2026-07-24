@@ -41,3 +41,44 @@ export function resolveAttendanceStaffNote(
   }
   return note || override || null;
 }
+
+const STAFF_CORRECTION_AUDIT_RE =
+  /\[Staff correction\s+([^\]]+?)\s+by\s+([^\]]+?)\]/gi;
+
+/** Latest staff edit stamp appended when saving in Dent (see applyStaffFields). */
+export function parseLatestStaffCorrectionAudit(
+  notes?: string | null,
+): { at?: string; by?: string } | null {
+  const text = String(notes || "");
+  if (!text) return null;
+  let last: { at?: string; by?: string } | null = null;
+  for (const match of text.matchAll(STAFF_CORRECTION_AUDIT_RE)) {
+    last = {
+      at: String(match[1] || "").trim() || undefined,
+      by: String(match[2] || "").trim() || undefined,
+    };
+  }
+  return last;
+}
+
+export function resolveStaffCorrectionAttribution(daily?: {
+  staffCorrectedByName?: string | null;
+  staffCorrectedAt?: string | null;
+  notes?: string | null;
+} | null): { by?: string; at?: string } | null {
+  const byName = String(daily?.staffCorrectedByName || "").trim();
+  if (byName) {
+    const at = daily?.staffCorrectedAt
+      ? new Date(daily.staffCorrectedAt).toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : undefined;
+    return { by: byName, at };
+  }
+  const audit = parseLatestStaffCorrectionAudit(daily?.notes);
+  if (audit?.by) return audit;
+  return null;
+}

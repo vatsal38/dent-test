@@ -2,6 +2,7 @@ import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
 import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
 import type { BobAttendance } from "@/platform/api/bob/attendance";
 import type { PunchType, StaffCorrections, StudentDayAttendance, FinalAttendanceRecord } from "../types";
+import { resolveStaffCorrectionAttribution } from "./attendanceStaffNotes";
 import { combineDateAndTime, toTimeInputValue } from "./attendanceRecordTime";
 import { formatAttendanceTime } from "./formatAttendanceTime";
 import { formatHoursLabel } from "./formatAttendanceTime";
@@ -396,8 +397,10 @@ export function buildStaffCorrections(
   const hasDisplayedCorrection = Boolean(
     morning.in || morning.out || afternoon.in || afternoon.out,
   );
+  const attribution = resolveStaffCorrectionAttribution(daily);
   const hasCorrections =
-    hasExplicitStaffCorrection(daily) && hasDisplayedCorrection;
+    hasDisplayedCorrection &&
+    (hasExplicitStaffCorrection(daily) || Boolean(attribution?.by));
 
   let hoursLabel: string | undefined;
   if (date && hasCorrections && day) {
@@ -418,8 +421,8 @@ export function buildStaffCorrections(
     afternoon,
     hasCorrections,
     hoursLabel,
-    correctedByName: daily?.staffCorrectedByName || undefined,
-    correctedAt: daily?.staffCorrectedAt || undefined,
+    correctedByName: attribution?.by || daily?.staffCorrectedByName || undefined,
+    correctedAt: attribution?.at || daily?.staffCorrectedAt || undefined,
   };
 }
 
@@ -476,7 +479,10 @@ export function buildFinalAttendanceRecord(
       hours: afternoonHours > 0 ? formatHoursLabel(afternoonHours) : undefined,
     },
     totalHours: totalHours > 0 ? formatHoursLabel(totalHours) : undefined,
-    correctedByName: daily?.staffCorrectedByName || undefined,
+    correctedByName:
+      resolveStaffCorrectionAttribution(daily)?.by ||
+      daily?.staffCorrectedByName ||
+      undefined,
   };
 }
 

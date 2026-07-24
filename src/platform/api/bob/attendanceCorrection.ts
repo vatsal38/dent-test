@@ -6,7 +6,7 @@ export type AttendanceCorrectionRequestType =
   | "special";
 
 export interface AttendanceCorrectionDateOption {
-  attendanceId: string;
+  attendanceId: string | null;
   airtableRecordId: string;
   date: string;
   /** Four punch slots (preferred); signIn/signOut kept for back-compat */
@@ -59,6 +59,7 @@ export interface SubmitAttendanceCorrectionInput {
   correctedSignOutDate?: string;
   correctedSignOutTime?: string;
   correctionDetail?: string;
+  correctionSession?: "morning" | "afternoon";
   specialCircumstance?: string;
 }
 

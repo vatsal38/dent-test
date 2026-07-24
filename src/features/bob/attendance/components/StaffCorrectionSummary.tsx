@@ -68,9 +68,12 @@ export function StaffCorrectionSummary({
   }
 
   const hoursLabel = corrections.hoursLabel;
-  const attribution =
-    corrections.correctedByName
-      ? `Updated by ${corrections.correctedByName}`
+  const attribution = corrections.correctedByName
+    ? corrections.correctedAt
+      ? `Updated by ${corrections.correctedByName} · ${corrections.correctedAt}`
+      : `Updated by ${corrections.correctedByName}`
+    : corrections.correctedAt
+      ? `Updated ${corrections.correctedAt}`
       : null;
 
   if (compact) {

@@ -42,7 +42,7 @@ import {
 } from "../model/staffRecordDerived";
 import { resolveDayHoursNumeric } from "../model/dayHours";
 import { formatAttendanceTime } from "../model/formatAttendanceTime";
-import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
+import { resolveAttendanceStaffNote, resolveStaffCorrectionAttribution } from "../model/attendanceStaffNotes";
 import { parseApiError } from "@/platform/api/errors";
 
 function formatFinalTimeLabel(date: string, hhmm: string): string {
@@ -222,6 +222,15 @@ export function StaffAttendanceRecordEditor({
     source?.signInTime,
   ]);
   const expectedHours = expectedHoursForDate(day.date);
+  const correctionAttribution = useMemo(
+    () =>
+      resolveStaffCorrectionAttribution({
+        staffCorrectedByName: source?.staffCorrectedByName,
+        staffCorrectedAt: source?.staffCorrectedAt,
+        notes: source?.notes ?? day.notes,
+      }),
+    [source?.staffCorrectedByName, source?.staffCorrectedAt, source?.notes, day.notes],
+  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -491,6 +500,12 @@ export function StaffAttendanceRecordEditor({
       </div>
 
       <div>
+        {correctionAttribution?.by ? (
+          <p className="mb-2 text-xs text-gray-600 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            Staff edit history: {correctionAttribution.by}
+            {correctionAttribution.at ? ` · ${correctionAttribution.at}` : ""}
+          </p>
+        ) : null}
         <FieldLabel>Notes</FieldLabel>
         <textarea
           value={notes}
