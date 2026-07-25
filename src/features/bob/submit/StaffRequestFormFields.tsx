@@ -4,6 +4,10 @@ import type { RefObject } from "react";
 import type { BobStaffMember } from "@/platform/api/bob/staff";
 import { staffDisplayName } from "@/features/bob/pods/staffDisplay";
 import { countPtoProgramDays } from "@/features/bob/submit/ptoDays";
+import {
+  bobSubmissionAttachmentMaxLabel,
+  fileExceedsBobAttachmentLimit,
+} from "@/features/bob/submit/attachmentLimits";
 
 export const STAFF_FORM_TYPES = [
   "pto_request",
@@ -24,6 +28,7 @@ interface StaffRequestFormFieldsProps {
   staffList?: BobStaffMember[];
   currentUserId?: string;
   currentUserName?: string;
+  onAttachmentReject?: (message: string) => void;
 }
 
 function AttachmentPicker({
@@ -31,11 +36,15 @@ function AttachmentPicker({
   setPendingFiles,
   fileInputRef,
   label = "Attachments",
-  hint = "Receipts, quotes, or supporting documents (2MB each).",
+  hint,
+  onAttachmentReject,
 }: Pick<
   StaffRequestFormFieldsProps,
-  "pendingFiles" | "setPendingFiles" | "fileInputRef"
+  "pendingFiles" | "setPendingFiles" | "fileInputRef" | "onAttachmentReject"
 > & { label?: string; hint?: string }) {
+  const sizeHint =
+    hint ??
+    `Receipts, quotes, or supporting documents (${bobSubmissionAttachmentMaxLabel()} each).`;
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -49,7 +58,19 @@ function AttachmentPicker({
         className="hidden"
         onChange={(e) => {
           const files = Array.from(e.target.files || []);
-          if (files.length) setPendingFiles((prev) => [...prev, ...files]);
+          const accepted: File[] = [];
+          for (const file of files) {
+            if (fileExceedsBobAttachmentLimit(file)) {
+              onAttachmentReject?.(
+                `${file.name} is over ${bobSubmissionAttachmentMaxLabel()}. Choose a smaller file.`,
+              );
+            } else {
+              accepted.push(file);
+            }
+          }
+          if (accepted.length) {
+            setPendingFiles((prev) => [...prev, ...accepted]);
+          }
           e.target.value = "";
         }}
       />
@@ -81,7 +102,7 @@ function AttachmentPicker({
           ))}
         </ul>
       ) : null}
-      <p className="mt-1 text-xs text-gray-500">{hint}</p>
+      <p className="mt-1 text-xs text-gray-500">{sizeHint}</p>
     </div>
   );
 }
@@ -96,6 +117,7 @@ export function StaffRequestFormFields({
   staffList = [],
   currentUserId,
   currentUserName,
+  onAttachmentReject,
 }: StaffRequestFormFieldsProps) {
   const ptoDayCount =
     type === "pto_request"
@@ -315,6 +337,7 @@ export function StaffRequestFormFields({
           setPendingFiles={setPendingFiles}
           fileInputRef={fileInputRef}
           label="Quotes or supporting documents"
+          onAttachmentReject={onAttachmentReject}
         />
       </>
     );
@@ -437,7 +460,7 @@ export function StaffRequestFormFields({
           setPendingFiles={setPendingFiles}
           fileInputRef={fileInputRef}
           label="Receipt photos or PDFs (optional)"
-          hint="Attach receipts when available (2MB each)."
+          onAttachmentReject={onAttachmentReject}
         />
       </>
     );

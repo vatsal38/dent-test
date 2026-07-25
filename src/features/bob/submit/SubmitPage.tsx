@@ -36,6 +36,10 @@ import {
   compareStudentsByName,
 } from "@/features/bob/submit/StudentMultiSelect";
 import { readFileAsBase64 } from "@/features/bob/submit/fileUtils";
+import {
+  bobSubmissionAttachmentMaxLabel,
+  fileExceedsBobAttachmentLimit,
+} from "@/features/bob/submit/attachmentLimits";
 import { useBobAccess } from "@/platform/rbac/useBobAccess";
 import { useBobStaffList } from "@/platform/query/hooks/useBobStaff";
 
@@ -371,6 +375,16 @@ export function SubmitPage() {
             }
         }
 
+        setError('');
+        const oversizeFile = pendingFiles.find((f) =>
+            fileExceedsBobAttachmentLimit(f),
+        );
+        if (oversizeFile) {
+            setError(
+                `${oversizeFile.name} is over ${bobSubmissionAttachmentMaxLabel()}. Use a smaller file or compress the image.`,
+            );
+            return;
+        }
         setSubmitting(true);
         setError(null);
         try {
@@ -567,7 +581,19 @@ export function SubmitPage() {
                                     className="hidden"
                                     onChange={(e) => {
                                         const files = Array.from(e.target.files || []);
-                                        if (files.length) setPendingFiles((prev) => [...prev, ...files]);
+                                        const accepted: File[] = [];
+                                        for (const file of files) {
+                                            if (fileExceedsBobAttachmentLimit(file)) {
+                                                setError(
+                                                    `${file.name} is over ${bobSubmissionAttachmentMaxLabel()}. Choose a smaller file.`,
+                                                );
+                                            } else {
+                                                accepted.push(file);
+                                            }
+                                        }
+                                        if (accepted.length) {
+                                            setPendingFiles((prev) => [...prev, ...accepted]);
+                                        }
                                         e.target.value = '';
                                     }}
                                 />
@@ -594,7 +620,7 @@ export function SubmitPage() {
                                         ))}
                                     </ul>
                                 ) : (
-                                    <p className="mt-1 text-xs text-gray-500">Photos, PDFs, and documents (max 2MB each).</p>
+                                    <p className="mt-1 text-xs text-gray-500">Photos, PDFs, and documents (max {bobSubmissionAttachmentMaxLabel()} each).</p>
                                 )}
                             </div>
                         </>
@@ -808,6 +834,7 @@ export function SubmitPage() {
                             staffList={staffList}
                             currentUserId={user?.id}
                             currentUserName={submitterName}
+                            onAttachmentReject={(msg) => setError(msg)}
                         />
                     ) : null}
                     {submissionType && isCoachFeedbackType(submissionType) ? (

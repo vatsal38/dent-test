@@ -40,6 +40,10 @@ import {
   useBobSubmissionEvents,
   useUpdateBobSubmission,
 } from "@/platform/query/hooks/useBobSubmissions";
+import {
+  bobSubmissionAttachmentMaxLabel,
+  fileExceedsBobAttachmentLimit,
+} from "@/features/bob/submit/attachmentLimits";
 
 function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -563,7 +567,14 @@ export function SubmissionDetailPanel({
               className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (!file || file.size > 2 * 1024 * 1024) return;
+                if (!file) return;
+                if (fileExceedsBobAttachmentLimit(file)) {
+                  window.alert(
+                    `${file.name} is over ${bobSubmissionAttachmentMaxLabel()}.`,
+                  );
+                  e.target.value = "";
+                  return;
+                }
                 const content = await readFileAsBase64(file);
                 attachmentMutation.mutate({
                   id: data.id,
