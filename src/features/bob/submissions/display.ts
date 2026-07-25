@@ -235,7 +235,7 @@ export function cardSummary(s: BobSubmission) {
   if (s.publicConsent) parts.push("public consent");
   const body = (
     s.type === "attendance_correction"
-      ? s.notes || s.description || s.concernSummary
+      ? s.notes || s.description || s.concernSummary || ""
       : s.reflection ||
         s.description ||
         s.concernSummary ||
