@@ -47,7 +47,7 @@ export const ROUTING_HINTS: Partial<Record<BobSubmissionType, string>> = {
   coach_feedback: "Weekly survey routed to program leadership",
   dent_testimony: "Routed to pod coach with program leadership notified",
   attendance_correction:
-    "Routed to pod coach; appears in Submissions inbox with incidents",
+    "Denternship → Onyx; AYD → Cameron; other tracks → pod coach",
 };
 
 export const SEVERITY_OPTIONS = ["low", "medium", "high"] as const;

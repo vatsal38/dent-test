@@ -234,13 +234,15 @@ export function cardSummary(s: BobSubmission) {
   if (s.coachRating != null) parts.push(`rating: ${s.coachRating}/5`);
   if (s.publicConsent) parts.push("public consent");
   const body = (
-    s.reflection ||
-    s.description ||
-    s.concernSummary ||
-    s.feedback ||
-    s.notes ||
-    s.reason ||
-    ""
+    s.type === "attendance_correction"
+      ? s.notes || s.description || s.concernSummary
+      : s.reflection ||
+        s.description ||
+        s.concernSummary ||
+        s.feedback ||
+        s.notes ||
+        s.reason ||
+        ""
   ).trim();
   if (body) parts.push(body.length > 80 ? `${body.slice(0, 80)}…` : body);
   return parts.join(" · ");

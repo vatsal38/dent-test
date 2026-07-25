@@ -107,19 +107,28 @@ export function SubmissionDetailPanel({
   }
 
   const bodyText =
-    data.reflection ||
-    data.description ||
-    data.concernSummary ||
-    data.feedback ||
-    data.notes ||
-    data.reason ||
-    [
-      data.curriculumFeedback ? `Curriculum: ${data.curriculumFeedback}` : "",
-      data.logisticsFeedback ? `Logistics: ${data.logisticsFeedback}` : "",
-      data.openQuestions ? `Questions: ${data.openQuestions}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    data.type === "attendance_correction"
+      ? (
+          data.notes ||
+          data.description ||
+          data.concernSummary ||
+          ""
+        ).trim() || null
+      : (
+          data.reflection ||
+          data.description ||
+          data.concernSummary ||
+          data.feedback ||
+          data.notes ||
+          data.reason ||
+          [
+            data.curriculumFeedback ? `Curriculum: ${data.curriculumFeedback}` : "",
+            data.logisticsFeedback ? `Logistics: ${data.logisticsFeedback}` : "",
+            data.openQuestions ? `Questions: ${data.openQuestions}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n")
+        ).trim() || null;
 
   return (
     <div className="flex flex-col min-h-full bg-white">
