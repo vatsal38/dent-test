@@ -33,7 +33,7 @@ function tabEnablesFetch(tab: StudentDrawerTabId, target: StudentDrawerTabId | S
 
 export function useStudentAttendanceHistory(
   studentId: string | null,
-  podId: string | null | undefined,
+  _podId: string | null | undefined,
   activeTab: StudentDrawerTabId,
 ) {
   const range = dateRangeIso(ATTENDANCE_WINDOW_DAYS);
@@ -46,7 +46,6 @@ export function useStudentAttendanceHistory(
     queryFn: () =>
       getBobAttendance({
         studentId: studentId!,
-        podId: podId ?? undefined,
         startDate: range.startDate,
         endDate: range.endDate,
         limit: 500,
