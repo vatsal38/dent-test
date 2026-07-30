@@ -5,11 +5,11 @@ import type { BobStudentsFacetsResponse } from "@/platform/api/bob/students";
 export const ROSTER_TRACK_TAB_FILTERS = [
   { id: "track_made_at_dent", label: "Made@Dent", track: "Made@Dent" },
   { id: "track_denternship", label: "Denternship", track: "Denternship" },
-  { id: "track_ayd", label: "AYD", track: "Accelerate Your Dent" },
+  { id: "track_ayd", label: "AYD", track: "Accelerate Your Dent (AYD)" },
   {
     id: "track_content_creation",
     label: "Content Creation",
-    track: "Content Creation",
+    track: "Content Creation & Marketing",
   },
 ] as const;
 

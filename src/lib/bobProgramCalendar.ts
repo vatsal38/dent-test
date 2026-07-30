@@ -3,11 +3,15 @@ import type { PunchType } from "@/features/bob/attendance/types";
 export const PROGRAM_START_DATE = "2026-06-29";
 export const PROGRAM_END_DATE = "2026-07-31";
 export const SHOWCASE_DATE = "2026-07-29";
+export const KICKOFF_DATE = "2026-07-03";
+export const FIELD_DAY_DATE = "2026-07-31";
 
-const PROGRAM_HOLIDAYS = new Set(["2026-07-03"]);
+const PROGRAM_HOLIDAYS = new Set<string>();
 
 const ALL_PUNCH_TYPES: PunchType[] = ["am_in", "am_out", "pm_in", "pm_out"];
 const SHOWCASE_PUNCH_TYPES: PunchType[] = ["pm_in", "pm_out"];
+/** Sign in at start, sign out at end — no lunch punches required. */
+const SINGLE_SESSION_PUNCH_TYPES: PunchType[] = ["am_in", "pm_out"];
 
 const MS_PER_DAY = 86400000;
 
@@ -33,6 +37,18 @@ export function isShowcaseDay(iso: string) {
   return String(iso || "").slice(0, 10) === SHOWCASE_DATE;
 }
 
+export function isKickoffDay(iso: string) {
+  return String(iso || "").slice(0, 10) === KICKOFF_DATE;
+}
+
+export function isFieldDay(iso: string) {
+  return String(iso || "").slice(0, 10) === FIELD_DAY_DATE;
+}
+
+export function isSingleSessionDay(iso: string) {
+  return isKickoffDay(iso) || isFieldDay(iso) || isShowcaseDay(iso);
+}
+
 export function isWithinProgramRange(iso: string) {
   const d = String(iso || "").slice(0, 10);
   return d >= PROGRAM_START_DATE && d <= PROGRAM_END_DATE;
@@ -45,6 +61,7 @@ export function isProgramDay(iso: string) {
 export function expectedPunchTypes(iso: string): PunchType[] {
   if (!isProgramDay(iso)) return [];
   if (isShowcaseDay(iso)) return [...SHOWCASE_PUNCH_TYPES];
+  if (isKickoffDay(iso) || isFieldDay(iso)) return [...SINGLE_SESSION_PUNCH_TYPES];
   return [...ALL_PUNCH_TYPES];
 }
 
@@ -79,6 +96,8 @@ export function isAttendanceExpectedOn(iso: string, now = new Date()) {
 }
 
 export function expectedHoursForDate(iso: string): number {
+  if (isKickoffDay(iso)) return 6;
+  if (isFieldDay(iso)) return 4;
   if (!isProgramDay(iso)) return 0;
   if (isShowcaseDay(iso)) return 6;
   return 5;
@@ -90,6 +109,22 @@ export const ROLLUP_MORNING_HOURS_PER_DAY = 2.5;
 export function getDaySchedule(iso: string) {
   if (!isProgramDay(iso)) {
     return { kind: "off" as const, sessions: [] as Array<{ label: string; start: string; end: string; punches: PunchType[] }> };
+  }
+  if (isKickoffDay(iso)) {
+    return {
+      kind: "kickoff" as const,
+      sessions: [
+        { label: "Kickoff", start: "10:00", end: "16:00", punches: SINGLE_SESSION_PUNCH_TYPES },
+      ],
+    };
+  }
+  if (isFieldDay(iso)) {
+    return {
+      kind: "field_day" as const,
+      sessions: [
+        { label: "Field Day", start: "10:00", end: "14:00", punches: SINGLE_SESSION_PUNCH_TYPES },
+      ],
+    };
   }
   if (isShowcaseDay(iso)) {
     return {

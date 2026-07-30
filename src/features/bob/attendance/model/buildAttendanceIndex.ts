@@ -34,6 +34,8 @@ import {
   isAttendanceExpectedOn,
   isProgramDay,
   isShowcaseDay,
+  isKickoffDay,
+  isFieldDay,
 } from "@/lib/bobProgramCalendar";
 import {
   isDailyAttendanceRecord,
@@ -593,6 +595,13 @@ export function buildStudentDayAttendance(
         }
         if (punches.am_out.state === "missing") {
           punches.am_out = { ...punches.am_out, state: "na" };
+        }
+      } else if (isKickoffDay(date) || isFieldDay(date)) {
+        if (punches.am_out.state === "missing") {
+          punches.am_out = { ...punches.am_out, state: "na" };
+        }
+        if (punches.pm_in.state === "missing") {
+          punches.pm_in = { ...punches.pm_in, state: "na" };
         }
       } else if (requiredPunches.length === 0) {
         for (const pt of PUNCH_TYPES) {

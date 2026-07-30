@@ -107,7 +107,7 @@ export function AttendanceDiscrepanciesPage() {
             <p className="text-sm text-amber-800 mt-2">
               Program has not started yet — defaulting to the first session week (
               {PROGRAM_START_DATE}). Correction counts use program weekdays only (
-              {PROGRAM_START_DATE} – {PROGRAM_END_DATE}, excluding July 3).
+              {PROGRAM_START_DATE} – {PROGRAM_END_DATE}, including Kickoff July 3).
             </p>
           ) : null}
         </div>

@@ -1,5 +1,5 @@
 import type { BobAttendanceStatus } from "@/platform/api/bob/attendance";
-import { expectedHoursForDate } from "@/lib/bobProgramCalendar";
+import { expectedHoursForDate, isFieldDay, isKickoffDay } from "@/lib/bobProgramCalendar";
 import type { BobAttendance } from "@/platform/api/bob/attendance";
 import type { PunchType, StaffCorrections, StudentDayAttendance, FinalAttendanceRecord } from "../types";
 import { resolveStaffCorrectionAttribution } from "./attendanceStaffNotes";
@@ -185,6 +185,17 @@ export function computeHoursPresentFromPunchSlots(
   date: string,
   punches: StudentDayAttendance["punches"],
 ): number {
+  if (isKickoffDay(date) || isFieldDay(date)) {
+    const span = hoursBetweenIso(
+      date,
+      punches.am_in.youthTimeIso,
+      punches.pm_out.youthTimeIso,
+    );
+    if (span > 0) {
+      const cap = expectedHoursForDate(date);
+      return cap > 0 && span > cap ? cap : span;
+    }
+  }
   const morning = computeSessionHoursFromPunches(date, punches, "am_in", "am_out");
   const afternoon = computeSessionHoursFromPunches(date, punches, "pm_in", "pm_out");
   const total = Math.round((morning + afternoon) * 100) / 100;
