@@ -39,18 +39,12 @@ export function SubmissionsInboxPage() {
   const [filters, setFilters] = useState<SubmissionFilterState>(() =>
     parseFiltersFromSearchParams(searchParams),
   );
-  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
   const [bulkIds, setBulkIds] = useState<Set<string>>(new Set());
   const [movingId, setMovingId] = useState<string | null>(null);
 
   useEffect(() => {
     setFilters(parseFiltersFromSearchParams(searchParams));
   }, [searchParams]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(filters.search), 250);
-    return () => clearTimeout(t);
-  }, [filters.search]);
 
   const syncFiltersToUrl = useCallback(
     (next: SubmissionFilterState) => {
@@ -76,10 +70,10 @@ export function SubmissionsInboxPage() {
     access.role === "site_supporter";
   const listParams = useMemo(
     () =>
-      filtersToListParams(filters, debouncedSearch, myId, {
+      filtersToListParams(filters, filters.search, myId, {
         excludePto: !canViewPto,
       }),
-    [filters, debouncedSearch, myId, canViewPto],
+    [filters, myId, canViewPto],
   );
 
   const { data, isLoading, error, refetch } = useBobSubmissionsList(listParams);

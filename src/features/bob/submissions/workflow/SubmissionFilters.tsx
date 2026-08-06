@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   BOB_SUBMISSION_STATUSES,
   BOB_SUBMISSION_TYPES,
@@ -25,19 +26,52 @@ export function SubmissionFilters({
   onChange: (next: SubmissionFilterState) => void;
   facets?: BobSubmissionFacets;
 }) {
+  const [searchDraft, setSearchDraft] = useState(filters.search);
+  const searchDirty = searchDraft.trim() !== filters.search.trim();
+
+  useEffect(() => {
+    setSearchDraft(filters.search);
+  }, [filters.search]);
+
   const set = (patch: Partial<SubmissionFilterState>) =>
     onChange({ ...filters, ...patch });
+
+  const commitSearch = () => {
+    const nextSearch = searchDraft.trim();
+    if (nextSearch === filters.search.trim()) return;
+    setSearchDraft(nextSearch);
+    onChange({ ...filters, search: nextSearch });
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
       <div className="md:col-span-3">
-        <input
-          value={filters.search}
-          onChange={(e) => set({ search: e.target.value })}
-          placeholder="Search submissions…"
-          className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
-          aria-label="Search submissions"
-        />
+        <div className="flex gap-2">
+          <input
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitSearch();
+              }
+            }}
+            placeholder="Search… (Enter to apply)"
+            className="min-w-0 flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            aria-label="Search submissions"
+          />
+          <button
+            type="button"
+            onClick={commitSearch}
+            className={`shrink-0 px-3 py-2 rounded-lg border text-sm font-medium ${
+              searchDirty
+                ? "border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100"
+                : "border-gray-300 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            Search
+          </button>
+        </div>
       </div>
       <div className="md:col-span-2">
         <select
