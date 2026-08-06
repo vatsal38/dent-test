@@ -139,8 +139,13 @@ export function useAttendanceWorkspace({
     () =>
       isStudentViewer
         ? students
-        : filterStudentsByCoachAttendanceScope(students, access, pods),
-    [students, access, pods, isStudentViewer],
+        : filterStudentsByCoachAttendanceScope(
+            students,
+            access,
+            pods,
+            me?.assignedPods,
+          ),
+    [students, access, pods, isStudentViewer, me?.assignedPods],
   );
 
   const enrollmentCount = useMemo(() => {
