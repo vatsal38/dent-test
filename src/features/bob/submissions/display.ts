@@ -4,6 +4,7 @@ import type {
 } from "@/platform/api/bob/submissions";
 import { progressStatusLabel } from "@/features/bob/progress/progressConstants";
 import { feedbackCategoryLabel } from "@/features/bob/submit/feedbackCategories";
+import { mileageRouteSummary } from "@/features/bob/submissions/MileageReimbursementDetail";
 import {
   SUBMISSION_STATUS_LABELS,
   SUBMISSION_TYPE_LABELS,
@@ -166,8 +167,11 @@ export function cardTitle(s: BobSubmission) {
         ? ` · $${s.requestAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
         : "";
     const route =
-      s.type === "reimbursement_request" && s.fromLocation && s.toLocation
-        ? ` · ${s.fromLocation} → ${s.toLocation}`
+      s.type === "reimbursement_request"
+        ? (() => {
+            const summary = mileageRouteSummary(s);
+            return summary ? ` · ${summary}` : "";
+          })()
         : "";
     const label = SUBMISSION_TYPE_LABELS[s.type] || s.type;
     return `${label}${amount}${route}${by}`;
@@ -231,6 +235,10 @@ export function cardSummary(s: BobSubmission) {
     );
   }
   if (s.category) parts.push(formatLabel(s.category));
+  if (s.type === "reimbursement_request") {
+    const route = mileageRouteSummary(s);
+    if (route) parts.push(route);
+  }
   if (s.coachRating != null) parts.push(`rating: ${s.coachRating}/5`);
   if (s.publicConsent) parts.push("public consent");
   const body = (

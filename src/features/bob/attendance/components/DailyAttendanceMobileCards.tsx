@@ -10,6 +10,8 @@ import { formatDayHoursPresent, formatHoursTotal, sumDayHours } from "../model/d
 import { resolveAttendanceStaffNote } from "../model/attendanceStaffNotes";
 
 import { AttendancePunchRow } from "./AttendancePunchRows";
+import { normalizeAttendanceDateKey } from "../model/normalizeDateKey";
+
 function DailyStudentCard({
   name,
   podName,
@@ -252,7 +254,11 @@ export function DailyAttendanceMobileCards({
           );
         }
 
-        const today = row.byDate.get(focusDate);
+        const dateKey = normalizeAttendanceDateKey(focusDate);
+        const today =
+          row.byDate.get(dateKey) ??
+          row.byDate.get(focusDate) ??
+          null;
         if (!today) return null;
 
         return (

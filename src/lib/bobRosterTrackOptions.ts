@@ -21,6 +21,14 @@ function isExcludedRosterTrackLabel(label: string): boolean {
 /**
  * Track labels for scope filters — sourced from live roster facet counts (not hardcoded).
  */
+/** FY26 operational tracks — always offer in attendance filters even when facet counts lag. */
+const FY26_ATTENDANCE_TRACKS = [
+  "Made@Dent",
+  "Denternship",
+  "Accelerate Your Dent (AYD)",
+  "Content Creation & Marketing",
+];
+
 export function rosterTrackFilterOptions(
   facets: BobStudentsFacetsResponse | null | undefined,
 ): RosterTrackOption[] {
@@ -39,6 +47,41 @@ export function rosterTrackFilterOptions(
     .sort((a, b) =>
       a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
     );
+}
+
+/** Facet counts + FY26 track labels (+ optional pod names) for attendance hub filters. */
+export function attendanceTrackFilterOptions(
+  facets: BobStudentsFacetsResponse | null | undefined,
+  pods?: Array<{ name?: string | null; displayLabel?: string | null }>,
+): RosterTrackOption[] {
+  const merged = new Map<string, RosterTrackOption>();
+
+  for (const row of rosterTrackFilterOptions(facets)) {
+    merged.set(row.value.toLowerCase(), row);
+  }
+
+  for (const raw of FY26_ATTENDANCE_TRACKS) {
+    const canonical = formatBobTrackDisplayLabel(raw);
+    if (!canonical || isExcludedRosterTrackLabel(canonical)) continue;
+    const key = canonical.toLowerCase();
+    if (!merged.has(key)) {
+      merged.set(key, { value: canonical, label: canonical, count: 0 });
+    }
+  }
+
+  for (const pod of pods || []) {
+    const raw = String(pod.displayLabel || pod.name || "").trim();
+    const canonical = formatBobTrackDisplayLabel(raw);
+    if (!canonical || isExcludedRosterTrackLabel(canonical)) continue;
+    const key = canonical.toLowerCase();
+    if (!merged.has(key)) {
+      merged.set(key, { value: canonical, label: canonical, count: 0 });
+    }
+  }
+
+  return [...merged.values()].sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+  );
 }
 
 /** Same rules as roster API track filter — canonical labels plus raw Airtable prefixes. */

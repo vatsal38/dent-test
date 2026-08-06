@@ -54,6 +54,12 @@ export interface BobStatusHistoryEntry {
   source?: string;
 }
 
+export interface BobMileageLeg {
+  from: string;
+  to: string;
+  miles: number;
+}
+
 export interface BobSubmission {
   id: string;
   type: BobSubmissionType;
@@ -101,6 +107,9 @@ export interface BobSubmission {
   requestVendor?: string | null;
   fromLocation?: string | null;
   toLocation?: string | null;
+  mileageLegs?: BobMileageLeg[] | null;
+  mileageRateUsd?: number | null;
+  mileageTotalMiles?: number | null;
   coachRating?: number | null;
   curriculumFeedback?: string | null;
   logisticsFeedback?: string | null;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AttendanceDiscrepanciesSkeleton } from "./components/AttendancePageSkeletons";
 import { RosterTrackScopeSelect } from "@/components/bob/RosterTrackScopeSelect";
-import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
+import { attendanceTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
 import { getWeekMonday, getWeekSunday } from "./weekDates";
 import { isBeforeProgramStart, PROGRAM_START_DATE, PROGRAM_END_DATE, resolveAttendancePickerMinDate, resolveDefaultAttendanceFocusDate } from "@/lib/bobProgramCalendar";
@@ -33,7 +33,7 @@ export function AttendanceDiscrepanciesPage() {
   );
 
   const focusDate = weekOf;
-  const { workspace, loading, error, refetch } = useAttendanceWorkspace({
+  const { workspace, loading, error, refetch, pods } = useAttendanceWorkspace({
     focusDate,
     weekMode: true,
     trackFilter,
@@ -42,8 +42,8 @@ export function AttendanceDiscrepanciesPage() {
   const { data: rosterFacets, isLoading: rosterFacetsLoading } =
     useBobStudentsFacets();
   const trackOptions = useMemo(
-    () => rosterTrackFilterOptions(rosterFacets ?? null),
-    [rosterFacets],
+    () => attendanceTrackFilterOptions(rosterFacets ?? null, pods),
+    [rosterFacets, pods],
   );
 
   const openItems = useMemo(

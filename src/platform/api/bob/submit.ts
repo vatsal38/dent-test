@@ -33,7 +33,30 @@ export interface BobOneStopAttachment {
   content: string;
 }
 
-export type BobOneStopPayload = Record<string, string | boolean | string[] | BobOneStopAttachment[] | undefined>;
+export type BobOneStopPayload = Record<
+  string,
+  | string
+  | boolean
+  | string[]
+  | BobOneStopAttachment[]
+  | { from: string; to: string; miles: number }[]
+  | undefined
+>;
+
+export interface MileageConfigResponse {
+  rateUsd: number;
+}
+
+export async function getMileageConfig(): Promise<MileageConfigResponse> {
+  const res = await fetch(`${getApiBase()}/api/bob/submit/mileage-config`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(
+      (body as { error?: string })?.error || "Failed to load mileage rate",
+    );
+  }
+  return res.json() as Promise<MileageConfigResponse>;
+}
 
 export async function getBlitzTeamOptions(): Promise<BlitzTeamOptionsResponse> {
   const res = await fetch(`${getApiBase()}/api/bob/submit/blitz-teams`);

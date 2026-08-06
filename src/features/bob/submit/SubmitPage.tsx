@@ -26,6 +26,10 @@ import {
   StaffRequestFormFields,
 } from "@/features/bob/submit/StaffRequestFormFields";
 import {
+  mileageLegsForSubmit,
+  parseMileageLegsJson,
+} from "@/features/bob/submit/mileageReimbursement";
+import {
   CoachFeedbackFormFields,
   isCoachFeedbackType,
 } from "@/features/bob/submit/CoachFeedbackFormFields";
@@ -374,6 +378,18 @@ export function SubmitPage() {
                 return;
             }
         }
+        if (
+            submissionType === 'reimbursement_request' &&
+            form.category === 'mileage'
+        ) {
+            const legs = mileageLegsForSubmit(parseMileageLegsJson(form.mileageLegs));
+            if (!legs.length) {
+                setError(
+                    'Add at least one trip leg with from, to, and miles.',
+                );
+                return;
+            }
+        }
 
         setError('');
         const oversizeFile = pendingFiles.find((f) =>
@@ -429,6 +445,14 @@ export function SubmitPage() {
                 if (submitterName && submitterName !== 'You') {
                     payload.awardedBy = submitterName;
                 }
+            }
+            if (
+                submissionType === 'reimbursement_request' &&
+                form.category === 'mileage'
+            ) {
+                payload.mileageLegs = mileageLegsForSubmit(
+                    parseMileageLegsJson(form.mileageLegs),
+                );
             }
             if (pendingFiles.length > 0) {
                 payload.attachments = await Promise.all(

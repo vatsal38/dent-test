@@ -20,6 +20,10 @@ import {
   SUBMISSION_TYPE_LABELS,
 } from "@/features/bob/submissions/display";
 import {
+  MileageReimbursementDetail,
+  mileageRouteSummary,
+} from "@/features/bob/submissions/MileageReimbursementDetail";
+import {
   assigneeSelectOptions,
   filterAssignableStaffForSubmission,
 } from "@/features/bob/submissions/assigneeOptions";
@@ -273,11 +277,14 @@ export function SubmissionDetailPanel({
               Vendor: {data.requestVendor}
             </span>
           ) : null}
-          {data.fromLocation && data.toLocation ? (
-            <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-700">
-              {data.fromLocation} → {data.toLocation}
-            </span>
-          ) : null}
+          {(() => {
+            const route = mileageRouteSummary(data);
+            return route ? (
+              <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-700">
+                {route}
+              </span>
+            ) : null;
+          })()}
           {data.category &&
           ["pto_request", "purchase_request", "reimbursement_request"].includes(
             data.type,
@@ -464,6 +471,11 @@ export function SubmissionDetailPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 text-sm">
+        {data.type === "reimbursement_request" &&
+        data.category === "mileage" ? (
+          <MileageReimbursementDetail data={data} />
+        ) : null}
+
         {data.nextWeekPlan ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <h3 className="text-xs font-semibold text-gray-600 uppercase mb-2">

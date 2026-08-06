@@ -1,9 +1,19 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import type { BobStaffMember } from "@/platform/api/bob/staff";
+import { getMileageConfig } from "@/platform/api/bob/submit";
 import { staffDisplayName } from "@/features/bob/pods/staffDisplay";
 import { countPtoProgramDays } from "@/features/bob/submit/ptoDays";
+import { MileageLegsEditor } from "@/features/bob/submit/MileageLegsEditor";
+import {
+  calculateMileageReimbursement,
+  DEFAULT_MILEAGE_RATE_USD,
+  emptyMileageLeg,
+  formatMileageAmount,
+  parseMileageLegsJson,
+  serializeMileageLegs,
+} from "@/features/bob/submit/mileageReimbursement";
 import {
   bobSubmissionAttachmentMaxLabel,
   fileExceedsBobAttachmentLimit,
@@ -119,6 +129,25 @@ export function StaffRequestFormFields({
   currentUserName,
   onAttachmentReject,
 }: StaffRequestFormFieldsProps) {
+  const [mileageRateUsd, setMileageRateUsd] = useState(DEFAULT_MILEAGE_RATE_USD);
+
+  useEffect(() => {
+    if (type !== "reimbursement_request") return;
+    let cancelled = false;
+    getMileageConfig()
+      .then((config) => {
+        if (!cancelled && config.rateUsd > 0) {
+          setMileageRateUsd(config.rateUsd);
+        }
+      })
+      .catch(() => {
+        // Keep default rate when config is unavailable offline.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [type]);
+
   const ptoDayCount =
     type === "pto_request"
       ? countPtoProgramDays(form.requestStartDate, form.requestEndDate)
@@ -344,6 +373,23 @@ export function StaffRequestFormFields({
   }
 
   if (type === "reimbursement_request") {
+    const isMileage = form.category === "mileage";
+    const mileageLegs = parseMileageLegsJson(form.mileageLegs);
+    const mileageCalculation = isMileage
+      ? calculateMileageReimbursement(mileageLegs, mileageRateUsd)
+      : null;
+
+    function setMileageLegs(nextLegs: ReturnType<typeof parseMileageLegsJson>) {
+      const calc = calculateMileageReimbursement(nextLegs, mileageRateUsd);
+      setForm((f) => ({
+        ...f,
+        mileageLegs: serializeMileageLegs(nextLegs),
+        fromLocation: nextLegs[0]?.from?.trim() || "",
+        toLocation: nextLegs[nextLegs.length - 1]?.to?.trim() || "",
+        requestAmount: calc ? String(calc.amount) : "",
+      }));
+    }
+
     return (
       <>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 leading-relaxed">
@@ -356,7 +402,22 @@ export function StaffRequestFormFields({
           </label>
           <select
             value={form.category ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+            onChange={(e) => {
+              const nextCategory = e.target.value;
+              setForm((f) => {
+                const next: Record<string, string> = {
+                  ...f,
+                  category: nextCategory,
+                };
+                if (nextCategory === "mileage" && !f.mileageLegs) {
+                  next.mileageLegs = serializeMileageLegs([emptyMileageLeg()]);
+                }
+                if (nextCategory !== "mileage") {
+                  next.mileageLegs = "";
+                }
+                return next;
+              });
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
           >
             <option value="">Select (optional)</option>
@@ -367,44 +428,17 @@ export function StaffRequestFormFields({
             <option value="other">Other</option>
           </select>
         </div>
-        {form.category === "mileage" ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                From location
-              </label>
-              <input
-                type="text"
-                value={form.fromLocation ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, fromLocation: e.target.value }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
-                required
-                placeholder="e.g. Morgan State University"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                To location
-              </label>
-              <input
-                type="text"
-                value={form.toLocation ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, toLocation: e.target.value }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
-                required
-                placeholder="e.g. Field trip site"
-              />
-            </div>
-          </div>
+        {isMileage ? (
+          <MileageLegsEditor
+            legs={mileageLegs}
+            rateUsd={mileageRateUsd}
+            onChange={setMileageLegs}
+          />
         ) : null}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Description
-            {form.category === "mileage" ? (
+            {isMileage ? (
               <span className="font-normal text-gray-500"> (optional)</span>
             ) : null}
           </label>
@@ -415,9 +449,9 @@ export function StaffRequestFormFields({
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
             rows={3}
-            required={form.category !== "mileage"}
+            required={!isMileage}
             placeholder={
-              form.category === "mileage"
+              isMileage
                 ? "Optional notes about the trip purpose"
                 : "What was purchased and for which program need?"
             }
@@ -427,18 +461,26 @@ export function StaffRequestFormFields({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Amount (USD)
           </label>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={form.requestAmount ?? ""}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, requestAmount: e.target.value }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
-            required
-            placeholder="0.00"
-          />
+          {isMileage ? (
+            <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-900">
+              {mileageCalculation
+                ? `$${formatMileageAmount(mileageCalculation.amount)}`
+                : "Enter trip legs to calculate"}
+            </div>
+          ) : (
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.requestAmount ?? ""}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, requestAmount: e.target.value }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+              required
+              placeholder="0.00"
+            />
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

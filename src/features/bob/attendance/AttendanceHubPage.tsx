@@ -39,7 +39,8 @@ import {
 } from "@/platform/api/bob";
 import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttendance";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
-import { rosterTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
+import { attendanceTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
+import { normalizeAttendanceDateKey } from "./model/normalizeDateKey";
 import { buildHoursAttendanceRollup } from "./model/hoursRollup";
 import { buildAttendanceCsv } from "./model/attendanceCsvExport";
 import {
@@ -152,8 +153,8 @@ export function AttendanceHubPage() {
   const { data: rosterFacets, isLoading: rosterFacetsLoading } =
     useBobStudentsFacets({ enabled: !isStudentViewer });
   const trackOptions = useMemo(
-    () => rosterTrackFilterOptions(rosterFacets ?? null),
-    [rosterFacets],
+    () => attendanceTrackFilterOptions(rosterFacets ?? null, pods),
+    [rosterFacets, pods],
   );
 
   const latestImportedDate = boundsQuery.data?.latestDate ?? null;
@@ -220,10 +221,13 @@ export function AttendanceHubPage() {
   }, [viewMode, focusDate]);
 
   const tableDays = useMemo(() => {
+    const focusKey = normalizeAttendanceDateKey(focusDate);
     const scoped =
       viewMode === "week" || viewMode === "month"
         ? workspace.days
-        : workspace.days.filter((d) => d.date === focusDate);
+        : workspace.days.filter(
+            (d) => normalizeAttendanceDateKey(d.date) === focusKey,
+          );
     return filterDaysByHealth(scoped, healthFilter);
   }, [workspace.days, viewMode, focusDate, healthFilter]);
 

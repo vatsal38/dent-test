@@ -10,6 +10,7 @@ import { SessionSummary } from "./SessionSummary";
 import { FinalAttendanceSummary } from "./FinalAttendanceSummary";
 import { StaffCorrectionSummary } from "./StaffCorrectionSummary";
 import { ATTENDANCE_PAGE_SIZE } from "../model/scale";
+import { normalizeAttendanceDateKey } from "../model/normalizeDateKey";
 import { studentMatchesSearch } from "../model/filterRows";
 import {
   formatDayHoursPresent,
@@ -48,6 +49,8 @@ export function DailyAttendanceTable({
 }) {
   const isWeek = weekDates && weekDates.length > 1;
 
+  const focusDateKey = normalizeAttendanceDateKey(focusDate);
+
   const rowsByStudent = useMemo(() => {
     const map = new Map<
       string,
@@ -67,19 +70,22 @@ export function DailyAttendanceTable({
         });
       }
       const row = map.get(rk)!;
-      const prev = row.byDate.get(d.date);
+      const dateKey = normalizeAttendanceDateKey(d.date);
+      const prev = row.byDate.get(dateKey);
       if (
         !prev ||
         (d.dailyRecordId && !prev.dailyRecordId) ||
         d.missingPunchCount < prev.missingPunchCount
       ) {
-        row.byDate.set(d.date, d);
+        row.byDate.set(dateKey, d);
         row.podId = d.podId;
       }
     }
     return Array.from(map.values())
       .filter((row) => {
-        const today = row.byDate.get(focusDate);
+        const today =
+          row.byDate.get(focusDateKey) ?? row.byDate.get(focusDate);
+        if (!isWeek && !today) return false;
         return studentMatchesSearch(
           row.studentId,
           workspace.studentById,
@@ -93,7 +99,7 @@ export function DailyAttendanceTable({
           resolveStudentName(b.studentId, workspace.studentById),
         ),
       );
-  }, [days, workspace.studentById, workspace.podById, search, focusDate]);
+  }, [days, workspace.studentById, workspace.podById, search, focusDate, focusDateKey, isWeek]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -232,7 +238,8 @@ export function DailyAttendanceTable({
               workspace.studentById,
             );
             const podName = resolvePodName(row.podId, workspace.podById, student);
-            const today = row.byDate.get(focusDate);
+            const today =
+              row.byDate.get(focusDateKey) ?? row.byDate.get(focusDate);
             const programHours = student?.attendanceStats?.hoursAttended;
             const weekDays = isWeek
               ? Array.from(row.byDate.values())
