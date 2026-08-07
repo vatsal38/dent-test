@@ -16,6 +16,7 @@ import {
 } from "../weekDates";
 import { computeAttendanceWorkspace } from "../model/computeWorkspace";
 import { filterStudentsByCoachAttendanceScope } from "../model/coachAttendanceScope";
+import { normalizeTrackFilterValue } from "@/lib/bobRosterTrackOptions";
 import {
   ATTENDANCE_FETCH_LIMIT,
   ATTENDANCE_MONTH_FETCH_LIMIT,
@@ -65,7 +66,9 @@ export function useAttendanceWorkspace({
   const linkedStudentId = me?.linkedStudent?.id ?? null;
   const isStudentViewer = access.role === "student";
   const effectivePod = isStudentViewer ? "" : podFilter;
-  const effectiveTrack = isStudentViewer ? "" : trackFilter;
+  const effectiveTrack = isStudentViewer
+    ? ""
+    : normalizeTrackFilterValue(trackFilter);
 
   const viewMode: AttendanceViewMode =
     viewModeProp ?? (weekMode ? "week" : "day");

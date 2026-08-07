@@ -39,7 +39,10 @@ import {
 } from "@/platform/api/bob";
 import { useBobAttendanceDateBounds } from "@/platform/query/hooks/useBobAttendance";
 import { useBobStudentsFacets } from "@/platform/query/hooks/useBobStudents";
-import { attendanceTrackFilterOptions } from "@/lib/bobRosterTrackOptions";
+import {
+  attendanceTrackFilterOptions,
+  normalizeTrackFilterValue,
+} from "@/lib/bobRosterTrackOptions";
 import { normalizeAttendanceDateKey } from "./model/normalizeDateKey";
 import { buildHoursAttendanceRollup } from "./model/hoursRollup";
 import { buildAttendanceCsv } from "./model/attendanceCsvExport";
@@ -63,7 +66,9 @@ export function AttendanceHubPage() {
   const trackSelectRef = useRef<HTMLSelectElement>(null);
   const initialDate =
     searchParams?.get("date") || resolveDefaultAttendanceFocusDate();
-  const initialTrack = searchParams?.get("track") || "";
+  const initialTrack = normalizeTrackFilterValue(
+    searchParams?.get("track") || "",
+  );
   const initialFilter = (searchParams?.get("filter") || "all") as IssueFilter;
 
   const [focusDate, setFocusDate] = useState(initialDate);

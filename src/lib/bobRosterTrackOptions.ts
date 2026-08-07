@@ -84,12 +84,40 @@ export function attendanceTrackFilterOptions(
   );
 }
 
+/** Short labels / URL params → canonical FY26 track filter value. */
+const TRACK_FILTER_CANONICAL_ALIASES: Record<string, string> = {
+  ayd: "Accelerate Your Dent (AYD)",
+  "accelerate your dent": "Accelerate Your Dent (AYD)",
+  "content creation": "Content Creation & Marketing",
+  denternship: "Denternship",
+  "made@dent": "Made@Dent",
+  "made at dent": "Made@Dent",
+};
+
+/** Regex aliases — keep in sync with dent-be/lib/bobTrackConstants.js */
+const TRACK_LABEL_MATCH_ALIASES: Record<string, RegExp[]> = {
+  "Accelerate Your Dent (AYD)": [/accelerate\s*your\s*dent/i, /\bayd\b/i],
+  "Content Creation & Marketing": [
+    /nextgen\s*innovators\s*[-–—:]\s*content\s*creation/i,
+    /content\s*creation\s*(?:&|and)\s*marketing/i,
+  ],
+  "Made@Dent": [/made\s*@?\s*dent/i],
+  Denternship: [/denternship/i],
+};
+
+export function normalizeTrackFilterValue(track: string): string {
+  const raw = String(track ?? "").trim();
+  if (!raw) return "";
+  const alias = TRACK_FILTER_CANONICAL_ALIASES[raw.toLowerCase()];
+  return formatBobTrackDisplayLabel(alias || raw);
+}
+
 /** Same rules as roster API track filter — canonical labels plus raw Airtable prefixes. */
 export function rosterTrackLabelMatches(
   trackFilter: string,
   label: string,
 ): boolean {
-  const want = String(trackFilter ?? "").trim();
+  const want = normalizeTrackFilterValue(trackFilter);
   const norm = String(label ?? "").trim();
   if (!want || !norm) return false;
   if (/^rec[a-zA-Z0-9]+$/i.test(norm)) return false;
@@ -104,6 +132,9 @@ export function rosterTrackLabelMatches(
     return true;
   }
 
+  const aliasPatterns = TRACK_LABEL_MATCH_ALIASES[wantCanonical];
+  if (aliasPatterns?.some((rx) => rx.test(norm))) return true;
+
   const escaped = want.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (new RegExp(`^\\s*${escaped}(\\s*\\+|\\s*$)`, "i").test(norm)) {
     return true;
@@ -116,6 +147,8 @@ export function rosterTrackLabelMatches(
     }
     if (new RegExp(canonEscaped, "i").test(norm)) return true;
   }
+
+  if (aliasPatterns?.some((rx) => rx.test(labelCanonical))) return true;
 
   return false;
 }
